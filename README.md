@@ -22,7 +22,7 @@ Người dùng thông thường chỉ cần tải bản đóng gói sẵn trên 
 ## Tác giả / Developed By
 
 - **Anh Bảy Chọ / Tài Giáp**
-- **Phiên bản / Version:** v1.2.0 - Security & Integrity Edition (Garena & Level Infinite / Steam)
+- **Phiên bản / Version:** v1.2.1 - Transparent Community Attribution Edition (Garena & Level Infinite / Steam)
 
 ---
 
@@ -45,9 +45,9 @@ Người dùng thông thường chỉ cần tải bản đóng gói sẵn trên 
    - **Phân loại vũ khí (Weapon Type):** `Assault Rifle`, `SMG`, `LMG`, `Marksman Rifle`, `Sniper Rifle`, `Shotgun`, `Pistol`, `Special`.
    - **Vũ khí (Weapon):** Danh sách 70+ khẩu súng được lọc thông minh theo điều kiện đang chọn, tự động chuyển sang súng đầu tiên có dữ liệu khi đổi bộ lọc.
 
-4. **Cơ sở dữ liệu lớn (2.200+ Cấu hình từ các nguồn cộng đồng):**
-   - Thu thập từ các cổng dữ liệu cộng đồng trực tuyến với cơ chế lọc trùng lặp tuyệt đối theo `loadout_code`.
-   - **Tuân thủ pháp lý & Sở hữu trí tuệ:** Tách biệt hoàn toàn thương hiệu bên thứ 3, chuẩn hóa sang các nhãn trung lập trên giao diện (`Nguồn Cộng Đồng #1`, `Nguồn Cộng Đồng #2`, `Nguồn Xếp Hạng Meta` / `Community A`, `Community B`, `Meta Rank`).
+4. **Cơ sở dữ liệu lớn (2.200+ Cấu hình từ 3 nguồn cộng đồng):**
+   - Thu thập và chuẩn hóa từ các cổng dữ liệu cộng đồng `DeltaForceTools`, `DeltaForceBuilds` và `FPSMeta` với cơ chế lọc trùng lặp tuyệt đối theo `loadout_code`.
+   - Ghi nhận nguồn minh bạch trên giao diện từng bản build giúp người chơi dễ dàng theo dõi.
    - **Khóa kênh cập nhật an toàn:** Đường dẫn cập nhật mùa mới được khóa cứng vào máy chủ GitHub chính thức của tác giả (`TaiGiap/df-loadout-scanner`), ngăn chặn hoàn toàn nguy cơ giả mạo nguồn dữ liệu (Data Spoofing).
 
 5. **Bảo mật & Chống can thiệp (Anti-Tamper & Security):**
@@ -81,8 +81,8 @@ Người dùng thông thường chỉ cần tải bản đóng gói sẵn trên 
    - Automatically resets to the first available weapon when filters change, preventing empty result states.
 
 4. **Large Multi-Source Database (2,200+ Builds):**
-   - Aggregated from online community repositories with strict deduplication by `loadout_code`.
-   - **Legal & Trademark Compliance:** Seamlessly maps third-party branding to neutral labels (`Community A`, `Community B`, `Meta Rank` / `Nguồn Cộng Đồng #1`, `Nguồn Cộng Đồng #2`, `Nguồn Xếp Hạng Meta`).
+   - Aggregated from online community repositories (`DeltaForceTools`, `DeltaForceBuilds`, `FPSMeta`) with strict deduplication by `loadout_code`.
+   - Transparent attribution displayed for each loadout card.
    - **Locked Official Update Pipeline:** Hardcoded to the author's verified GitHub repository, preventing malicious data spoofing attacks.
 
 5. **Security & Anti-Tamper Hardening:**
@@ -112,6 +112,25 @@ Người dùng thông thường chỉ cần tải bản đóng gói sẵn trên 
 2. Chọn **Server** (`Garena` hoặc `Infinity`) và **Chế độ chơi** (`Warfare` hoặc `Operations`) phù hợp.
 3. Trong game, vào giao diện tùy biến vũ khí và nhấn phím **`F9`**.
 4. Ứng dụng phát tiếng bíp xác nhận. Nhấn **`Ctrl + V`** để dán ngay bản Meta, hoặc **`Win + V`** để chọn các build khác.
+
+---
+
+## Nguồn Dữ Liệu, Ghi Nhận & Chính Sách Gỡ Bỏ / Data Sources, Attribution & Takedown Policy
+
+### 1. Nguồn Dữ Liệu Tham Khảo Cộng Đồng (Community Attribution)
+Cơ sở dữ liệu cấu hình trang bị được tổng hợp nhằm mục đích tra cứu phi lợi nhuận cho người chơi từ 3 cổng cộng đồng trực tuyến:
+- **DeltaForceTools:** [deltaforcetools.gg](https://deltaforcetools.gg/vi/weapon-builds)
+- **DeltaForceBuilds:** [deltaforcebuilds.com](https://deltaforcebuilds.com)
+- **FPSMeta:** [fpsmeta.com](https://fpsmeta.com) ([fpsmeta.gg](https://fpsmeta.gg/delta-force-meta))
+
+Ứng dụng hoàn toàn độc lập, phi thương mại, không có mối liên kết hay tài trợ từ các chủ sở hữu trang web nêu trên cũng như nhà phát hành trò chơi Delta Force (Team Jade / TiMi Studio Group / Garena).
+
+### 2. Quy Trình Tiếp Nhận Khiếu Nại & Gỡ Bỏ Dữ Liệu (Notice & Takedown Policy)
+Tác giả tôn trọng quyền sở hữu trí tuệ và mong muốn của các quản trị viên/chủ sở hữu nguồn dữ liệu cộng đồng:
+- Nếu quý đơn vị hoặc chủ sở hữu không muốn dữ liệu được trích dẫn hay tổng hợp trong công cụ này, vui lòng gửi yêu cầu gỡ bỏ (Takedown / Opt-out Request) thông qua:
+  - **GitHub Issues:** [Tạo Issue Yêu Cầu Gỡ Bỏ](https://github.com/TaiGiap/df-loadout-scanner/issues)
+  - **Email Liên Hệ Trực Tiếp:** [tai.gd361@gmail.com](mailto:tai.gd361@gmail.com)
+- Mọi yêu cầu hợp lệ từ chủ sở hữu nguồn sẽ được xử lý, loại bỏ hoàn toàn khỏi bộ cào và cơ sở dữ liệu phân phối trong vòng **24–48 giờ**.
 
 ---
 
