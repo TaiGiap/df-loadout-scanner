@@ -11,7 +11,7 @@ Công cụ tự động nhận diện vũ khí thời gian thực qua Windows OC
 Người dùng thông thường chỉ cần tải bản đóng gói sẵn tại mục GitHub Releases:
 
 - **Phiên bản mới nhất (Latest Release):** [DF-Loadout-Scanner Releases](https://github.com/TaiGiap/df-loadout-scanner/releases/latest)
-- **Tệp cài đặt:** `DF-Loadout-Scanner-Windows-x64.zip` (Đã đóng gói trọn gói file thực thi `.exe`, tài liệu hướng dẫn và giấy phép).
+- **Tệp cài đặt:** `DF-Loadout-Scanner-v1.3.2-Windows-x64.zip` (Đã đóng gói trọn gói file thực thi `.exe`, tài liệu hướng dẫn và giấy phép).
 
 > **Tác giả / Developed By:** Anh Bảy Chọ / Tài Giáp  
 > **Phiên bản / Version:** `v1.3.2` (Performance & OCR Accuracy Edition)
@@ -83,9 +83,9 @@ Người dùng thông thường chỉ cần tải bản đóng gói sẵn tại 
 **DF Loadout Scanner** is a lightweight, real-time weapon recognition and loadout synchronizer for Delta Force (Garena & Level Infinite / Steam).
 
 ### Quick Start (3 Steps)
-1. **Download:** Grab the latest `DF-Loadout-Scanner-Windows-x64.zip` from [GitHub Releases](https://github.com/TaiGiap/df-loadout-scanner/releases/latest) and extract it.
-2. **Launch:** Run `DF-Loadout-Scanner-Windows-x64.exe`. If the Windows SmartScreen blue prompt appears, click **More info** $\rightarrow$ **Run anyway** (requires admin rights for global hotkey capture).
-3. **Use in Game:** Set game display to **Borderless Windowed** and enable Windows **Clipboard History (`Win + V`)**. In game gunsmith menu, press hotkey (default `F9` or customizable to `Mouse 4/5` / `F1-F12`). Hit `Ctrl + V` to paste the most popular build directly into the game, or `Win + V` to browse alternate builds.
+1. **Download:** Grab `DF-Loadout-Scanner-v1.3.2-Windows-x64.zip` from [GitHub Releases](https://github.com/TaiGiap/df-loadout-scanner/releases/latest) and extract it.
+2. **Launch:** Run `DF-Loadout-Scanner-Windows-x64.exe`. If the Windows SmartScreen prompt appears, click **More info** $\rightarrow$ **Run anyway** (requires admin rights for global hotkey capture).
+3. **Use in Game:** Set game display to **Borderless Windowed** and enable Windows **Clipboard History (`Win + V`)**. In gunsmith menu, press hotkey (default `F9` or customizable to `Mouse 4/5` / `F1-F12`). Hit `Ctrl + V` to paste the top build, or `Win + V` to browse alternate builds.
 
 ### Key Highlights
 - **Real-time OCR with Homoglyph Correction:** Captures weapon title with native Windows OCR and fuzzy matching, automatically correcting confused character pairs (`0`/`O`, `1`/`I`/`L`, `5`/`S`, `8`/`B`).
