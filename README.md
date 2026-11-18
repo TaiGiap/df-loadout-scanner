@@ -11,10 +11,10 @@ Công cụ tự động nhận diện vũ khí thời gian thực qua Windows OC
 Người dùng thông thường chỉ cần tải bản đóng gói sẵn tại mục GitHub Releases:
 
 - **Phiên bản mới nhất (Latest Release):** [DF-Loadout-Scanner Releases](https://github.com/TaiGiap/df-loadout-scanner/releases/latest)
-- **Tệp cài đặt:** `DF-Loadout-Scanner-v1.3.2-Windows-x64.zip` (Đã đóng gói trọn gói file thực thi `.exe`, tài liệu hướng dẫn và giấy phép).
+- **Tệp cài đặt:** `DF-Loadout-Scanner-v1.3.3-Windows-x64.zip` (Đã đóng gói trọn gói file thực thi `.exe`, tài liệu hướng dẫn và giấy phép).
 
 > **Tác giả / Developed By:** Anh Bảy Chọ / Tài Giáp  
-> **Phiên bản / Version:** `v1.3.2` (Performance & OCR Accuracy Edition)
+> **Phiên bản / Version:** `v1.3.3` (Data Validator & OCR Accuracy Edition)
 
 ---
 
@@ -26,7 +26,7 @@ Người dùng thông thường chỉ cần tải bản đóng gói sẵn tại 
 
 ### Bước 2: Khởi chạy ứng dụng
 - Mở file `DF-Loadout-Scanner-Windows-x64.exe`.
-- *Lưu ý:* Nếu Windows SmartScreen hiển thị hộp thoại màu xanh *"Windows protected your PC"*, hãy nhấn **More info** $\rightarrow$ chọn **Run anyway** để tiếp tục. Ứng dụng tự động yêu cầu quyền Administrator để Windows cho phép bắt phím tắt toàn cục khi cửa sổ game đang hoạt động.
+- *Lưu ý:* Nếu Windows SmartScreen hiển thị hộp thoại màu xanh *"Windows protected your PC"*, hãy nhấn **More info** $\rightarrow$ chọn **Run anyway** để tiếp tục. Ứng dụng tự động yêu cầu quyền Administrator để bắt phím tắt toàn cục và chụp vùng tên súng ổn định khi đang mở game toàn màn hình.
 
 ### Bước 3: Thiết lập & Quét trong game
 1. **Thiết lập hệ thống & game:**
@@ -48,8 +48,8 @@ Người dùng thông thường chỉ cần tải bản đóng gói sẵn tại 
    - **Bộ lọc sửa lỗi đọc nhầm OCR:** Tự động chuẩn hóa các cặp ký tự dễ nhầm lẫn trên font game (`0` <-> `O`, `1` <-> `I`/`L`, `5` <-> `S`, `8` <-> `B`, loại bỏ khoảng trắng và dấu gạch nối thừa) giúp độ chính xác đạt mức tối đa.
    - Đổi phím tắt quét tức thì ngay trên thanh điều khiển với nút `[⌨]`, hỗ trợ đầy đủ `F1`–`F12`, phím điều hướng, phím số `Numpad`, phím đặc biệt và **hai nút chuột phụ bên hông** (`Mouse 4` / `Mouse 5`).
 
-2. **Tối ưu hóa hiệu năng nền (Zero Background Overhead):**
-   - Ứng dụng tự động phát hiện trạng thái cửa sổ (`focused` / `minimized`). Khi người dùng đang trong trận đấu, toàn bộ việc vẽ lại giao diện được tạm dừng, giảm tải CPU/GPU về mức 0% và chỉ kích hoạt vẽ khi có thao tác quét súng hoặc mở lại cửa sổ.
+2. **Tối ưu giảm tải CPU/GPU khi cửa sổ chạy nền:**
+   - Ứng dụng tự động phát hiện trạng thái cửa sổ (`focused` / `minimized`). Khi người dùng đang trong trận đấu, toàn bộ việc vẽ lại giao diện được tạm dừng, giảm đáng kể tải CPU/GPU và chỉ kích hoạt vẽ khi có thao tác quét súng hoặc mở lại cửa sổ.
 
 3. **Tự động kiểm tra bản cập nhật mới (Auto Update Checker):**
    - Tự động kiểm tra phiên bản mới từ GitHub Releases khi khởi động; hiển thị huy hiệu `[BẢN MỚI]` trên thanh Header giúp người dùng mở nhanh trang tải về chỉ với 1 cú click.
@@ -83,8 +83,8 @@ Người dùng thông thường chỉ cần tải bản đóng gói sẵn tại 
 **DF Loadout Scanner** is a lightweight, real-time weapon recognition and loadout synchronizer for Delta Force (Garena & Level Infinite / Steam).
 
 ### Quick Start (3 Steps)
-1. **Download:** Grab `DF-Loadout-Scanner-v1.3.2-Windows-x64.zip` from [GitHub Releases](https://github.com/TaiGiap/df-loadout-scanner/releases/latest) and extract it.
-2. **Launch:** Run `DF-Loadout-Scanner-Windows-x64.exe`. If the Windows SmartScreen prompt appears, click **More info** $\rightarrow$ **Run anyway** (requires admin rights for global hotkey capture).
+1. **Download:** Grab `DF-Loadout-Scanner-v1.3.3-Windows-x64.zip` from [GitHub Releases](https://github.com/TaiGiap/df-loadout-scanner/releases/latest) and extract it.
+2. **Launch:** Run `DF-Loadout-Scanner-Windows-x64.exe`. If the Windows SmartScreen prompt appears, click **More info** $\rightarrow$ **Run anyway** (requires admin rights for global hotkey capture and stable fullscreen screenshot).
 3. **Use in Game:** Set game display to **Borderless Windowed** and enable Windows **Clipboard History (`Win + V`)**. In gunsmith menu, press hotkey (default `F9` or customizable to `Mouse 4/5` / `F1-F12`). Hit `Ctrl + V` to paste the top build, or `Win + V` to browse alternate builds.
 
 ### Key Highlights
