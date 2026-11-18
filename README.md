@@ -11,10 +11,10 @@ Công cụ tự động nhận diện vũ khí thời gian thực qua Windows OC
 Người dùng thông thường chỉ cần tải bản đóng gói sẵn tại mục GitHub Releases:
 
 - **Phiên bản mới nhất (Latest Release):** [DF-Loadout-Scanner Releases](https://github.com/TaiGiap/df-loadout-scanner/releases/latest)
-- **Tệp cài đặt:** `DF-Loadout-Scanner-v1.3.5-Windows-x64.zip` (Đã đóng gói trọn gói file thực thi `.exe`, tài liệu hướng dẫn và giấy phép).
+- **Tệp cài đặt:** `DF-Loadout-Scanner-v1.3.6-Windows-x64.zip` (Đã đóng gói trọn gói file thực thi `.exe`, tài liệu hướng dẫn và giấy phép).
 
 > **Tác giả / Developed By:** Anh Bảy Chọ / Tài Giáp  
-> **Phiên bản / Version:** `v1.3.5` (Enhanced OCR Recognition & Vietnamese Weapons)
+> **Phiên bản / Version:** `v1.3.6` (Anti-18+ Banner Fallback & Enhanced 2.5x OCR)
 
 ---
 
@@ -43,9 +43,11 @@ Người dùng thông thường chỉ cần tải bản đóng gói sẵn tại 
 
 ## Tính Năng Nổi Bật / Key Features
 
-1. **Quét vũ khí thời gian thực & Bộ lọc sửa lỗi OCR thông minh:**
-   - Tự động nhận diện tên vũ khí chính xác qua Windows Native OCR (`Windows.Media.Ocr`) kết hợp thuật toán so khớp mờ Jaro-Winkler.
-   - **Bộ lọc sửa lỗi đọc nhầm OCR:** Tự động chuẩn hóa các cặp ký tự dễ nhầm lẫn trên font game (`0` <-> `O`, `1` <-> `I`/`L`, `5` <-> `S`, `8` <-> `B`, loại bỏ khoảng trắng và dấu gạch nối thừa) giúp độ chính xác đạt mức tối đa.
+1. **Quét vũ khí thời gian thực & Bộ xử lý ảnh OCR nâng cao (Anti-18+ Banner & Fallback ROI):**
+   - **Tăng cường độ nét ảnh 2.5x & Lọc tương phản:** Phóng to ảnh 2.5x kết hợp thuật toán phân tách chữ trắng (giữ lại pixel sáng chữ tên súng, triệt tiêu hoàn toàn nền xám mờ của bảng cảnh báo 18+ về màu đen).
+   - **Cơ chế quét dự phòng (Fallback ROI):** Nếu vùng giữa bị che khuất hoặc không nhận diện được, ứng dụng tự động dò tìm vị trí thẻ súng đang được chọn ở cột danh sách bên trái (dựa trên viền trắng nổi bật), cắt lấy dòng tiêu đề và tự động loại bỏ tên skin để nhận diện chính xác 100%.
+   - **Bộ lọc từ rác bảng cảnh báo 18+:** Loại bỏ triệt để các cụm từ như *"Chơi quá 180 phút..."* và các ký tự rác nhỏ lẻ.
+   - **Sửa 14 lỗi nhận diện súng:** Khắc phục triệt để các trường hợp đọc nhầm font game (`G3`, `P90`, `AR-57`, `PSG-1`, `M82`, `M7`, `MK4`, `R93`, `QBZ95-1`, `SG552`, `CI-19`, `SR-3M`, `VECTOR`, `725 Double-Barrel`).
    - Đổi phím tắt quét tức thì ngay trên thanh điều khiển với nút `[⌨]`, hỗ trợ đầy đủ `F1`–`F12`, phím điều hướng, phím số `Numpad`, phím đặc biệt và **hai nút chuột phụ bên hông** (`Mouse 4` / `Mouse 5`).
 
 2. **Tối ưu giảm tải CPU/GPU khi cửa sổ chạy nền:**
@@ -88,13 +90,14 @@ Người dùng thông thường chỉ cần tải bản đóng gói sẵn tại 
 **DF Loadout Scanner** is a lightweight, real-time weapon recognition and loadout synchronizer for Delta Force (Garena & Level Infinite / Steam).
 
 ### Quick Start (3 Steps)
-1. **Download:** Grab `DF-Loadout-Scanner-v1.3.5-Windows-x64.zip` from [GitHub Releases](https://github.com/TaiGiap/df-loadout-scanner/releases/latest) and extract it.
+1. **Download:** Grab `DF-Loadout-Scanner-v1.3.6-Windows-x64.zip` from [GitHub Releases](https://github.com/TaiGiap/df-loadout-scanner/releases/latest) and extract it.
 2. **Launch:** Run `DF-Loadout-Scanner-Windows-x64.exe`. If the Windows SmartScreen prompt appears, click **More info** $\rightarrow$ **Run anyway** (requires admin rights for global hotkey capture and stable fullscreen screenshot).
 3. **Use in Game:** Set game display to **Borderless Windowed** and enable Windows **Clipboard History (`Win + V`)**. In gunsmith menu, press hotkey (default `F9` or customizable to `Mouse 4/5` / `F1-F12`). Hit `Ctrl + V` to paste the top build, or `Win + V` to browse alternate builds.
 
 ### Key Highlights
-- **Smart Category Suffix Stripping & Alias Mapping:** Strips category suffixes in both English & Vietnamese (Battle Rifle, Marksman Rifle, Light Machine Gun, Súng máy hạng nhẹ...) and maps localized names (`Shotgun Hai Nòng` $\rightarrow$ `725 Double-Barrel`, `Cung phức hợp` $\rightarrow$ `Compound Bow`).
-- **Strict Multi-Tier OCR Matching:** Strict 5-tier matching priority eliminates false matches between similar weapons (`M249` vs `MINI-14`, `M14` vs `M16A4`) with strict Jaro-Winkler threshold ($\ge 0.88$).
+- **2.5x Upscaling & White-Text Contrast Thresholding:** Eliminates blurry text and nullifies the Vietnamese 18+ health warning gray overlay box by isolating pure white text before OCR processing.
+- **Smart Left-Column Fallback ROI:** Automatically detects the highlighted weapon card on the left list when the center screen region is obstructed or unreadable, strips custom skin names, and extracts the clean weapon name.
+- **14 Specific Weapon OCR Fixes & Anti-Junk Filtering:** Resolves misreadings for `G3`, `P90`, `AR-57`, `PSG-1`, `M82`, `M7`, `MK4`, `R93`, `QBZ95-1`, `SG552`, `CI-19`, `SR-3M`, `VECTOR`, and `725 Double-Barrel`, with strict length difference checks protecting short weapon names.
 - **Zero Background Overhead:** Window focus/minimize detection ensures zero CPU/GPU consumption while in game, waking up only upon scan trigger.
 - **Auto Release Check:** Built-in update notifier surfaces a clickable badge in Header when a new release is available.
 - **Custom Hotkey:** Dedicated `[⌨]` rebind button supporting `F1`–`F12`, `Numpad`, and side mouse buttons (`Mouse 4` / `Mouse 5`).
@@ -128,7 +131,8 @@ Tác giả tôn trọng quyền sở hữu trí tuệ và mong muốn của các
 
 | Phiên bản | Điểm mới & Cải tiến chính |
 | :--- | :--- |
-| **v1.3.5 (Mới nhất)** | Nâng cấp toàn diện bộ nhận diện vũ khí OCR: Tự động loại bỏ hậu tố phân loại súng (Tiếng Anh & Tiếng Việt), bổ sung bảng ánh xạ bí danh (`Shotgun Hai Nòng` $\rightarrow$ `725 Double-Barrel`, `Cung phức hợp` $\rightarrow$ `Compound Bow`...), siết chặt thuật toán so khớp 5 tầng (sửa triệt để lỗi nhận nhầm `G3`, `M249`, `PKM`, `M14`, `R93`) và hiển thị cảnh báo thông minh khi bộ lọc hiện tại chưa có cấu hình. |
+| **v1.3.6 (Mới nhất)** | Nâng cấp toàn diện độ nét OCR: Phóng to 2.5x kèm lọc ngưỡng tương phản cao (triệt tiêu nền mờ bảng 18+), cơ chế quét dự phòng thông minh (Fallback ROI) tự động nhận diện thẻ súng đang chọn ở cột bên trái và cắt bỏ tên skin, lọc triệt để từ rác bảng cảnh báo 18+ và sửa 14 lỗi nhận diện súng thực tế (G3, P90, AR-57, PSG-1, M82, M7, MK4, R93, QBZ95-1, SG552, CI-19, SR-3M, VECTOR, 725 Double-Barrel). |
+| **v1.3.5** | Nâng cấp toàn diện bộ nhận diện vũ khí OCR: Tự động loại bỏ hậu tố phân loại súng (Tiếng Anh & Tiếng Việt), bổ sung bảng ánh xạ bí danh (`Shotgun Hai Nòng` $\rightarrow$ `725 Double-Barrel`, `Cung phức hợp` $\rightarrow$ `Compound Bow`...), siết chặt thuật toán so khớp 5 tầng (sửa triệt để lỗi nhận nhầm `G3`, `M249`, `PKM`, `M14`, `R93`) và hiển thị cảnh báo thông minh khi bộ lọc hiện tại chưa có cấu hình. |
 | **v1.3.4** | Tích hợp cửa sổ `[❤ ỦNG HỘ / SUPPORT]` với mã VietQR Techcombank động (tự điền số tiền theo 3 mốc `1.000đ`, `5.000đ`, `10.000đ` hoặc tùy ý), sao chép nhanh STK và chuẩn hóa tuyên bố Freeware 100% cho cộng đồng. |
 | **v1.3.3** | Bổ sung bộ kiểm duyệt dữ liệu `Data Validator` trong bộ cào lọc sạch mã build lỗi/rác, tự động đối chiếu sửa `mode` và ưu tiên thứ tự khớp chính xác tên súng OCR 100%. |
 | **v1.3.2** | Tối ưu hóa hiệu năng tạm dừng render khi game fullscreen (giảm tải CPU/GPU chạy nền), tự động sửa lỗi OCR đọc nhầm ký tự tương đồng (`0/O`, `1/I/L`, `5/S`, `8/B`) và huy hiệu thông báo khi có bản cập nhật mới trên Header. |
