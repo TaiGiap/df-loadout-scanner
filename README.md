@@ -11,10 +11,10 @@ Công cụ tự động nhận diện vũ khí thời gian thực qua Windows OC
 Người dùng thông thường chỉ cần tải bản đóng gói sẵn tại mục GitHub Releases:
 
 - **Phiên bản mới nhất (Latest Release):** [DF-Loadout-Scanner Releases](https://github.com/TaiGiap/df-loadout-scanner/releases/latest)
-- **Tệp cài đặt:** `DF-Loadout-Scanner-v1.3.3-Windows-x64.zip` (Đã đóng gói trọn gói file thực thi `.exe`, tài liệu hướng dẫn và giấy phép).
+- **Tệp cài đặt:** `DF-Loadout-Scanner-v1.3.4-Windows-x64.zip` (Đã đóng gói trọn gói file thực thi `.exe`, tài liệu hướng dẫn và giấy phép).
 
 > **Tác giả / Developed By:** Anh Bảy Chọ / Tài Giáp  
-> **Phiên bản / Version:** `v1.3.3` (Data Validator & OCR Accuracy Edition)
+> **Phiên bản / Version:** `v1.3.4` (Support Me / VietQR Edition)
 
 ---
 
@@ -76,6 +76,11 @@ Người dùng thông thường chỉ cần tải bản đóng gói sẵn tại 
    - Chỉ sử dụng Windows API chuẩn để chụp ảnh màn hình và ghi dữ liệu văn bản vào Clipboard.
    - Hoàn toàn không can thiệp bộ nhớ (RAM), không inject DLL, không chỉnh sửa file hay tiến trình game.
 
+10. **Ủng hộ tác giả (Support Me / VietQR Động):**
+   - Nút `[❤ ỦNG HỘ]` trực tiếp trên thanh Header mở nhanh cửa sổ hỗ trợ tác giả.
+   - Tích hợp mã VietQR động Techcombank tự điền đúng số tiền với 3 mốc nhanh (`1.000đ` - 4 xu delta, `5.000đ` - 20 xu delta, `10.000đ` - ly trà tắc) hoặc số tiền tùy ý.
+   - Hỗ trợ sao chép số tài khoản (`1903 9673 0960 12` - GIÁP ĐỨC TÀI) và mở mã QR trên trình duyệt khi cần.
+
 ---
 
 ## English Summary
@@ -83,7 +88,7 @@ Người dùng thông thường chỉ cần tải bản đóng gói sẵn tại 
 **DF Loadout Scanner** is a lightweight, real-time weapon recognition and loadout synchronizer for Delta Force (Garena & Level Infinite / Steam).
 
 ### Quick Start (3 Steps)
-1. **Download:** Grab `DF-Loadout-Scanner-v1.3.3-Windows-x64.zip` from [GitHub Releases](https://github.com/TaiGiap/df-loadout-scanner/releases/latest) and extract it.
+1. **Download:** Grab `DF-Loadout-Scanner-v1.3.4-Windows-x64.zip` from [GitHub Releases](https://github.com/TaiGiap/df-loadout-scanner/releases/latest) and extract it.
 2. **Launch:** Run `DF-Loadout-Scanner-Windows-x64.exe`. If the Windows SmartScreen prompt appears, click **More info** $\rightarrow$ **Run anyway** (requires admin rights for global hotkey capture and stable fullscreen screenshot).
 3. **Use in Game:** Set game display to **Borderless Windowed** and enable Windows **Clipboard History (`Win + V`)**. In gunsmith menu, press hotkey (default `F9` or customizable to `Mouse 4/5` / `F1-F12`). Hit `Ctrl + V` to paste the top build, or `Win + V` to browse alternate builds.
 
@@ -95,18 +100,19 @@ Người dùng thông thường chỉ cần tải bản đóng gói sẵn tại 
 - **Smart Auto-Pick & Clipboard Sync:** Automatically feeds the loadout with highest copy count to `Ctrl + V`, populating alternate builds to `Win + V`.
 - **Multi-Source Database:** Over 2,200 builds aggregated from `DFTools`, `DFBuilds`, and `FPSMeta`.
 - **100% Anti-Cheat Compliant:** Pure Windows display/clipboard APIs — zero memory scanning, zero game injection.
+- **Support / Dynamic VietQR:** Built-in modal supporting instant donation presets (1K, 5K, 10K VND or custom) via auto-generated Techcombank VietQR and one-click account copying.
 
 ---
 
 ## Nguồn Dữ Liệu, Ghi Nhận & Chính Sách Gỡ Bỏ / Data Attribution & Takedown
 
 ### 1. Nguồn Dữ Liệu Tham Khảo Cộng Đồng (Community Attribution)
-Cơ sở dữ liệu cấu hình trang bị được tổng hợp nhằm mục đích tra cứu phi lợi nhuận cho cộng đồng người chơi từ 3 cổng thông tin trực tuyến:
+Cơ sở dữ liệu cấu hình trang bị được tổng hợp miễn phí phục vụ cộng đồng người chơi tra cứu thuận tiện từ 3 cổng thông tin trực tuyến:
 - **DeltaForceTools:** [deltaforcetools.gg](https://deltaforcetools.gg/vi/weapon-builds)
 - **DeltaForceBuilds:** [deltaforcebuilds.com](https://deltaforcebuilds.com)
 - **FPSMeta:** [fpsmeta.com](https://fpsmeta.com) ([fpsmeta.gg](https://fpsmeta.gg/delta-force-meta))
 
-Ứng dụng hoàn toàn độc lập, phi lợi nhuận, không có mối liên kết hay tài trợ từ các trang web nêu trên cũng như nhà phát hành trò chơi Delta Force (Team Jade / TiMi Studio Group / Garena).
+Phần mềm được phát hành miễn phí 100% cho cộng đồng (Freeware) — mọi khoản ủng hộ (trà tắc/cà phê) từ người dùng đều hoàn toàn tự nguyện và không khóa bất kỳ tính năng nào. Ứng dụng hoạt động hoàn toàn độc lập, không có mối liên kết hay tài trợ từ các trang web nêu trên cũng như nhà phát hành trò chơi Delta Force (Team Jade / TiMi Studio Group / Garena).
 
 ### 2. Tiếp Nhận Khiếu Nại & Gỡ Bỏ Dữ Liệu (Notice & Takedown Policy)
 Tác giả tôn trọng quyền sở hữu trí tuệ và mong muốn của các đơn vị quản trị nguồn dữ liệu:
