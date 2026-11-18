@@ -59,10 +59,8 @@ Người dùng thông thường chỉ cần tải bản đóng gói sẵn trên 
    - Ghi nhận nguồn minh bạch trên giao diện từng bản build giúp người chơi dễ dàng theo dõi.
    - **Khóa kênh cập nhật an toàn:** Đường dẫn cập nhật mùa mới được khóa cứng vào máy chủ GitHub chính thức của tác giả (`TaiGiap/df-loadout-scanner`), ngăn chặn hoàn toàn nguy cơ giả mạo nguồn dữ liệu (Data Spoofing).
 
-6. **Bảo mật & Chống can thiệp (Anti-Tamper & Security):**
-   - **Kiểm tra tính toàn vẹn (Integrity Check):** Tính mã băm FNV-1a 64-bit định danh tác giả và ứng dụng ngay lúc khởi động và liên tục trong vòng lặp kết xuất (render loop). Mọi hành vi dùng Hex Editor sửa đổi chuỗi trong file nhị phân sẽ kích hoạt cơ chế tự dừng ứng dụng ngay lập tức.
-   - **Phát hiện trình gỡ lỗi (Anti-Debugger):** Tích hợp kiểm tra API `IsDebuggerPresent()` của Windows nhằm ngăn chặn hành vi đính kèm trình gỡ lỗi trái phép.
-   - **Tối ưu chống dịch ngược:** Thiết lập `[profile.release]` với `opt-level = 3`, `lto = "fat"`, `codegen-units = 1`, `panic = "abort"` và `strip = "symbols"`, xóa sạch bảng ký hiệu và dấu vết đường dẫn cá nhân.
+6. **Bảo vệ toàn vẹn & Bản quyền:**
+   - Ứng dụng được tích hợp cơ chế bảo vệ toàn vẹn tệp thực thi và bản quyền tác giả.
 
 7. **Giao diện Tactical Dark UI:**
    - Phong cách quân sự Delta Force với bảng màu `#0B1015`, `#131B24`, `#00E5A0`.
@@ -103,10 +101,8 @@ Người dùng thông thường chỉ cần tải bản đóng gói sẵn trên 
    - Transparent attribution displayed for each loadout card.
    - **Locked Official Update Pipeline:** Hardcoded to the author's verified GitHub repository, preventing malicious data spoofing attacks.
 
-6. **Security & Anti-Tamper Hardening:**
-   - **Continuous Integrity Verification:** 64-bit FNV-1a hash verification runs at startup and during every frame render loop. Any hex modification to author identity or app name terminates the process immediately.
-   - **Anti-Debugger Guard:** Checks Windows `IsDebuggerPresent()` at launch to block live reverse engineering attempts.
-   - **Aggressive Release Stripping:** Release profile compiled with `opt-level = 3`, `lto = "fat"`, `codegen-units = 1`, `panic = "abort"`, and `strip = "symbols"`.
+6. **Integrity & Copyright Protection:**
+   - Equipped with built-in binary integrity and author copyright protection.
 
 7. **Tactical Military Dark UI:**
    - Delta Force emerald accent palette, bilingual `[LANG: VI / EN]` switcher, User Guide modal, Always on Top toggle, and fixed 1140x680 resolution with compactly tuned dropdowns.
@@ -166,7 +162,7 @@ Mã nguồn được quản lý và bảo vệ trong kho lưu trữ riêng biệ
 Phần mềm được phát hành theo giấy phép **Proprietary Freeware License - All Rights Reserved** (Copyright © 2026 Anh Bảy Chọ / Tài Giáp).
 
 - **Quyền sử dụng:** Người dùng được phép tải về và sử dụng miễn phí bản thực thi nguyên trạng cho mục đích cá nhân, phi thương mại.
-- **Nghiêm cấm:** Mọi hành vi sao chép mã nguồn, dịch ngược, giải mã, can thiệp file nhị phân bằng Hex Editor, sửa đổi/xóa tên tác giả hoặc kinh doanh thương mại hóa dưới bất kỳ hình thức nào khi chưa có sự đồng ý bằng văn bản từ tác giả.
+- **Nghiêm cấm:** Mọi hành vi sao chép mã nguồn, dịch ngược, giải mã, can thiệp file thực thi, sửa đổi/xóa tên tác giả hoặc kinh doanh thương mại hóa dưới bất kỳ hình thức nào khi chưa có sự đồng ý bằng văn bản từ tác giả.
 
 ### Tuyên Bố Miễn Trừ Trách Nhiệm & Nhãn Hiệu (Disclaimer & Trademarks)
 - Công cụ độc lập hoạt động hoàn toàn qua Windows OCR API chuẩn, không chứa bất kỳ tài sản trí tuệ, hình ảnh hay mã nguồn nào của trò chơi Delta Force (Team Jade / TiMi Studio Group / Garena).
