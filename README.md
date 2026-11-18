@@ -11,10 +11,10 @@ Công cụ tự động nhận diện vũ khí thời gian thực qua Windows OC
 Người dùng thông thường chỉ cần tải bản đóng gói sẵn tại mục GitHub Releases:
 
 - **Phiên bản mới nhất (Latest Release):** [DF-Loadout-Scanner Releases](https://github.com/TaiGiap/df-loadout-scanner/releases/latest)
-- **Tệp cài đặt:** `DF-Loadout-Scanner-v1.3.6-Windows-x64.zip` (Đã đóng gói trọn gói file thực thi `.exe`, tài liệu hướng dẫn và giấy phép).
+- **Tệp cài đặt:** `DF-Loadout-Scanner-v1.3.7-Windows-x64.zip` (Đã đóng gói trọn gói file thực thi `.exe`, tài liệu hướng dẫn và giấy phép).
 
 > **Tác giả / Developed By:** Anh Bảy Chọ / Tài Giáp  
-> **Phiên bản / Version:** `v1.3.6` (Anti-18+ Banner Fallback & Enhanced 2.5x OCR)
+> **Phiên bản / Version:** `v1.3.7` (Semantic Data Validator & Source-Normalized Ranking)
 
 ---
 
@@ -74,9 +74,9 @@ Người dùng thông thường chỉ cần tải bản đóng gói sẵn tại 
 8. **Bảo vệ toàn vẹn & Bản quyền:**
    - Ứng dụng được tích hợp cơ chế bảo vệ toàn vẹn tệp thực thi và bản quyền tác giả.
 
-9. **An toàn 100% (Anti-Cheat Safe):**
+9. **Tính tương thích & An toàn kỹ thuật (Anti-Cheat Compatibility):**
+   - Được thiết kế để giảm thiểu tối đa can thiệp vào trò chơi: không đọc bộ nhớ (RAM), không tiêm tệp (DLL Injection), không chỉnh sửa tiến trình và không tự động hóa thao tác phím/chuột. Tuy nhiên, tính tương thích với các hệ thống chống gian lận (ACE) không được bảo đảm chính thức từ nhà phát hành.
    - Chỉ sử dụng Windows API chuẩn để chụp ảnh màn hình và ghi dữ liệu văn bản vào Clipboard.
-   - Hoàn toàn không can thiệp bộ nhớ (RAM), không inject DLL, không chỉnh sửa file hay tiến trình game.
 
 10. **Ủng hộ tác giả (Support Me / VietQR Động):**
    - Nút `[❤ ỦNG HỘ]` trực tiếp trên thanh Header mở nhanh cửa sổ hỗ trợ tác giả.
@@ -90,11 +90,13 @@ Người dùng thông thường chỉ cần tải bản đóng gói sẵn tại 
 **DF Loadout Scanner** is a lightweight, real-time weapon recognition and loadout synchronizer for Delta Force (Garena & Level Infinite / Steam).
 
 ### Quick Start (3 Steps)
-1. **Download:** Grab `DF-Loadout-Scanner-v1.3.6-Windows-x64.zip` from [GitHub Releases](https://github.com/TaiGiap/df-loadout-scanner/releases/latest) and extract it.
+1. **Download:** Grab `DF-Loadout-Scanner-v1.3.7-Windows-x64.zip` from [GitHub Releases](https://github.com/TaiGiap/df-loadout-scanner/releases/latest) and extract it.
 2. **Launch:** Run `DF-Loadout-Scanner-Windows-x64.exe`. If the Windows SmartScreen prompt appears, click **More info** $\rightarrow$ **Run anyway** (requires admin rights for global hotkey capture and stable fullscreen screenshot).
 3. **Use in Game:** Set game display to **Borderless Windowed** and enable Windows **Clipboard History (`Win + V`)**. In gunsmith menu, press hotkey (default `F9` or customizable to `Mouse 4/5` / `F1-F12`). Hit `Ctrl + V` to paste the top build, or `Win + V` to browse alternate builds.
 
 ### Key Highlights
+- **Semantic Data Validator & Clean Code Guarantee:** Deep cross-validation ensures every weapon code belongs 100% to the matching weapon, removing corrupted/mismatched codes and rogue newlines.
+- **Source-Normalized Ranking:** Dynamically balances popularity scores across multiple sources, allowing high-quality builds from DFBuilds and FPSMeta to be fairly interleaved with DFTools without getting pushed to the bottom.
 - **2.5x Upscaling & White-Text Contrast Thresholding:** Eliminates blurry text and nullifies the Vietnamese 18+ health warning gray overlay box by isolating pure white text before OCR processing.
 - **Smart Left-Column Fallback ROI:** Automatically detects the highlighted weapon card on the left list when the center screen region is obstructed or unreadable, strips custom skin names, and extracts the clean weapon name.
 - **14 Specific Weapon OCR Fixes & Anti-Junk Filtering:** Resolves misreadings for `G3`, `P90`, `AR-57`, `PSG-1`, `M82`, `M7`, `MK4`, `R93`, `QBZ95-1`, `SG552`, `CI-19`, `SR-3M`, `VECTOR`, and `725 Double-Barrel`, with strict length difference checks protecting short weapon names.
@@ -102,8 +104,8 @@ Người dùng thông thường chỉ cần tải bản đóng gói sẵn tại 
 - **Auto Release Check:** Built-in update notifier surfaces a clickable badge in Header when a new release is available.
 - **Custom Hotkey:** Dedicated `[⌨]` rebind button supporting `F1`–`F12`, `Numpad`, and side mouse buttons (`Mouse 4` / `Mouse 5`).
 - **Smart Auto-Pick & Clipboard Sync:** Automatically feeds the loadout with highest copy count to `Ctrl + V`, populating alternate builds to `Win + V`.
-- **Multi-Source Database:** Over 2,200 builds aggregated from `DFTools`, `DFBuilds`, and `FPSMeta`.
-- **100% Anti-Cheat Compliant:** Pure Windows display/clipboard APIs — zero memory scanning, zero game injection.
+- **Multi-Source Database:** Over 2,100 verified builds aggregated from `DFTools`, `DFBuilds`, and `FPSMeta`.
+- **Technical Safety & Anti-Cheat Compatibility:** Designed to minimize game interference: no game memory access, DLL injection, process modification, or automated gameplay input. Compatibility with anti-cheat systems is not officially guaranteed.
 - **Support / Dynamic VietQR:** Built-in modal supporting instant donation presets (1K, 5K, 10K VND or custom) via auto-generated Techcombank VietQR and one-click account copying.
 
 ---
@@ -131,7 +133,8 @@ Tác giả tôn trọng quyền sở hữu trí tuệ và mong muốn của các
 
 | Phiên bản | Điểm mới & Cải tiến chính |
 | :--- | :--- |
-| **v1.3.6 (Mới nhất)** | Nâng cấp toàn diện độ nét OCR: Phóng to 2.5x kèm lọc ngưỡng tương phản cao (triệt tiêu nền mờ bảng 18+), cơ chế quét dự phòng thông minh (Fallback ROI) tự động nhận diện thẻ súng đang chọn ở cột bên trái và cắt bỏ tên skin, lọc triệt để từ rác bảng cảnh báo 18+ và sửa 14 lỗi nhận diện súng thực tế (G3, P90, AR-57, PSG-1, M82, M7, MK4, R93, QBZ95-1, SG552, CI-19, SR-3M, VECTOR, 725 Double-Barrel). |
+| **v1.3.7 (Mới nhất)** | Nâng cấp bộ kiểm duyệt ngữ nghĩa (Semantic Data Validator) loại bỏ 100% bản ghi sai tên súng bên trong loadout code và mã rác; áp dụng thuật toán xếp hạng cân bằng đa nguồn (Source-Normalized Ranking) hiển thị đan xen công bằng các bản build giữa DFTools, DFBuilds và FPSMeta; chuẩn hóa tuyên bố tương thích Anti-Cheat chính xác và khách quan. |
+| **v1.3.6** | Nâng cấp toàn diện độ nét OCR: Phóng to 2.5x kèm lọc ngưỡng tương phản cao (triệt tiêu nền mờ bảng 18+), cơ chế quét dự phòng thông minh (Fallback ROI) tự động nhận diện thẻ súng đang chọn ở cột bên trái và cắt bỏ tên skin, lọc triệt để từ rác bảng cảnh báo 18+ và sửa 14 lỗi nhận diện súng thực tế (G3, P90, AR-57, PSG-1, M82, M7, MK4, R93, QBZ95-1, SG552, CI-19, SR-3M, VECTOR, 725 Double-Barrel). |
 | **v1.3.5** | Nâng cấp toàn diện bộ nhận diện vũ khí OCR: Tự động loại bỏ hậu tố phân loại súng (Tiếng Anh & Tiếng Việt), bổ sung bảng ánh xạ bí danh (`Shotgun Hai Nòng` $\rightarrow$ `725 Double-Barrel`, `Cung phức hợp` $\rightarrow$ `Compound Bow`...), siết chặt thuật toán so khớp 5 tầng (sửa triệt để lỗi nhận nhầm `G3`, `M249`, `PKM`, `M14`, `R93`) và hiển thị cảnh báo thông minh khi bộ lọc hiện tại chưa có cấu hình. |
 | **v1.3.4** | Tích hợp cửa sổ `[❤ ỦNG HỘ / SUPPORT]` với mã VietQR Techcombank động (tự điền số tiền theo 3 mốc `1.000đ`, `5.000đ`, `10.000đ` hoặc tùy ý), sao chép nhanh STK và chuẩn hóa tuyên bố Freeware 100% cho cộng đồng. |
 | **v1.3.3** | Bổ sung bộ kiểm duyệt dữ liệu `Data Validator` trong bộ cào lọc sạch mã build lỗi/rác, tự động đối chiếu sửa `mode` và ưu tiên thứ tự khớp chính xác tên súng OCR 100%. |

@@ -143,7 +143,7 @@
       "Đột kích"
     ],
     "copy_count": 1234,
-    "loadout_code": "CAR-15 Assault Rifle-Warfare-6JHJ0580B1U4GH9U0RGNM\n"
+    "loadout_code": "CAR-15 Assault Rifle-Warfare-6JHJ0580B1U4GH9U0RGNM"
   },
   {
     "server": "Garena",
@@ -273,7 +273,7 @@
       "Đột kích"
     ],
     "copy_count": 746,
-    "loadout_code": "AS Val Assault Rifle-Warfare-6JHJ0UK0B1U4GH9U0RGNM\n"
+    "loadout_code": "AS Val Assault Rifle-Warfare-6JHJ0UK0B1U4GH9U0RGNM"
   },
   {
     "server": "Garena",
@@ -520,13 +520,13 @@
       "Đột kích"
     ],
     "copy_count": 456,
-    "loadout_code": "ASh-12 Battle Rifle-Warfare-6JHJ0HK0B1U4GH9U0RGNM\n"
+    "loadout_code": "ASh-12 Battle Rifle-Warfare-6JHJ0HK0B1U4GH9U0RGNM"
   },
   {
     "server": "Garena",
     "mode": "Warfare",
     "weapon_type": "Assault Rifle",
-    "weapon": "KC17",
+    "weapon": "KC-17",
     "classification": "DFTools, Cấu hình đề xuất, Tất cả binh chủng",
     "tags": [
       "DFTools",
@@ -577,7 +577,7 @@
       "Tất cả binh chủng"
     ],
     "copy_count": 371,
-    "loadout_code": "AK-12 Assault Rifle-Warfare-6JHIV100B1U4GH9U0RGNM\n"
+    "loadout_code": "AK-12 Assault Rifle-Warfare-6JHIV100B1U4GH9U0RGNM"
   },
   {
     "server": "Garena",
@@ -643,7 +643,7 @@
     "server": "Garena",
     "mode": "Warfare",
     "weapon_type": "LMG",
-    "weapon": "QJB201",
+    "weapon": "QJB-201",
     "classification": "DFTools, Tầm gần, Công binh",
     "tags": [
       "DFTools",
@@ -694,7 +694,7 @@
       "Hỗ trợ"
     ],
     "copy_count": 293,
-    "loadout_code": "SCAR-H Battle Rifle-Warfare-6JHIVI00B1U4GH9U0RGNM\n"
+    "loadout_code": "SCAR-H Battle Rifle-Warfare-6JHIVI00B1U4GH9U0RGNM"
   },
   {
     "server": "Garena",
@@ -861,7 +861,7 @@
   },
   {
     "server": "Garena",
-    "mode": "Warfare",
+    "mode": "Operations",
     "weapon_type": "Assault Rifle",
     "weapon": "AK-12",
     "classification": "DFTools, Thao tác linh hoạt, Đáng tiền nhất, Tất cả binh chủng",
@@ -1049,7 +1049,7 @@
       "Tất cả binh chủng"
     ],
     "copy_count": 139,
-    "loadout_code": "M250通用機槍-全面战场-6JGI18S0B1U4GH9U0RGNM\n"
+    "loadout_code": "M250通用機槍-全面战场-6JGI18S0B1U4GH9U0RGNM"
   },
   {
     "server": "Garena",
@@ -1331,20 +1331,6 @@
     "server": "Garena",
     "mode": "Warfare",
     "weapon_type": "Assault Rifle",
-    "weapon": "M7",
-    "classification": "DFTools, Cấu hình đề xuất, Đột kích",
-    "tags": [
-      "DFTools",
-      "Cấu hình đề xuất",
-      "Đột kích"
-    ],
-    "copy_count": 56,
-    "loadout_code": "Fuzil de Assalto MDR-Conquista-6LCANMO08DM0K6HV12T9C"
-  },
-  {
-    "server": "Garena",
-    "mode": "Warfare",
-    "weapon_type": "Assault Rifle",
     "weapon": "SR-3M",
     "classification": "DFTools, Độ ổn định cao, Tầm gần, Hỗ trợ",
     "tags": [
@@ -1529,20 +1515,6 @@
   {
     "server": "Garena",
     "mode": "Operations",
-    "weapon_type": "SMG",
-    "weapon": "MP7",
-    "classification": "DFTools, Dễ dùng cho người mới, Sát thương bùng nổ",
-    "tags": [
-      "DFTools",
-      "Dễ dùng cho người mới",
-      "Sát thương bùng nổ"
-    ],
-    "copy_count": 1335,
-    "loadout_code": "MK4 Submachine Gun-Chiến Dịch Sinh Tồn-6J3OHS80DM4CO5LP50QD5"
-  },
-  {
-    "server": "Garena",
-    "mode": "Operations",
     "weapon_type": "Assault Rifle",
     "weapon": "AS VAL",
     "classification": "DFTools, Đáng tiền nhất, Tầm gần",
@@ -1565,7 +1537,7 @@
       "Cấu hình đề xuất"
     ],
     "copy_count": 1304,
-    "loadout_code": "MK4 Submachine Gun-Operations-6JHIU7O0B1U4GH9U0RGNM\n"
+    "loadout_code": "MK4 Submachine Gun-Operations-6JHIU7O0B1U4GH9U0RGNM"
   },
   {
     "server": "Garena",
@@ -1593,7 +1565,7 @@
       "Đáng tiền nhất"
     ],
     "copy_count": 1052,
-    "loadout_code": "AK-12 Assault Rifle-Operations-6JHIOM00B1U4GH9U0RGNM\n"
+    "loadout_code": "AK-12 Assault Rifle-Operations-6JHIOM00B1U4GH9U0RGNM"
   },
   {
     "server": "Garena",
@@ -1620,7 +1592,7 @@
       "Cấu hình đề xuất"
     ],
     "copy_count": 989,
-    "loadout_code": "AKS-74 Assault Rifle-Operations-6JHITPK0B1U4GH9U0RGNM\n"
+    "loadout_code": "AKS-74 Assault Rifle-Operations-6JHITPK0B1U4GH9U0RGNM"
   },
   {
     "server": "Garena",
@@ -1633,7 +1605,7 @@
       "Cấu hình đề xuất"
     ],
     "copy_count": 955,
-    "loadout_code": "AKM Assault Rifle-Operations-6JHIKUO0B1U4GH9U0RGNM\n"
+    "loadout_code": "AKM Assault Rifle-Operations-6JHIKUO0B1U4GH9U0RGNM"
   },
   {
     "server": "Garena",
@@ -1660,7 +1632,7 @@
       "Cấu hình đề xuất"
     ],
     "copy_count": 794,
-    "loadout_code": "M249 Light Machine Gun-Operations-6JHITB00B1U4GH9U0RGNM\n"
+    "loadout_code": "M249 Light Machine Gun-Operations-6JHITB00B1U4GH9U0RGNM"
   },
   {
     "server": "Garena",
@@ -1674,7 +1646,7 @@
       "Đáng tiền nhất"
     ],
     "copy_count": 778,
-    "loadout_code": "CAR-15 Assault Rifle-Operations-6JHILRG0B1U4GH9U0RGNM\n"
+    "loadout_code": "CAR-15 Assault Rifle-Operations-6JHILRG0B1U4GH9U0RGNM"
   },
   {
     "server": "Garena",
@@ -1755,7 +1727,7 @@
       "Đáng tiền nhất"
     ],
     "copy_count": 598,
-    "loadout_code": "G3 Battle Rifle-Operations-6JHIKO80B1U4GH9U0RGNM\n"
+    "loadout_code": "G3 Battle Rifle-Operations-6JHIKO80B1U4GH9U0RGNM"
   },
   {
     "server": "Garena",
@@ -1774,7 +1746,7 @@
     "server": "Garena",
     "mode": "Operations",
     "weapon_type": "Assault Rifle",
-    "weapon": "KC17",
+    "weapon": "KC-17",
     "classification": "DFTools, Cấu hình đề xuất",
     "tags": [
       "DFTools",
@@ -1795,7 +1767,7 @@
       "Cấu hình đề xuất"
     ],
     "copy_count": 549,
-    "loadout_code": "AUG突擊步槍-烽火地帶-6JGT9040B1U4GH9U0RGNM\n"
+    "loadout_code": "AUG突擊步槍-烽火地帶-6JGT9040B1U4GH9U0RGNM"
   },
   {
     "server": "Garena",
@@ -1942,7 +1914,7 @@
       "Cấu hình đề xuất"
     ],
     "copy_count": 407,
-    "loadout_code": "SR-3M Compact Assault Rifle-Operations-6JHIUGG0B1U4GH9U0RGNM\n"
+    "loadout_code": "SR-3M Compact Assault Rifle-Operations-6JHIUGG0B1U4GH9U0RGNM"
   },
   {
     "server": "Garena",
@@ -2002,14 +1974,14 @@
     "server": "Garena",
     "mode": "Operations",
     "weapon_type": "LMG",
-    "weapon": "QJB201",
+    "weapon": "QJB-201",
     "classification": "DFTools, Cấu hình đề xuất",
     "tags": [
       "DFTools",
       "Cấu hình đề xuất"
     ],
     "copy_count": 388,
-    "loadout_code": "QJB201 Light Machine Gun-Operations-6JHIQ2C0B1U4GH9U0RGNM\n"
+    "loadout_code": "QJB201 Light Machine Gun-Operations-6JHIQ2C0B1U4GH9U0RGNM"
   },
   {
     "server": "Garena",
@@ -2037,7 +2009,7 @@
       "Đáng tiền nhất"
     ],
     "copy_count": 366,
-    "loadout_code": "ASh-12 Battle Rifle-Operations-6JHIP240B1U4GH9U0RGNM\n"
+    "loadout_code": "ASh-12 Battle Rifle-Operations-6JHIP240B1U4GH9U0RGNM"
   },
   {
     "server": "Garena",
@@ -2117,7 +2089,7 @@
       "Cấu hình đề xuất"
     ],
     "copy_count": 292,
-    "loadout_code": "PKM General Machine Gun-Operations-6JHISO80B1U4GH9U0RGNM\n"
+    "loadout_code": "PKM General Machine Gun-Operations-6JHISO80B1U4GH9U0RGNM"
   },
   {
     "server": "Garena",
@@ -2144,7 +2116,7 @@
       "Đáng tiền nhất"
     ],
     "copy_count": 289,
-    "loadout_code": "PTR-32 Assault Rifle-Operations-6JHILA40B1U4GH9U0RGNM\n"
+    "loadout_code": "PTR-32 Assault Rifle-Operations-6JHILA40B1U4GH9U0RGNM"
   },
   {
     "server": "Garena",
@@ -2254,7 +2226,7 @@
       "Đáng tiền nhất"
     ],
     "copy_count": 249,
-    "loadout_code": "M16A4 Assault Rifle-Operations-6JHINES0B1U4GH9U0RGNM\n"
+    "loadout_code": "M16A4 Assault Rifle-Operations-6JHINES0B1U4GH9U0RGNM"
   },
   {
     "server": "Garena",
@@ -2342,7 +2314,7 @@
     "server": "Garena",
     "mode": "Operations",
     "weapon_type": "LMG",
-    "weapon": "QJB201",
+    "weapon": "QJB-201",
     "classification": "DFTools, Đáng tiền nhất",
     "tags": [
       "DFTools",
@@ -2464,7 +2436,7 @@
     "server": "Garena",
     "mode": "Operations",
     "weapon_type": "Special",
-    "weapon": "LEVER-ACTION",
+    "weapon": "MARLIN LEVER-ACTION",
     "classification": "DFTools, Tầm xa",
     "tags": [
       "DFTools",
@@ -2977,20 +2949,6 @@
   {
     "server": "Infinity",
     "mode": "Warfare",
-    "weapon_type": "Assault Rifle",
-    "weapon": "K416",
-    "classification": "DFTools, Đáng tiền nhất, Đột kích",
-    "tags": [
-      "DFTools",
-      "Đáng tiền nhất",
-      "Đột kích"
-    ],
-    "copy_count": 2461,
-    "loadout_code": "Автомат AR-57-Сражения-6JPPIOC01KLPVBIAJFKFN"
-  },
-  {
-    "server": "Infinity",
-    "mode": "Warfare",
     "weapon_type": "Sniper Rifle",
     "weapon": "SV-98",
     "classification": "DFTools",
@@ -3276,18 +3234,6 @@
     ],
     "copy_count": 1252,
     "loadout_code": "MP5 Submachine Gun-Warfare-6JF8PP0073PLKDGT2OU3K"
-  },
-  {
-    "server": "Infinity",
-    "mode": "Warfare",
-    "weapon_type": "Assault Rifle",
-    "weapon": "AK-12",
-    "classification": "DFTools",
-    "tags": [
-      "DFTools"
-    ],
-    "copy_count": 1245,
-    "loadout_code": "Assault Rifle-Warfare-6ENTK0400U98BTLV400GS"
   },
   {
     "server": "Infinity",
@@ -3730,7 +3676,7 @@
     "server": "Infinity",
     "mode": "Warfare",
     "weapon_type": "LMG",
-    "weapon": "QJB201",
+    "weapon": "QJB-201",
     "classification": "DFTools, Đáng tiền nhất, Cấu hình đề xuất, Công binh",
     "tags": [
       "DFTools",
@@ -3886,7 +3832,7 @@
     "server": "Infinity",
     "mode": "Warfare",
     "weapon_type": "Assault Rifle",
-    "weapon": "KC17",
+    "weapon": "KC-17",
     "classification": "DFTools",
     "tags": [
       "DFTools"
@@ -4184,7 +4130,7 @@
       "Cấu hình đề xuất"
     ],
     "copy_count": 349,
-    "loadout_code": "AS Val突擊步槍-全面战场-6JHI8HG073PI62OT9AFJ2\n"
+    "loadout_code": "AS Val突擊步槍-全面战场-6JHI8HG073PI62OT9AFJ2"
   },
   {
     "server": "Infinity",
@@ -4283,20 +4229,6 @@
     ],
     "copy_count": 313,
     "loadout_code": "Vector Submachine Gun-Warfare-6JJSJBS073PI62OT9AFJ2"
-  },
-  {
-    "server": "Infinity",
-    "mode": "Warfare",
-    "weapon_type": "Assault Rifle",
-    "weapon": "QBZ95-Z",
-    "classification": "DFTools, Độ ổn định cao, Tất cả binh chủng",
-    "tags": [
-      "DFTools",
-      "Độ ổn định cao",
-      "Tất cả binh chủng"
-    ],
-    "copy_count": 311,
-    "loadout_code": "Fusil de asalto QBZ-95-1-Conflicto Bélico-6F4SUR409SFKBQISO64FO"
   },
   {
     "server": "Infinity",
@@ -4443,7 +4375,7 @@
       "Tất cả binh chủng"
     ],
     "copy_count": 276,
-    "loadout_code": "ASh-12戰鬥步槍-全战场-6JHI964073PI62OT9AFJ2\n"
+    "loadout_code": "ASh-12戰鬥步槍-全战场-6JHI964073PI62OT9AFJ2"
   },
   {
     "server": "Infinity",
@@ -4578,7 +4510,7 @@
     "server": "Infinity",
     "mode": "Warfare",
     "weapon_type": "LMG",
-    "weapon": "QJB201",
+    "weapon": "QJB-201",
     "classification": "DFTools, Tầm gần, Độ ổn định cao, Công binh",
     "tags": [
       "DFTools",
@@ -4699,7 +4631,7 @@
   },
   {
     "server": "Infinity",
-    "mode": "Warfare",
+    "mode": "Operations",
     "weapon_type": "SMG",
     "weapon": "VITYAZ",
     "classification": "DFTools, Sát thương bùng nổ, Hỏa lực duy trì, Tất cả binh chủng",
@@ -4769,7 +4701,7 @@
     "server": "Infinity",
     "mode": "Warfare",
     "weapon_type": "Assault Rifle",
-    "weapon": "KC17",
+    "weapon": "KC-17",
     "classification": "DFTools, Dễ dùng cho người mới, Tầm xa, Tất cả binh chủng",
     "tags": [
       "DFTools",
@@ -4921,7 +4853,7 @@
     "server": "Infinity",
     "mode": "Warfare",
     "weapon_type": "LMG",
-    "weapon": "QJB201",
+    "weapon": "QJB-201",
     "classification": "DFTools, Tầm xa, Độ ổn định cao, Công binh",
     "tags": [
       "DFTools",
@@ -5060,7 +4992,7 @@
     "server": "Infinity",
     "mode": "Warfare",
     "weapon_type": "Assault Rifle",
-    "weapon": "KC17",
+    "weapon": "KC-17",
     "classification": "DFTools, Cấu hình đề xuất, Độ ổn định cao, Đột kích",
     "tags": [
       "DFTools",
@@ -5100,21 +5032,6 @@
   {
     "server": "Infinity",
     "mode": "Warfare",
-    "weapon_type": "Assault Rifle",
-    "weapon": "AK-12",
-    "classification": "DFTools, Độ ổn định cao, Cấu hình đề xuất, Đột kích",
-    "tags": [
-      "DFTools",
-      "Độ ổn định cao",
-      "Cấu hình đề xuất",
-      "Đột kích"
-    ],
-    "copy_count": 160,
-    "loadout_code": "Автомат AR-57-Сражения-6JT7C68040DFSDN34GKRV"
-  },
-  {
-    "server": "Infinity",
-    "mode": "Warfare",
     "weapon_type": "SMG",
     "weapon": "QCQ171",
     "classification": "DFTools, Dễ dùng cho người mới, Độ ổn định cao, Tất cả binh chủng",
@@ -5139,7 +5056,7 @@
       "Đột kích"
     ],
     "copy_count": 158,
-    "loadout_code": "SCAR-H戰鬥步槍-全面战场-6JHIB0S073PI62OT9AFJ2\n"
+    "loadout_code": "SCAR-H戰鬥步槍-全面战场-6JHIB0S073PI62OT9AFJ2"
   },
   {
     "server": "Infinity",
@@ -5542,7 +5459,7 @@
     "server": "Infinity",
     "mode": "Warfare",
     "weapon_type": "Assault Rifle",
-    "weapon": "KC17",
+    "weapon": "KC-17",
     "classification": "DFTools, Dễ dùng cho người mới, Đột kích",
     "tags": [
       "DFTools",
@@ -5775,7 +5692,7 @@
     "server": "Infinity",
     "mode": "Warfare",
     "weapon_type": "Assault Rifle",
-    "weapon": "KC17",
+    "weapon": "KC-17",
     "classification": "DFTools",
     "tags": [
       "DFTools"
@@ -6086,20 +6003,6 @@
   {
     "server": "Infinity",
     "mode": "Warfare",
-    "weapon_type": "Special",
-    "weapon": "COMPOUND BOW",
-    "classification": "DFTools, Cấu hình đề xuất, Tất cả binh chủng",
-    "tags": [
-      "DFTools",
-      "Cấu hình đề xuất",
-      "Tất cả binh chủng"
-    ],
-    "copy_count": 65,
-    "loadout_code": "Desert Eagle-Warfare-6JSINH803TLF5PCJAJKI3"
-  },
-  {
-    "server": "Infinity",
-    "mode": "Warfare",
     "weapon_type": "Assault Rifle",
     "weapon": "SG552",
     "classification": "DFTools, Tầm xa, Đáng tiền nhất, Tất cả binh chủng",
@@ -6249,7 +6152,7 @@
       "Tất cả binh chủng"
     ],
     "copy_count": 56,
-    "loadout_code": "CAR-15突擊步槍-全面战场-6JHIA28073PI62OT9AFJ2\n"
+    "loadout_code": "CAR-15突擊步槍-全面战场-6JHIA28073PI62OT9AFJ2"
   },
   {
     "server": "Infinity",
@@ -6292,21 +6195,6 @@
     ],
     "copy_count": 54,
     "loadout_code": "Vityaz Submachine Gun-Warfare-6KH62VK0C9G0GN8V454A5"
-  },
-  {
-    "server": "Infinity",
-    "mode": "Warfare",
-    "weapon_type": "Sniper Rifle",
-    "weapon": "AWM",
-    "classification": "DFTools, Đa dụng, Độ ổn định cao, Đột kích",
-    "tags": [
-      "DFTools",
-      "Đa dụng",
-      "Độ ổn định cao",
-      "Đột kích"
-    ],
-    "copy_count": 54,
-    "loadout_code": "Автомат AR-57-Сражения-6K4ACNO07EADLEBMFVFU6"
   },
   {
     "server": "Infinity",
@@ -6375,7 +6263,7 @@
       "Tất cả binh chủng"
     ],
     "copy_count": 45,
-    "loadout_code": "AK-12突擊步槍-全面战场-6JHIBSO073PI62OT9AFJ2\n"
+    "loadout_code": "AK-12突擊步槍-全面战场-6JHIBSO073PI62OT9AFJ2"
   },
   {
     "server": "Infinity",
@@ -6394,7 +6282,7 @@
   },
   {
     "server": "Infinity",
-    "mode": "Warfare",
+    "mode": "Operations",
     "weapon_type": "Assault Rifle",
     "weapon": "M7",
     "classification": "DFTools, Cấu hình đề xuất, Đột kích",
@@ -6404,7 +6292,7 @@
       "Đột kích"
     ],
     "copy_count": 44,
-    "loadout_code": "M7戰鬥步槍-烽火地帶-6JHICJ4073PI62OT9AFJ2\n"
+    "loadout_code": "M7戰鬥步槍-烽火地帶-6JHICJ4073PI62OT9AFJ2"
   },
   {
     "server": "Infinity",
@@ -6425,7 +6313,7 @@
     "server": "Infinity",
     "mode": "Warfare",
     "weapon_type": "LMG",
-    "weapon": "QJB201",
+    "weapon": "QJB-201",
     "classification": "DFTools, Độ ổn định cao, Dễ dùng cho người mới, Đột kích",
     "tags": [
       "DFTools",
@@ -6462,21 +6350,6 @@
     ],
     "copy_count": 42,
     "loadout_code": "M4A1 Assault Rifle-Warfare-6ETN8RK0CH9JKOV493VV2"
-  },
-  {
-    "server": "Infinity",
-    "mode": "Warfare",
-    "weapon_type": "Marksman Rifle",
-    "weapon": "MINI-14",
-    "classification": "DFTools, Cấu hình đề xuất, Đa dụng, Tất cả binh chủng",
-    "tags": [
-      "DFTools",
-      "Cấu hình đề xuất",
-      "Đa dụng",
-      "Tất cả binh chủng"
-    ],
-    "copy_count": 41,
-    "loadout_code": "Thompson SMG-Warfare-6LKM3JC0C1J62U5ERUBMO"
   },
   {
     "server": "Infinity",
@@ -6789,7 +6662,7 @@
     "server": "Infinity",
     "mode": "Operations",
     "weapon_type": "LMG",
-    "weapon": "QJB201",
+    "weapon": "QJB-201",
     "classification": "DFTools, Dễ dùng cho người mới, Tầm gần, Tất cả binh chủng",
     "tags": [
       "DFTools",
@@ -6877,21 +6750,6 @@
   {
     "server": "Infinity",
     "mode": "Warfare",
-    "weapon_type": "Assault Rifle",
-    "weapon": "M7",
-    "classification": "DFTools, Độ ổn định cao, Tầm xa, Hỗ trợ",
-    "tags": [
-      "DFTools",
-      "Độ ổn định cao",
-      "Tầm xa",
-      "Hỗ trợ"
-    ],
-    "copy_count": 14,
-    "loadout_code": "Пистолет-пулемет MP7-Сражения-6LM7KH8073PMTDTFH3F61"
-  },
-  {
-    "server": "Infinity",
-    "mode": "Warfare",
     "weapon_type": "Pistol",
     "weapon": "DESERT EAGLE",
     "classification": "DFTools, Đáng tiền nhất, Thao tác linh hoạt, Tất cả binh chủng",
@@ -6933,21 +6791,6 @@
     ],
     "copy_count": 1,
     "loadout_code": "CAR-15 Assault Rifle-Warfare-6LTG8900ABIQPIL9JSIFC"
-  },
-  {
-    "server": "Infinity",
-    "mode": "Warfare",
-    "weapon_type": "Assault Rifle",
-    "weapon": "M16A4",
-    "classification": "DFTools, Cấu hình đề xuất, Thao tác linh hoạt, Tất cả binh chủng",
-    "tags": [
-      "DFTools",
-      "Cấu hình đề xuất",
-      "Thao tác linh hoạt",
-      "Tất cả binh chủng"
-    ],
-    "copy_count": 0,
-    "loadout_code": "Автомат M4A1-Сражения-6LUB3EO06RMIAPTLCP01U"
   },
   {
     "server": "Infinity",
@@ -7373,7 +7216,7 @@
       "Cấu hình đề xuất"
     ],
     "copy_count": 1104,
-    "loadout_code": "MK4衝鋒槍-烽火地帶-6JHI75K073PI62OT9AFJ2\n"
+    "loadout_code": "MK4衝鋒槍-烽火地帶-6JHI75K073PI62OT9AFJ2"
   },
   {
     "server": "Infinity",
@@ -7483,7 +7326,7 @@
   },
   {
     "server": "Infinity",
-    "mode": "Operations",
+    "mode": "Warfare",
     "weapon_type": "Assault Rifle",
     "weapon": "QBZ95-1",
     "classification": "DFTools, Độ ổn định cao",
@@ -7577,7 +7420,7 @@
     "server": "Infinity",
     "mode": "Operations",
     "weapon_type": "LMG",
-    "weapon": "QJB201",
+    "weapon": "QJB-201",
     "classification": "DFTools, Cấu hình đề xuất, Đáng tiền nhất",
     "tags": [
       "DFTools",
@@ -7824,7 +7667,7 @@
       "Cấu hình đề xuất"
     ],
     "copy_count": 574,
-    "loadout_code": "M249輕機槍-烽火地帶-6JHI4N8073PI62OT9AFJ2\n"
+    "loadout_code": "M249輕機槍-烽火地帶-6JHI4N8073PI62OT9AFJ2"
   },
   {
     "server": "Infinity",
@@ -7894,7 +7737,7 @@
     "server": "Infinity",
     "mode": "Operations",
     "weapon_type": "Special",
-    "weapon": "LEVER-ACTION RIFLE",
+    "weapon": "MARLIN LEVER-ACTION",
     "classification": "DFTools, Đáng tiền nhất, Cấu hình đề xuất",
     "tags": [
       "DFTools",
@@ -7941,7 +7784,7 @@
       "Cấu hình đề xuất"
     ],
     "copy_count": 526,
-    "loadout_code": "AK-12突擊步槍-烽火地帶-6JHHJB8073PI62OT9AFJ2\n"
+    "loadout_code": "AK-12突擊步槍-烽火地帶-6JHHJB8073PI62OT9AFJ2"
   },
   {
     "server": "Infinity",
@@ -8119,7 +7962,7 @@
       "Cấu hình đề xuất"
     ],
     "copy_count": 437,
-    "loadout_code": "M16A4突擊步槍-烽火地帶-6JHHE9O073PI62OT9AFJ2\n"
+    "loadout_code": "M16A4突擊步槍-烽火地帶-6JHHE9O073PI62OT9AFJ2"
   },
   {
     "server": "Infinity",
@@ -8278,7 +8121,7 @@
       "Cấu hình đề xuất"
     ],
     "copy_count": 382,
-    "loadout_code": "AKS-74U突擊步槍-烽火地帶-6JHI5CC073PI62OT9AFJ2\n"
+    "loadout_code": "AKS-74U突擊步槍-烽火地帶-6JHI5CC073PI62OT9AFJ2"
   },
   {
     "server": "Infinity",
@@ -8566,7 +8409,7 @@
     "server": "Infinity",
     "mode": "Operations",
     "weapon_type": "Assault Rifle",
-    "weapon": "KC17",
+    "weapon": "KC-17",
     "classification": "DFTools, Dễ dùng cho người mới",
     "tags": [
       "DFTools",
@@ -8758,7 +8601,7 @@
       "Cấu hình đề xuất"
     ],
     "copy_count": 260,
-    "loadout_code": "QJB-201輕機槍-烽火地帶-6JHI2RS073PI62OT9AFJ2\n"
+    "loadout_code": "QJB-201輕機槍-烽火地帶-6JHI2RS073PI62OT9AFJ2"
   },
   {
     "server": "Infinity",
@@ -8804,7 +8647,7 @@
     "server": "Infinity",
     "mode": "Operations",
     "weapon_type": "Pistol",
-    "weapon": "QSZ92G",
+    "weapon": "QSZ-92G",
     "classification": "DFTools, Thao tác linh hoạt, Cấu hình đề xuất",
     "tags": [
       "DFTools",
@@ -8866,7 +8709,7 @@
       "Cấu hình đề xuất"
     ],
     "copy_count": 250,
-    "loadout_code": "PTR-32突擊步槍-烽火地帶-6JHHBM0073PI62OT9AFJ2\n"
+    "loadout_code": "PTR-32突擊步槍-烽火地帶-6JHHBM0073PI62OT9AFJ2"
   },
   {
     "server": "Infinity",
@@ -9023,7 +8866,7 @@
       "Cấu hình đề xuất"
     ],
     "copy_count": 237,
-    "loadout_code": "ASh-12戰鬥步槍-烽火地帶-6JHHJR8073PI62OT9AFJ2\n"
+    "loadout_code": "ASh-12戰鬥步槍-烽火地帶-6JHHJR8073PI62OT9AFJ2"
   },
   {
     "server": "Infinity",
@@ -9036,7 +8879,7 @@
       "Cấu hình đề xuất"
     ],
     "copy_count": 237,
-    "loadout_code": "AKM突擊步槍-烽火地帶-6JHHB94073PI62OT9AFJ2\n"
+    "loadout_code": "AKM突擊步槍-烽火地帶-6JHHB94073PI62OT9AFJ2"
   },
   {
     "server": "Infinity",
@@ -9110,20 +8953,6 @@
   {
     "server": "Infinity",
     "mode": "Operations",
-    "weapon_type": "Assault Rifle",
-    "weapon": "AK-12",
-    "classification": "DFTools, Tầm xa, Dễ dùng cho người mới",
-    "tags": [
-      "DFTools",
-      "Tầm xa",
-      "Dễ dùng cho người mới"
-    ],
-    "copy_count": 227,
-    "loadout_code": "SG552 Assault Rifle-Operations-6KH4PFK04JQPFVUAHV9AC"
-  },
-  {
-    "server": "Infinity",
-    "mode": "Operations",
     "weapon_type": "SMG",
     "weapon": "VECTOR",
     "classification": "DFTools, Hỏa lực duy trì, Tầm gần",
@@ -9165,7 +8994,7 @@
     "server": "Infinity",
     "mode": "Operations",
     "weapon_type": "LMG",
-    "weapon": "QJB201",
+    "weapon": "QJB-201",
     "classification": "DFTools, Độ ổn định cao, Tầm xa",
     "tags": [
       "DFTools",
@@ -9258,7 +9087,7 @@
     "server": "Infinity",
     "mode": "Warfare",
     "weapon_type": "LMG",
-    "weapon": "QJB201",
+    "weapon": "QJB-201",
     "classification": "DFTools",
     "tags": [
       "DFTools"
@@ -9625,20 +9454,6 @@
     "server": "Infinity",
     "mode": "Operations",
     "weapon_type": "Assault Rifle",
-    "weapon": "M4A1",
-    "classification": "DFTools, Đáng tiền nhất, Tầm gần",
-    "tags": [
-      "DFTools",
-      "Đáng tiền nhất",
-      "Tầm gần"
-    ],
-    "copy_count": 149,
-    "loadout_code": "M7 Battle Rifle-Operations-6JM4QMO066SHC1NGUVR49"
-  },
-  {
-    "server": "Infinity",
-    "mode": "Operations",
-    "weapon_type": "Assault Rifle",
     "weapon": "SG552",
     "classification": "DFTools",
     "tags": [
@@ -9727,7 +9542,7 @@
       "Cấu hình đề xuất"
     ],
     "copy_count": 139,
-    "loadout_code": "PKM通用機槍-烽火地帶-6JHI3T8073PI62OT9AFJ2\n"
+    "loadout_code": "PKM通用機槍-烽火地帶-6JHI3T8073PI62OT9AFJ2"
   },
   {
     "server": "Infinity",
@@ -9785,7 +9600,7 @@
     "server": "Infinity",
     "mode": "Operations",
     "weapon_type": "Special",
-    "weapon": "LEVER-ACTION",
+    "weapon": "MARLIN LEVER-ACTION",
     "classification": "DFTools, Tầm xa",
     "tags": [
       "DFTools",
@@ -9819,7 +9634,7 @@
       "Cấu hình đề xuất"
     ],
     "copy_count": 134,
-    "loadout_code": "QBZ95-1 Assault Rifle-Operations-6JGSEUG073PLKDGT2OU3K\n"
+    "loadout_code": "QBZ95-1 Assault Rifle-Operations-6JGSEUG073PLKDGT2OU3K"
   },
   {
     "server": "Infinity",
@@ -9860,7 +9675,7 @@
       "Cấu hình đề xuất"
     ],
     "copy_count": 131,
-    "loadout_code": "AS Val Assault Rifle-Operations-6JGSAN4073PLKDGT2OU3K\n"
+    "loadout_code": "AS Val Assault Rifle-Operations-6JGSAN4073PLKDGT2OU3K"
   },
   {
     "server": "Infinity",
@@ -9935,7 +9750,7 @@
     "server": "Infinity",
     "mode": "Operations",
     "weapon_type": "LMG",
-    "weapon": "QJB201",
+    "weapon": "QJB-201",
     "classification": "DFTools",
     "tags": [
       "DFTools"
@@ -9996,7 +9811,7 @@
       "Cấu hình đề xuất"
     ],
     "copy_count": 110,
-    "loadout_code": "CAR-15突擊步槍-烽火地帶-6JHHCCS073PI62OT9AFJ2\n"
+    "loadout_code": "CAR-15突擊步槍-烽火地帶-6JHHCCS073PI62OT9AFJ2"
   },
   {
     "server": "Infinity",
@@ -10118,7 +9933,7 @@
       "Cấu hình đề xuất"
     ],
     "copy_count": 98,
-    "loadout_code": "M4A1 Assault Rifle-Operations-6JGSDP8073PLKDGT2OU3K\n"
+    "loadout_code": "M4A1 Assault Rifle-Operations-6JGSDP8073PLKDGT2OU3K"
   },
   {
     "server": "Infinity",
@@ -10159,7 +9974,7 @@
       "Cấu hình đề xuất"
     ],
     "copy_count": 89,
-    "loadout_code": "MK47 Assault Rifle-Operations-6JGIMUS073PLKDGT2OU3K\n"
+    "loadout_code": "MK47 Assault Rifle-Operations-6JGIMUS073PLKDGT2OU3K"
   },
   {
     "server": "Infinity",
@@ -10239,19 +10054,6 @@
     ],
     "copy_count": 77,
     "loadout_code": "MK47 Assault Rifle-Operations-6JLHG6C073PI62OT9AFJ2"
-  },
-  {
-    "server": "Infinity",
-    "mode": "Operations",
-    "weapon_type": "SMG",
-    "weapon": "SMG-45",
-    "classification": "DFTools, Đáng tiền nhất",
-    "tags": [
-      "DFTools",
-      "Đáng tiền nhất"
-    ],
-    "copy_count": 74,
-    "loadout_code": "Bizon Submachine Gun-Operations-6JF8FJC073PLKDGT2OU3K"
   },
   {
     "server": "Infinity",
@@ -10469,7 +10271,7 @@
       "Cấu hình đề xuất"
     ],
     "copy_count": 42,
-    "loadout_code": "SR-3M衝鋒槍-烽火地帶-6JHI7IO073PI62OT9AFJ2\n"
+    "loadout_code": "SR-3M衝鋒槍-烽火地帶-6JHI7IO073PI62OT9AFJ2"
   },
   {
     "server": "Infinity",
@@ -10599,20 +10401,6 @@
   {
     "server": "Infinity",
     "mode": "Operations",
-    "weapon_type": "Marksman Rifle",
-    "weapon": "M14",
-    "classification": "DFTools, Tầm xa, Sát thương bùng nổ",
-    "tags": [
-      "DFTools",
-      "Tầm xa",
-      "Sát thương bùng nổ"
-    ],
-    "copy_count": 20,
-    "loadout_code": "Автомат MDR-«Операции» (режим эвакуации)-6LHHBUS042C76NULUSF12"
-  },
-  {
-    "server": "Infinity",
-    "mode": "Operations",
     "weapon_type": "SMG",
     "weapon": "QCQ171",
     "classification": "DFTools, Dễ dùng cho người mới, Độ ổn định cao",
@@ -10682,21 +10470,6 @@
     ],
     "copy_count": 0,
     "loadout_code": "مدفع رشاش UZI-الحرب-6LV6EM806O2UA1OQ87JF0"
-  },
-  {
-    "server": "Garena",
-    "mode": "Warfare",
-    "weapon_type": "SMG",
-    "weapon": "AKS-74U",
-    "classification": "#garena",
-    "tags": [
-      "DFBuilds",
-      "Warfare",
-      "Garena",
-      "Pro"
-    ],
-    "copy_count": 0,
-    "loadout_code": "البندقية الهجومية AKS-74-الحرب-6LV6D9K06O2UA1OQ87JF0"
   },
   {
     "server": "Garena",
@@ -10940,7 +10713,7 @@
       "Global"
     ],
     "copy_count": 0,
-    "loadout_code": "Global- \nAK-12 Assault Rifle-Warfare-6IDLBK803CCHHIL0UAR5G"
+    "loadout_code": "AK-12 Assault Rifle-Warfare-6IDLBK803CCHHIL0UAR5G"
   },
   {
     "server": "Infinity",
@@ -11623,20 +11396,6 @@
     "loadout_code": "AK-12 Assault Rifle-Warfare-6KRKFCO03QORSQ2MPP5EL"
   },
   {
-    "server": "Garena",
-    "mode": "Operations",
-    "weapon_type": "Assault Rifle",
-    "weapon": "AK-12",
-    "classification": "Test",
-    "tags": [
-      "DFBuilds",
-      "Operations",
-      "Garena"
-    ],
-    "copy_count": 0,
-    "loadout_code": "Rifle-Operations-6KRERP409I9U2SCQGVPM0"
-  },
-  {
     "server": "Infinity",
     "mode": "Warfare",
     "weapon_type": "Assault Rifle",
@@ -11678,35 +11437,6 @@
     ],
     "copy_count": 0,
     "loadout_code": "AK-12 Assault Rifle-Warfare-6ERSU4404IRCV4UQ6PCEV"
-  },
-  {
-    "server": "Infinity",
-    "mode": "Warfare",
-    "weapon_type": "Assault Rifle",
-    "weapon": "AK-12",
-    "classification": "Cộng đồng AK-12",
-    "tags": [
-      "DFBuilds",
-      "Operations",
-      "Global"
-    ],
-    "copy_count": 0,
-    "loadout_code": "K437 Assault Rifle-Warfare-6L9NCUG073PG5455UG4QQ"
-  },
-  {
-    "server": "Infinity",
-    "mode": "Warfare",
-    "weapon_type": "Assault Rifle",
-    "weapon": "AK-12",
-    "classification": "Cộng đồng AK-12",
-    "tags": [
-      "DFBuilds",
-      "Warfare",
-      "Global",
-      "Pro"
-    ],
-    "copy_count": 0,
-    "loadout_code": "KC-17 Assault Rifle-Warfare-6L60US40637L6FN3DT06F"
   },
   {
     "server": "Infinity",
@@ -11889,20 +11619,6 @@
     ],
     "copy_count": 0,
     "loadout_code": "Fusil de asalto AK-12-Conflicto Bélico-6K3QFS809R86268D1BTQP"
-  },
-  {
-    "server": "Infinity",
-    "mode": "Warfare",
-    "weapon_type": "Assault Rifle",
-    "weapon": "AK-12",
-    "classification": "Cộng đồng AK-12",
-    "tags": [
-      "DFBuilds",
-      "Warfare",
-      "Global"
-    ],
-    "copy_count": 0,
-    "loadout_code": "CAR-15 Assault Rifle-Warfare-6KHC55G0B4US7GVJNB71L"
   },
   {
     "server": "Infinity",
@@ -12446,20 +12162,6 @@
     "mode": "Warfare",
     "weapon_type": "Assault Rifle",
     "weapon": "AKM",
-    "classification": "Cộng đồng AKM",
-    "tags": [
-      "DFBuilds",
-      "Warfare",
-      "Global"
-    ],
-    "copy_count": 0,
-    "loadout_code": "K437 Assault Rifle-Warfare-6KIR3640637L6FN3DT06F"
-  },
-  {
-    "server": "Infinity",
-    "mode": "Warfare",
-    "weapon_type": "Assault Rifle",
-    "weapon": "AKM",
     "classification": "This build is hip fire specialized and for close to mid range. It's absolutely game changer because it's capable of precise shot while also useful in flicking moments",
     "tags": [
       "DFBuilds",
@@ -12800,62 +12502,6 @@
     "mode": "Warfare",
     "weapon_type": "SMG",
     "weapon": "AKS-74U",
-    "classification": "ABSOLUTE MONSTER TO MOW DOWN ENEMIES IN WARFARE. FOR BEST EXPERIENCE USE VYRON WITH STIM SHOTS",
-    "tags": [
-      "DFBuilds",
-      "Warfare",
-      "Global"
-    ],
-    "copy_count": 0,
-    "loadout_code": "AKS-74 Assault Rifle-Warfare-6KN4KJG073PMR2GB0H0PR"
-  },
-  {
-    "server": "Infinity",
-    "mode": "Warfare",
-    "weapon_type": "SMG",
-    "weapon": "AKS-74U",
-    "classification": "SCORPION GAMING PAKISTAN",
-    "tags": [
-      "DFBuilds",
-      "Operations",
-      "Global"
-    ],
-    "copy_count": 0,
-    "loadout_code": "AKS-74 Assault Rifle-Warfare-6KGKMD003KJEDGAJ6NICI"
-  },
-  {
-    "server": "Infinity",
-    "mode": "Warfare",
-    "weapon_type": "SMG",
-    "weapon": "AKS-74U",
-    "classification": "For AKS-74 fans, this is a zero recoil lazer build with decent handling",
-    "tags": [
-      "DFBuilds",
-      "Warfare",
-      "Global"
-    ],
-    "copy_count": 0,
-    "loadout_code": "AKS-74 Assault Rifle-Warfare-6LG5L9G0637L6FN3DT06F"
-  },
-  {
-    "server": "Infinity",
-    "mode": "Operations",
-    "weapon_type": "SMG",
-    "weapon": "AKS-74U",
-    "classification": "Problems: Harsh recoil and stability, visual lense bounce. And the solution is here- this build; under 187k",
-    "tags": [
-      "DFBuilds",
-      "Operations",
-      "Global"
-    ],
-    "copy_count": 0,
-    "loadout_code": "AKS-74 Assault Rifle-Operations-6KAVBGK01NFLCIOJPMIHI"
-  },
-  {
-    "server": "Infinity",
-    "mode": "Warfare",
-    "weapon_type": "SMG",
-    "weapon": "AKS-74U",
     "classification": "this is troll build 3 flash light and low recoil",
     "tags": [
       "DFBuilds",
@@ -12870,245 +12516,6 @@
     "mode": "Warfare",
     "weapon_type": "SMG",
     "weapon": "AKS-74U",
-    "classification": "Use this and thank me later.",
-    "tags": [
-      "DFBuilds",
-      "Warfare",
-      "Global"
-    ],
-    "copy_count": 0,
-    "loadout_code": "AKS-74 Assault Rifle-Warfare-6KILJM4073PM5F5P7H6U6"
-  },
-  {
-    "server": "Garena",
-    "mode": "Warfare",
-    "weapon_type": "SMG",
-    "weapon": "AKS-74U",
-    "classification": "This build gives positive stats all across the board with ZERO drawbacks.try it out and see for yourself",
-    "tags": [
-      "DFBuilds",
-      "Warfare",
-      "Garena"
-    ],
-    "copy_count": 0,
-    "loadout_code": "AKS-74 Assault Rifle-Warfare-6K7N4AG02DM5Q0JV5H79D"
-  },
-  {
-    "server": "Infinity",
-    "mode": "Warfare",
-    "weapon_type": "SMG",
-    "weapon": "AKS-74U",
-    "classification": "This build is for extreme confident players who do tactical pushes & objective defense.",
-    "tags": [
-      "DFBuilds",
-      "Warfare",
-      "Global"
-    ],
-    "copy_count": 0,
-    "loadout_code": "AKS-74 Assault Rifle-Warfare-6KK01A00FNQ33PD15D5VA"
-  },
-  {
-    "server": "Infinity",
-    "mode": "Warfare",
-    "weapon_type": "SMG",
-    "weapon": "AKS-74U",
-    "classification": "Cộng đồng AKS-74U",
-    "tags": [
-      "DFBuilds",
-      "Warfare",
-      "Global"
-    ],
-    "copy_count": 0,
-    "loadout_code": "AKS-74 Taarruz Tüfeği-Savaş-6K9V960036D250E4UC99R"
-  },
-  {
-    "server": "Infinity",
-    "mode": "Warfare",
-    "weapon_type": "SMG",
-    "weapon": "AKS-74U",
-    "classification": "Everybody building it wrong and calling the gun trash. But using the gun with the right build definitely worth it.I can't compromise the reputation of this.I restored this legendary weapon to it's pic...",
-    "tags": [
-      "DFBuilds",
-      "Warfare",
-      "Global"
-    ],
-    "copy_count": 0,
-    "loadout_code": "AKS-74 Assault Rifle-Warfare-6KC7C2801NFLCIOJPMIHI"
-  },
-  {
-    "server": "Infinity",
-    "mode": "Warfare",
-    "weapon_type": "SMG",
-    "weapon": "AKS-74U",
-    "classification": "AKS-74 build designed for balanced control, stable handling, and reliable stability during aggressive close to mid range fights. A dependable setup for players who prefer fast but controlled gameplay.",
-    "tags": [
-      "DFBuilds",
-      "Warfare",
-      "Global"
-    ],
-    "copy_count": 0,
-    "loadout_code": "AKS-74 Assault Rifle-Warfare-6K6DNJO0CO50BNN1VFRRG"
-  },
-  {
-    "server": "Infinity",
-    "mode": "Warfare",
-    "weapon_type": "SMG",
-    "weapon": "AKS-74U",
-    "classification": "Cộng đồng AKS-74U",
-    "tags": [
-      "DFBuilds",
-      "Operations",
-      "Global"
-    ],
-    "copy_count": 0,
-    "loadout_code": "AKS-74 Assault Rifle-Warfare-6K5QKTO0637L6FN3DT06F"
-  },
-  {
-    "server": "Infinity",
-    "mode": "Warfare",
-    "weapon_type": "SMG",
-    "weapon": "AKS-74U",
-    "classification": "OG GUN",
-    "tags": [
-      "DFBuilds",
-      "Warfare",
-      "Global"
-    ],
-    "copy_count": 0,
-    "loadout_code": "AKS-74 Assault Rifle-Warfare-6K5FC1C05VS836I7GOOM4"
-  },
-  {
-    "server": "Infinity",
-    "mode": "Warfare",
-    "weapon_type": "SMG",
-    "weapon": "AKS-74U",
-    "classification": "High Mag capacity, tactical gameplay",
-    "tags": [
-      "DFBuilds",
-      "Warfare",
-      "Global",
-      "Semi Pro"
-    ],
-    "copy_count": 0,
-    "loadout_code": "AKS-74 Assault Rifle-Warfare-6L3F6EK0E0CV1PBVPCJAA"
-  },
-  {
-    "server": "Garena",
-    "mode": "Warfare",
-    "weapon_type": "SMG",
-    "weapon": "AKS-74U",
-    "classification": "Cộng đồng AKS-74U",
-    "tags": [
-      "DFBuilds",
-      "Warfare",
-      "Garena"
-    ],
-    "copy_count": 0,
-    "loadout_code": "AKS-74 Assault Rifle-Warfare-6K5PUFO0EC6V2H5DL0C0I"
-  },
-  {
-    "server": "Garena",
-    "mode": "Warfare",
-    "weapon_type": "SMG",
-    "weapon": "AKS-74U",
-    "classification": "This Loadout have very very low recoil use it and destroy anyone stand against you",
-    "tags": [
-      "DFBuilds",
-      "Warfare",
-      "Garena"
-    ],
-    "copy_count": 0,
-    "loadout_code": "البندقية الهجومية AKS-74-الحرب-6KA02040E9PE6DDEFN4BQ"
-  },
-  {
-    "server": "Infinity",
-    "mode": "Warfare",
-    "weapon_type": "SMG",
-    "weapon": "AKS-74U",
-    "classification": "Low recoil, high accuracy.\nYou can change the scope to your preferred choice.\nFor the calibrate, chat me up on WhatsApp \n+234-8141376661",
-    "tags": [
-      "DFBuilds",
-      "Warfare",
-      "Global"
-    ],
-    "copy_count": 0,
-    "loadout_code": "AKS-74 Assault Rifle-Warfare-6KHMH000CMKG89CH18PAA"
-  },
-  {
-    "server": "Infinity",
-    "mode": "Warfare",
-    "weapon_type": "SMG",
-    "weapon": "AKS-74U",
-    "classification": "This one feels like laser beam.",
-    "tags": [
-      "DFBuilds",
-      "Warfare",
-      "Global"
-    ],
-    "copy_count": 0,
-    "loadout_code": "AKS-74 Assault Rifle-Warfare-6L52VQG073PNI8G4K88N9"
-  },
-  {
-    "server": "Infinity",
-    "mode": "Warfare",
-    "weapon_type": "SMG",
-    "weapon": "AKS-74U",
-    "classification": "Aim bot direct headshot 💯☠️",
-    "tags": [
-      "DFBuilds",
-      "Operations",
-      "Global"
-    ],
-    "copy_count": 0,
-    "loadout_code": "AKS-74 Assault Rifle-Warfare-6KDTPGC09V5S9KI4GBS8S"
-  },
-  {
-    "server": "Infinity",
-    "mode": "Warfare",
-    "weapon_type": "SMG",
-    "weapon": "AKS-74U",
-    "classification": "Cộng đồng AKS-74U",
-    "tags": [
-      "DFBuilds",
-      "Warfare",
-      "Global"
-    ],
-    "copy_count": 0,
-    "loadout_code": "AKS-74 Assault Rifle-Warfare-6KF54OC0672MDP2V52F1V"
-  },
-  {
-    "server": "Infinity",
-    "mode": "Warfare",
-    "weapon_type": "SMG",
-    "weapon": "AKS-74U",
-    "classification": "The best build.",
-    "tags": [
-      "DFBuilds",
-      "Warfare",
-      "Global"
-    ],
-    "copy_count": 0,
-    "loadout_code": "AKS-74 Assault Rifle-Warfare-6KJQVJK073PMF7S0VOIMN"
-  },
-  {
-    "server": "Garena",
-    "mode": "Warfare",
-    "weapon_type": "SMG",
-    "weapon": "AKS-74U",
-    "classification": "Good",
-    "tags": [
-      "DFBuilds",
-      "Warfare",
-      "Garena"
-    ],
-    "copy_count": 0,
-    "loadout_code": "AKS-74 Assault Rifle-Warfare-6KRL3Q807BHGN3MKSCFJ6"
-  },
-  {
-    "server": "Infinity",
-    "mode": "Warfare",
-    "weapon_type": "SMG",
-    "weapon": "AKS-74U",
     "classification": "not troll moding at this time fast ads",
     "tags": [
       "DFBuilds",
@@ -13117,34 +12524,6 @@
     ],
     "copy_count": 0,
     "loadout_code": "AKS-74U 돌격소총-전면전-6KPGPHG08LNIU2LA46FTV"
-  },
-  {
-    "server": "Infinity",
-    "mode": "Warfare",
-    "weapon_type": "SMG",
-    "weapon": "AKS-74U",
-    "classification": "Cộng đồng AKS-74U",
-    "tags": [
-      "DFBuilds",
-      "Operations",
-      "Global"
-    ],
-    "copy_count": 0,
-    "loadout_code": "AKS-74 Assault Rifle-Warfare-6KLQUH0073F3V22GQM3RK"
-  },
-  {
-    "server": "Infinity",
-    "mode": "Warfare",
-    "weapon_type": "SMG",
-    "weapon": "AKS-74U",
-    "classification": "Balanced build with low recoil",
-    "tags": [
-      "DFBuilds",
-      "Warfare",
-      "Global"
-    ],
-    "copy_count": 0,
-    "loadout_code": "AKS-74 Assault Rifle-Warfare-6LOVVE008L3JKSCGGMUED"
   },
   {
     "server": "Garena",
@@ -13987,21 +13366,6 @@
     "mode": "Warfare",
     "weapon_type": "Assault Rifle",
     "weapon": "AS VAL",
-    "classification": "Cộng đồng AS VAL",
-    "tags": [
-      "DFBuilds",
-      "Warfare",
-      "Global",
-      "Pro"
-    ],
-    "copy_count": 0,
-    "loadout_code": "K416 Assault Rifle-Warfare-6KMIDDG0637L6FN3DT06F"
-  },
-  {
-    "server": "Infinity",
-    "mode": "Warfare",
-    "weapon_type": "Assault Rifle",
-    "weapon": "AS VAL",
     "classification": "Balanced build with medium recoil",
     "tags": [
       "DFBuilds",
@@ -14192,20 +13556,6 @@
     ],
     "copy_count": 0,
     "loadout_code": "AS Val Assault Rifle-Warfare-6KEO4G0073PLT9P3OGGGR"
-  },
-  {
-    "server": "Infinity",
-    "mode": "Warfare",
-    "weapon_type": "Assault Rifle",
-    "weapon": "AS VAL",
-    "classification": "recoilless beast",
-    "tags": [
-      "DFBuilds",
-      "Warfare",
-      "Global"
-    ],
-    "copy_count": 0,
-    "loadout_code": "M7 Battle Rifle-Warfare-6JPPDL4006G48V0MFU8DO"
   },
   {
     "server": "Infinity",
@@ -14545,20 +13895,6 @@
     ],
     "copy_count": 0,
     "loadout_code": "ASh-12 Battle Rifle-Warfare-6K5RCHO0637L6FN3DT06F"
-  },
-  {
-    "server": "Infinity",
-    "mode": "Warfare",
-    "weapon_type": "Assault Rifle",
-    "weapon": "ASH-12",
-    "classification": "Cộng đồng ASH-12",
-    "tags": [
-      "DFBuilds",
-      "Operations",
-      "Global"
-    ],
-    "copy_count": 0,
-    "loadout_code": "AUG Assault Rifle-Warfare-6KOOSM00DUFI2V3QLGEBU"
   },
   {
     "server": "Infinity",
@@ -16036,34 +15372,6 @@
     ],
     "copy_count": 0,
     "loadout_code": "CI-19 Assault Rifle-Warfare-6LTGCB805VS836I7GOOM4"
-  },
-  {
-    "server": "Infinity",
-    "mode": "Warfare",
-    "weapon_type": "Assault Rifle",
-    "weapon": "CI-19",
-    "classification": "Cộng đồng CI-19",
-    "tags": [
-      "DFBuilds",
-      "Operations",
-      "Global"
-    ],
-    "copy_count": 0,
-    "loadout_code": "Assault Rifle-Warfare-6JU5DCK04STA3R5PGB90S"
-  },
-  {
-    "server": "Infinity",
-    "mode": "Warfare",
-    "weapon_type": "Assault Rifle",
-    "weapon": "CI-19",
-    "classification": "Cộng đồng CI-19",
-    "tags": [
-      "DFBuilds",
-      "Warfare",
-      "Global"
-    ],
-    "copy_count": 0,
-    "loadout_code": "CAR-15 Assault Rifle-Warfare-6K64UOS02SC957GM3CTSC"
   },
   {
     "server": "Infinity",
@@ -17587,7 +16895,7 @@
     "server": "Infinity",
     "mode": "Warfare",
     "weapon_type": "Assault Rifle",
-    "weapon": "KC17",
+    "weapon": "KC-17",
     "classification": "If u want a 75 mag KC-17 build, this is the one that u r looking for. Max range with balanced stats.",
     "tags": [
       "DFBuilds",
@@ -17601,7 +16909,7 @@
     "server": "Infinity",
     "mode": "Warfare",
     "weapon_type": "Assault Rifle",
-    "weapon": "KC17",
+    "weapon": "KC-17",
     "classification": "If you're looking for a 75-round mag KC-17 build, this is the one. It delivers maximum range while maintaining well-balanced overall stats.",
     "tags": [
       "DFBuilds",
@@ -17615,7 +16923,7 @@
     "server": "Infinity",
     "mode": "Warfare",
     "weapon_type": "Assault Rifle",
-    "weapon": "KC17",
+    "weapon": "KC-17",
     "classification": "KC-17 is one of the meta guns right now. I saw many good players using it even over AK-12. This one is a aggressive build for KC-17. Control and stability are so well managed that u barely feel any re...",
     "tags": [
       "DFBuilds",
@@ -17629,7 +16937,7 @@
     "server": "Garena",
     "mode": "Warfare",
     "weapon_type": "Assault Rifle",
-    "weapon": "KC17",
+    "weapon": "KC-17",
     "classification": "Want an lmg with smg like mobility and minimal recoil?well look no further my friend this builds got you covered",
     "tags": [
       "DFBuilds",
@@ -17643,7 +16951,7 @@
     "server": "Infinity",
     "mode": "Warfare",
     "weapon_type": "Assault Rifle",
-    "weapon": "KC17",
+    "weapon": "KC-17",
     "classification": "If u want an aggressive KC-17 build with high ads, with 75 mag, then take this ultimate build🔥🔥🫡",
     "tags": [
       "DFBuilds",
@@ -17657,7 +16965,7 @@
     "server": "Infinity",
     "mode": "Operations",
     "weapon_type": "Assault Rifle",
-    "weapon": "KC17",
+    "weapon": "KC-17",
     "classification": "USE THIS BUILD WITH TIER 5 AMMO ( GOLDEN ) MELTS ENEMY's ARMOR and also recommended for Warfare",
     "tags": [
       "DFBuilds",
@@ -17671,7 +16979,7 @@
     "server": "Garena",
     "mode": "Operations",
     "weapon_type": "Assault Rifle",
-    "weapon": "KC17",
+    "weapon": "KC-17",
     "classification": "Best budget build with good ads",
     "tags": [
       "DFBuilds",
@@ -17686,7 +16994,7 @@
     "server": "Garena",
     "mode": "Warfare",
     "weapon_type": "Assault Rifle",
-    "weapon": "KC17",
+    "weapon": "KC-17",
     "classification": "Best for Tempest Users, Pretty fast ads, Stability and Easy To Control",
     "tags": [
       "DFBuilds",
@@ -17700,7 +17008,7 @@
     "server": "Infinity",
     "mode": "Warfare",
     "weapon_type": "Assault Rifle",
-    "weapon": "KC17",
+    "weapon": "KC-17",
     "classification": "45 mag Beast",
     "tags": [
       "DFBuilds",
@@ -17714,7 +17022,7 @@
     "server": "Infinity",
     "mode": "Warfare",
     "weapon_type": "Assault Rifle",
-    "weapon": "KC17",
+    "weapon": "KC-17",
     "classification": "balanced build with insane zero recoil",
     "tags": [
       "DFBuilds",
@@ -17728,7 +17036,7 @@
     "server": "Infinity",
     "mode": "Warfare",
     "weapon_type": "Assault Rifle",
-    "weapon": "KC17",
+    "weapon": "KC-17",
     "classification": "Easy to control recoil made for close range so DONT use it's for 50+ meter kills",
     "tags": [
       "DFBuilds",
@@ -17742,7 +17050,7 @@
     "server": "Infinity",
     "mode": "Warfare",
     "weapon_type": "Assault Rifle",
-    "weapon": "KC17",
+    "weapon": "KC-17",
     "classification": "Best for close range . you can change meg if u want but prefer this both reloading time is the same.",
     "tags": [
       "DFBuilds",
@@ -17756,7 +17064,7 @@
     "server": "Infinity",
     "mode": "Warfare",
     "weapon_type": "Assault Rifle",
-    "weapon": "KC17",
+    "weapon": "KC-17",
     "classification": "Aggressive KC-17. No recoil, dominates in cqc and can hold its own at range",
     "tags": [
       "DFBuilds",
@@ -17770,7 +17078,7 @@
     "server": "Infinity",
     "mode": "Warfare",
     "weapon_type": "Assault Rifle",
-    "weapon": "KC17",
+    "weapon": "KC-17",
     "classification": "This build is very fascinating because it has absolutely zero recoil bloom. This gun is naturally a close combat shredder. So this build is t emphasize snapping onto targets instantly and exploit it's...",
     "tags": [
       "DFBuilds",
@@ -17784,7 +17092,7 @@
     "server": "Infinity",
     "mode": "Warfare",
     "weapon_type": "Assault Rifle",
-    "weapon": "KC17",
+    "weapon": "KC-17",
     "classification": "Crazy Build• Zero Recoil • Very Stable • Very Accurate • Close and Mid range• (Updated Build)",
     "tags": [
       "DFBuilds",
@@ -17798,7 +17106,7 @@
     "server": "Garena",
     "mode": "Warfare",
     "weapon_type": "Assault Rifle",
-    "weapon": "KC17",
+    "weapon": "KC-17",
     "classification": "Want to strafe faster then you can walk?then this kc-17 build got you covered",
     "tags": [
       "DFBuilds",
@@ -17812,7 +17120,7 @@
     "server": "Infinity",
     "mode": "Warfare",
     "weapon_type": "Assault Rifle",
-    "weapon": "KC17",
+    "weapon": "KC-17",
     "classification": "Most Stabazlied build, so far for kc-17.",
     "tags": [
       "DFBuilds",
@@ -17826,7 +17134,7 @@
     "server": "Infinity",
     "mode": "Warfare",
     "weapon_type": "Assault Rifle",
-    "weapon": "KC17",
+    "weapon": "KC-17",
     "classification": "insane recoil control and stability",
     "tags": [
       "DFBuilds",
@@ -17841,7 +17149,7 @@
     "server": "Infinity",
     "mode": "Operations",
     "weapon_type": "Assault Rifle",
-    "weapon": "KC17",
+    "weapon": "KC-17",
     "classification": "Top on operation",
     "tags": [
       "DFBuilds",
@@ -17856,7 +17164,7 @@
     "server": "Garena",
     "mode": "Warfare",
     "weapon_type": "Assault Rifle",
-    "weapon": "KC17",
+    "weapon": "KC-17",
     "classification": "the best build kc17 no recoil",
     "tags": [
       "DFBuilds",
@@ -17871,7 +17179,7 @@
     "server": "Garena",
     "mode": "Warfare",
     "weapon_type": "Assault Rifle",
-    "weapon": "KC17",
+    "weapon": "KC-17",
     "classification": "This KC17 come with amazing recoil and firing stability with good ads speed and aiming stability",
     "tags": [
       "DFBuilds",
@@ -17886,7 +17194,7 @@
     "server": "Infinity",
     "mode": "Warfare",
     "weapon_type": "Assault Rifle",
-    "weapon": "KC17",
+    "weapon": "KC-17",
     "classification": "Good for close to mid range",
     "tags": [
       "DFBuilds",
@@ -17900,7 +17208,7 @@
     "server": "Infinity",
     "mode": "Warfare",
     "weapon_type": "Assault Rifle",
-    "weapon": "KC17",
+    "weapon": "KC-17",
     "classification": "No recoil great controls at great a long range mid and close range  fight",
     "tags": [
       "DFBuilds",
@@ -17914,7 +17222,7 @@
     "server": "Infinity",
     "mode": "Warfare",
     "weapon_type": "Assault Rifle",
-    "weapon": "KC17",
+    "weapon": "KC-17",
     "classification": "Best For Assult Oparator Vyron.",
     "tags": [
       "DFBuilds",
@@ -17928,7 +17236,7 @@
     "server": "Infinity",
     "mode": "Warfare",
     "weapon_type": "Assault Rifle",
-    "weapon": "KC17",
+    "weapon": "KC-17",
     "classification": "ZERO RECOIL",
     "tags": [
       "DFBuilds",
@@ -17942,7 +17250,7 @@
     "server": "Infinity",
     "mode": "Warfare",
     "weapon_type": "Assault Rifle",
-    "weapon": "KC17",
+    "weapon": "KC-17",
     "classification": "My fav how can I forget both medics and assault loves this AR.",
     "tags": [
       "DFBuilds",
@@ -17956,7 +17264,7 @@
     "server": "Infinity",
     "mode": "Warfare",
     "weapon_type": "Assault Rifle",
-    "weapon": "KC17",
+    "weapon": "KC-17",
     "classification": "Beamer",
     "tags": [
       "DFBuilds",
@@ -17967,24 +17275,10 @@
     "loadout_code": "KC-17 Assault Rifle-Warfare-6L2B7L80BN79RIOC78K8Q"
   },
   {
-    "server": "Garena",
-    "mode": "Warfare",
-    "weapon_type": "Assault Rifle",
-    "weapon": "KC17",
-    "classification": "Cộng đồng KC17",
-    "tags": [
-      "DFBuilds",
-      "Operations",
-      "Garena"
-    ],
-    "copy_count": 0,
-    "loadout_code": "KC-17 Assault\n\nRifle-Warfare-6K6I054062G9KMBH\n\nPP3HH"
-  },
-  {
     "server": "Infinity",
     "mode": "Warfare",
     "weapon_type": "Assault Rifle",
-    "weapon": "KC17",
+    "weapon": "KC-17",
     "classification": "ZERO RECOIL",
     "tags": [
       "DFBuilds",
@@ -17998,7 +17292,7 @@
     "server": "Garena",
     "mode": "Warfare",
     "weapon_type": "Assault Rifle",
-    "weapon": "KC17",
+    "weapon": "KC-17",
     "classification": "This is the meta KC 17 with good control okay stability and handling(codes for garena)",
     "tags": [
       "DFBuilds",
@@ -18012,7 +17306,7 @@
     "server": "Garena",
     "mode": "Warfare",
     "weapon_type": "Assault Rifle",
-    "weapon": "KC17",
+    "weapon": "KC-17",
     "classification": "All in control, looks good with the mandelbrick",
     "tags": [
       "DFBuilds",
@@ -18026,7 +17320,7 @@
     "server": "Garena",
     "mode": "Warfare",
     "weapon_type": "Assault Rifle",
-    "weapon": "KC17",
+    "weapon": "KC-17",
     "classification": "Good for close-range and mid-range fight.",
     "tags": [
       "DFBuilds",
@@ -18040,7 +17334,7 @@
     "server": "Infinity",
     "mode": "Operations",
     "weapon_type": "Assault Rifle",
-    "weapon": "KC17",
+    "weapon": "KC-17",
     "classification": "450k-gold ammo-best budgetish gun I've used",
     "tags": [
       "DFBuilds",
@@ -18055,7 +17349,7 @@
     "server": "Infinity",
     "mode": "Operations",
     "weapon_type": "Assault Rifle",
-    "weapon": "KC17",
+    "weapon": "KC-17",
     "classification": "Mid Range",
     "tags": [
       "DFBuilds",
@@ -18070,7 +17364,7 @@
     "server": "Garena",
     "mode": "Warfare",
     "weapon_type": "Assault Rifle",
-    "weapon": "KC17",
+    "weapon": "KC-17",
     "classification": "High mobility, high stability. Almost no recoil.",
     "tags": [
       "DFBuilds",
@@ -18084,7 +17378,7 @@
     "server": "Infinity",
     "mode": "Warfare",
     "weapon_type": "Assault Rifle",
-    "weapon": "KC17",
+    "weapon": "KC-17",
     "classification": "this is some fun thing",
     "tags": [
       "DFBuilds",
@@ -18098,7 +17392,7 @@
     "server": "Infinity",
     "mode": "Warfare",
     "weapon_type": "Assault Rifle",
-    "weapon": "KC17",
+    "weapon": "KC-17",
     "classification": "No comments !",
     "tags": [
       "DFBuilds",
@@ -18112,7 +17406,7 @@
     "server": "Infinity",
     "mode": "Warfare",
     "weapon_type": "Assault Rifle",
-    "weapon": "KC17",
+    "weapon": "KC-17",
     "classification": "Cộng đồng KC17",
     "tags": [
       "DFBuilds",
@@ -18126,7 +17420,7 @@
     "server": "Infinity",
     "mode": "Warfare",
     "weapon_type": "Assault Rifle",
-    "weapon": "KC17",
+    "weapon": "KC-17",
     "classification": "Cộng đồng KC17",
     "tags": [
       "DFBuilds",
@@ -18140,7 +17434,7 @@
     "server": "Infinity",
     "mode": "Operations",
     "weapon_type": "Assault Rifle",
-    "weapon": "KC17",
+    "weapon": "KC-17",
     "classification": "Best kc-17 build ever",
     "tags": [
       "DFBuilds",
@@ -18154,7 +17448,7 @@
     "server": "Infinity",
     "mode": "Operations",
     "weapon_type": "Assault Rifle",
-    "weapon": "KC17",
+    "weapon": "KC-17",
     "classification": "For Mid range fights",
     "tags": [
       "DFBuilds",
@@ -18333,20 +17627,6 @@
     ],
     "copy_count": 0,
     "loadout_code": "البندقية الهجومية M16A4-الحرب-6KN71P80E3TERKKVJC8K2"
-  },
-  {
-    "server": "Infinity",
-    "mode": "Warfare",
-    "weapon_type": "Assault Rifle",
-    "weapon": "M16A4",
-    "classification": "Beast laser with pump action body",
-    "tags": [
-      "DFBuilds",
-      "Operations",
-      "Global"
-    ],
-    "copy_count": 0,
-    "loadout_code": "Rifle-Warfare-6K5FI7G05VS836I7GOOM4"
   },
   {
     "server": "Infinity",
@@ -19559,7 +18839,7 @@
       "Budget"
     ],
     "copy_count": 0,
-    "loadout_code": "Battle Rifle \nM7-Операции-6KNUGOO0541D1M6DA95V6"
+    "loadout_code": "M7-Операции-6KNUGOO0541D1M6DA95V6"
   },
   {
     "server": "Infinity",
@@ -19910,20 +19190,6 @@
     "mode": "Warfare",
     "weapon_type": "Assault Rifle",
     "weapon": "M7",
-    "classification": "Cộng đồng M7",
-    "tags": [
-      "DFBuilds",
-      "Operations",
-      "Global"
-    ],
-    "copy_count": 0,
-    "loadout_code": "M82 Sniper Rifle-Warfare-6KK7N1S02DM5Q0JV5H79D"
-  },
-  {
-    "server": "Infinity",
-    "mode": "Warfare",
-    "weapon_type": "Assault Rifle",
-    "weapon": "M7",
     "classification": "So Good",
     "tags": [
       "DFBuilds",
@@ -20189,20 +19455,6 @@
     ],
     "copy_count": 0,
     "loadout_code": "MCX LT Assault Rifle-Detonation-6LOJ39C025F1P43R8SF9M"
-  },
-  {
-    "server": "Infinity",
-    "mode": "Warfare",
-    "weapon_type": "Assault Rifle",
-    "weapon": "MCX LT",
-    "classification": "Cộng đồng MCX LT",
-    "tags": [
-      "DFBuilds",
-      "Warfare",
-      "Global"
-    ],
-    "copy_count": 0,
-    "loadout_code": "Rifle-Warfare-6K5R49K0637L6FN3DT06F"
   },
   {
     "server": "Infinity",
@@ -20629,20 +19881,6 @@
     ],
     "copy_count": 0,
     "loadout_code": "MDR Assault Rifle-Warfare-6LATGCK022GGB6MHCGA7J"
-  },
-  {
-    "server": "Infinity",
-    "mode": "Warfare",
-    "weapon_type": "Pistol",
-    "weapon": "G18",
-    "classification": "HipFire MDR build with SMG level Handling.",
-    "tags": [
-      "DFBuilds",
-      "Operations",
-      "Global"
-    ],
-    "copy_count": 0,
-    "loadout_code": "MDR Assault Rifle-Warfare-6LART400CG185HLT67V7A"
   },
   {
     "server": "Infinity",
@@ -21271,7 +20509,7 @@
       "Garena"
     ],
     "copy_count": 0,
-    "loadout_code": "This is for Garena mobile \n\n\nPTR-32 Assault Rifle-Warfare-6K5Q1S80EC6V2H5DL0C0I"
+    "loadout_code": "PTR-32 Assault Rifle-Warfare-6K5Q1S80EC6V2H5DL0C0I"
   },
   {
     "server": "Infinity",
@@ -22944,20 +22182,6 @@
     "mode": "Warfare",
     "weapon_type": "Assault Rifle",
     "weapon": "SG552",
-    "classification": "SG552",
-    "tags": [
-      "DFBuilds",
-      "Operations",
-      "Global"
-    ],
-    "copy_count": 0,
-    "loadout_code": "Rifle-Warfare-6KPMU5C0637L6FN3DT06F"
-  },
-  {
-    "server": "Infinity",
-    "mode": "Warfare",
-    "weapon_type": "Assault Rifle",
-    "weapon": "SG552",
     "classification": ":)",
     "tags": [
       "DFBuilds",
@@ -23641,20 +22865,6 @@
     "mode": "Warfare",
     "weapon_type": "SMG",
     "weapon": "MP7",
-    "classification": "Highly Requested MK4\n\nReally good range, Extremely stable feel with fast ADS time and high muzzle velocity. \n\nGood for aggressive plays, shines more in the hands of mechanical players",
-    "tags": [
-      "DFBuilds",
-      "Warfare",
-      "Global"
-    ],
-    "copy_count": 0,
-    "loadout_code": "MK4 Submachine Gun-Warfare-6KEUAJC01TC887EUP3LE2"
-  },
-  {
-    "server": "Infinity",
-    "mode": "Warfare",
-    "weapon_type": "SMG",
-    "weapon": "MP7",
     "classification": "MP7 Submachine Gun-Warfare-6K7EFG802KG3OENJ0J9TC",
     "tags": [
       "DFBuilds",
@@ -24159,20 +23369,6 @@
     ],
     "copy_count": 0,
     "loadout_code": "P90 submachine Gun-Warfare-6LAEKSO07BHLMNAGS8428"
-  },
-  {
-    "server": "Infinity",
-    "mode": "Operations",
-    "weapon_type": "SMG",
-    "weapon": "P90",
-    "classification": "M14 Marksman Rifle-Operations-6KCK57801NFLCIOJPMIHI",
-    "tags": [
-      "DFBuilds",
-      "Warfare",
-      "Global"
-    ],
-    "copy_count": 0,
-    "loadout_code": "M14 Marksman Rifle-Operations-6KCK57801NFLCIOJPMIHI"
   },
   {
     "server": "Infinity",
@@ -25007,7 +24203,7 @@
   },
   {
     "server": "Garena",
-    "mode": "Warfare",
+    "mode": "Operations",
     "weapon_type": "SMG",
     "weapon": "THOMPSON",
     "classification": "Zero Recoil Thompson build (Garena)",
@@ -25118,20 +24314,6 @@
     ],
     "copy_count": 0,
     "loadout_code": "Thompson SMG-Operations (Extraction Mode)-6LLC2TC01NFLCIOJPMIHI"
-  },
-  {
-    "server": "Infinity",
-    "mode": "Warfare",
-    "weapon_type": "Pistol",
-    "weapon": "G18",
-    "classification": "Sharing a build for the very first time. Works for me in close range and mid range.",
-    "tags": [
-      "DFBuilds",
-      "Warfare",
-      "Global"
-    ],
-    "copy_count": 0,
-    "loadout_code": "Thompson SMG-Warfare-6L9MQ8C0CG185HLT67V7A"
   },
   {
     "server": "Infinity",
@@ -25773,7 +24955,7 @@
     "server": "Garena",
     "mode": "Warfare",
     "weapon_type": "Special",
-    "weapon": "LEVER-ACTION RIFLE",
+    "weapon": "MARLIN LEVER-ACTION",
     "classification": "For you quick scopers out there enjoy",
     "tags": [
       "DFBuilds",
@@ -25787,7 +24969,7 @@
     "server": "Infinity",
     "mode": "Warfare",
     "weapon_type": "Special",
-    "weapon": "LEVER-ACTION RIFLE",
+    "weapon": "MARLIN LEVER-ACTION",
     "classification": "Calling it MR is a half truth. U can also call it ur long range shotgun or short range sniper. Meet a deadly side of the Lever Action. A combo of high handling and accuracy with 100 damage and 30m ran...",
     "tags": [
       "DFBuilds",
@@ -25801,7 +24983,7 @@
     "server": "Infinity",
     "mode": "Operations",
     "weapon_type": "Special",
-    "weapon": "LEVER-ACTION RIFLE",
+    "weapon": "MARLIN LEVER-ACTION",
     "classification": "Cộng đồng LEVER-ACTION RIFLE",
     "tags": [
       "DFBuilds",
@@ -25816,7 +24998,7 @@
     "server": "Infinity",
     "mode": "Operations",
     "weapon_type": "Special",
-    "weapon": "LEVER-ACTION RIFLE",
+    "weapon": "MARLIN LEVER-ACTION",
     "classification": "(≈270k)Offers high ADS and raised headshot damage for a fraction of the cost of high-end snipes",
     "tags": [
       "DFBuilds",
@@ -25831,7 +25013,7 @@
     "server": "Infinity",
     "mode": "Warfare",
     "weapon_type": "Special",
-    "weapon": "LEVER-ACTION RIFLE",
+    "weapon": "MARLIN LEVER-ACTION",
     "classification": "This thing will one shot to the chest within 20 meters and has very very fast ads time",
     "tags": [
       "DFBuilds",
@@ -25845,7 +25027,7 @@
     "server": "Infinity",
     "mode": "Operations",
     "weapon_type": "Special",
-    "weapon": "LEVER-ACTION RIFLE",
+    "weapon": "MARLIN LEVER-ACTION",
     "classification": "Best Lever-Action",
     "tags": [
       "DFBuilds",
@@ -25860,7 +25042,7 @@
     "server": "Infinity",
     "mode": "Warfare",
     "weapon_type": "Special",
-    "weapon": "LEVER-ACTION RIFLE",
+    "weapon": "MARLIN LEVER-ACTION",
     "classification": "This build gives you quick reloading time and very fast movement that aims instantly letting you sprint into the fight and land sniper like high damage shots with parfect timing",
     "tags": [
       "DFBuilds",
@@ -25874,7 +25056,7 @@
     "server": "Garena",
     "mode": "Warfare",
     "weapon_type": "Special",
-    "weapon": "LEVER-ACTION RIFLE",
+    "weapon": "MARLIN LEVER-ACTION",
     "classification": "This gun Catters to a very particular playstyle: accurate aggression \nIf your accurate and aggressive then this weapon is exactly for you\nNote:feel free to change the lever if you want tho if your g...",
     "tags": [
       "DFBuilds",
@@ -26138,20 +25320,6 @@
     ],
     "copy_count": 0,
     "loadout_code": "M14 Marksman Rifle-Warfare-6K5NHAC02DM5Q0JV5H79D"
-  },
-  {
-    "server": "Infinity",
-    "mode": "Warfare",
-    "weapon_type": "Marksman Rifle",
-    "weapon": "M14",
-    "classification": "Cộng đồng M14",
-    "tags": [
-      "DFBuilds",
-      "Warfare",
-      "Global"
-    ],
-    "copy_count": 0,
-    "loadout_code": "K437 Assault Rifle-Warfare-6K9UTHO073PJR9QC8ECFN"
   },
   {
     "server": "Infinity",
@@ -28021,21 +27189,6 @@
     "loadout_code": "M249 Hafif Makineli Tüfek-Savaş-6LFL6IO037MOMAR037BE1"
   },
   {
-    "server": "Garena",
-    "mode": "Warfare",
-    "weapon_type": "LMG",
-    "weapon": "M249",
-    "classification": "An amazing lmg for all mods",
-    "tags": [
-      "DFBuilds",
-      "Operations",
-      "Garena",
-      "Pro"
-    ],
-    "copy_count": 0,
-    "loadout_code": "M250 General Machine Gun-Warfare-6KM674G0BE72LSE0I8AT7"
-  },
-  {
     "server": "Infinity",
     "mode": "Warfare",
     "weapon_type": "LMG",
@@ -28778,7 +27931,7 @@
     "server": "Infinity",
     "mode": "Operations",
     "weapon_type": "LMG",
-    "weapon": "QJB201",
+    "weapon": "QJB-201",
     "classification": "AR on steroids for nearly 450k. Stealth,agile, stable, fast, reliable and comfortable",
     "tags": [
       "DFBuilds",
@@ -28793,7 +27946,7 @@
     "server": "Infinity",
     "mode": "Warfare",
     "weapon_type": "LMG",
-    "weapon": "QJB201",
+    "weapon": "QJB-201",
     "classification": "This INSANE QJB201 Build has Zero Recoil in Delta Force.",
     "tags": [
       "DFBuilds",
@@ -28807,7 +27960,7 @@
     "server": "Infinity",
     "mode": "Operations",
     "weapon_type": "LMG",
-    "weapon": "QJB201",
+    "weapon": "QJB-201",
     "classification": "You can use 45 mag",
     "tags": [
       "DFBuilds",
@@ -28821,7 +27974,7 @@
     "server": "Infinity",
     "mode": "Operations",
     "weapon_type": "LMG",
-    "weapon": "QJB201",
+    "weapon": "QJB-201",
     "classification": "Fire rate beast somewhat controllable mid and close range",
     "tags": [
       "DFBuilds",
@@ -28836,7 +27989,7 @@
     "server": "Garena",
     "mode": "Warfare",
     "weapon_type": "LMG",
-    "weapon": "QJB201",
+    "weapon": "QJB-201",
     "classification": "Need to prevent attackers from pushing all together?use this qjb to rain bullets till they surrender",
     "tags": [
       "DFBuilds",
@@ -28851,7 +28004,7 @@
     "server": "Infinity",
     "mode": "Warfare",
     "weapon_type": "LMG",
-    "weapon": "QJB201",
+    "weapon": "QJB-201",
     "classification": "What is better than QJB201 fire rate zero recoil build? Obviously QJB201 fire rate zero recoil build with 125 mag",
     "tags": [
       "DFBuilds",
@@ -28865,7 +28018,7 @@
     "server": "Infinity",
     "mode": "Warfare",
     "weapon_type": "LMG",
-    "weapon": "QJB201",
+    "weapon": "QJB-201",
     "classification": "This attachments feels like a bike engine to me. Starts slow but ends fast. Try it if u like🔥🔥🫡",
     "tags": [
       "DFBuilds",
@@ -28879,7 +28032,7 @@
     "server": "Garena",
     "mode": "Warfare",
     "weapon_type": "LMG",
-    "weapon": "QJB201",
+    "weapon": "QJB-201",
     "classification": "Abuse the range and the recoil",
     "tags": [
       "DFBuilds",
@@ -28893,7 +28046,7 @@
     "server": "Infinity",
     "mode": "Warfare",
     "weapon_type": "LMG",
-    "weapon": "QJB201",
+    "weapon": "QJB-201",
     "classification": "Zero recoil LMG, whith the bipod on it's unmovable in any range",
     "tags": [
       "DFBuilds",
@@ -28907,7 +28060,7 @@
     "server": "Infinity",
     "mode": "Warfare",
     "weapon_type": "LMG",
-    "weapon": "QJB201",
+    "weapon": "QJB-201",
     "classification": "Low recoil silent monster",
     "tags": [
       "DFBuilds",
@@ -28921,7 +28074,7 @@
     "server": "Garena",
     "mode": "Warfare",
     "weapon_type": "LMG",
-    "weapon": "QJB201",
+    "weapon": "QJB-201",
     "classification": "In my opinion the only lmg that can actually run it's max belt fed magazine without becoming a slug",
     "tags": [
       "DFBuilds",
@@ -28935,7 +28088,7 @@
     "server": "Infinity",
     "mode": "Warfare",
     "weapon_type": "LMG",
-    "weapon": "QJB201",
+    "weapon": "QJB-201",
     "classification": "ADS Time: 202ms\nBehaves like Battle Rifle with higher fire rate and shorter range.\nMake sure to account for spray pattern going left. Hip Fire spread is below 2°",
     "tags": [
       "DFBuilds",
@@ -28949,7 +28102,7 @@
     "server": "Infinity",
     "mode": "Warfare",
     "weapon_type": "LMG",
-    "weapon": "QJB201",
+    "weapon": "QJB-201",
     "classification": "QJB201 has zero recoil, that's not the point here. The point is it's a fire rate build, means more ttk, still zero recoil. And good handling also",
     "tags": [
       "DFBuilds",
@@ -28963,7 +28116,7 @@
     "server": "Infinity",
     "mode": "Warfare",
     "weapon_type": "LMG",
-    "weapon": "QJB201",
+    "weapon": "QJB-201",
     "classification": "No recoil with adv.thermal scope",
     "tags": [
       "DFBuilds",
@@ -28977,7 +28130,7 @@
     "server": "Infinity",
     "mode": "Warfare",
     "weapon_type": "LMG",
-    "weapon": "QJB201",
+    "weapon": "QJB-201",
     "classification": "No recoil light machine gun and increase the fire rate",
     "tags": [
       "DFBuilds",
@@ -28991,7 +28144,7 @@
     "server": "Infinity",
     "mode": "Warfare",
     "weapon_type": "LMG",
-    "weapon": "QJB201",
+    "weapon": "QJB-201",
     "classification": "High recoil control, impressive stability, and a large mag capacity make this QJB201 build perfect for sustained pressure and aggressive pushes. The balanced handling keeps movement smooth during clos...",
     "tags": [
       "DFBuilds",
@@ -29005,7 +28158,7 @@
     "server": "Garena",
     "mode": "Warfare",
     "weapon_type": "LMG",
-    "weapon": "QJB201",
+    "weapon": "QJB-201",
     "classification": "Want an smg-like build for the qjb?well my friends here I present to you my build",
     "tags": [
       "DFBuilds",
@@ -29019,7 +28172,7 @@
     "server": "Garena",
     "mode": "Warfare",
     "weapon_type": "LMG",
-    "weapon": "QJB201",
+    "weapon": "QJB-201",
     "classification": "The new windrage mag turns the qjb into a suppresive fire demon perfect for spamming enemies down",
     "tags": [
       "DFBuilds",
@@ -29033,7 +28186,7 @@
     "server": "Infinity",
     "mode": "Warfare",
     "weapon_type": "LMG",
-    "weapon": "QJB201",
+    "weapon": "QJB-201",
     "classification": "Highly optimized configuration designed for sustained fire and dominance in medium to long range engagements",
     "tags": [
       "DFBuilds",
@@ -29047,7 +28200,7 @@
     "server": "Infinity",
     "mode": "Warfare",
     "weapon_type": "LMG",
-    "weapon": "QJB201",
+    "weapon": "QJB-201",
     "classification": "A build for aggressive engineers. High ads, good control and stability, all packed in this🔥🔥🫡",
     "tags": [
       "DFBuilds",
@@ -29061,7 +28214,7 @@
     "server": "Infinity",
     "mode": "Warfare",
     "weapon_type": "LMG",
-    "weapon": "QJB201",
+    "weapon": "QJB-201",
     "classification": "Low recoil good for aggressive play and holding position use bipod for zero recoil",
     "tags": [
       "DFBuilds",
@@ -29075,7 +28228,7 @@
     "server": "Infinity",
     "mode": "Warfare",
     "weapon_type": "LMG",
-    "weapon": "QJB201",
+    "weapon": "QJB-201",
     "classification": "Created the perfect build for this lmg. Low horizontal recoil,  0.3 m/s ttk. Genuinely a beauty",
     "tags": [
       "DFBuilds",
@@ -29089,7 +28242,7 @@
     "server": "Garena",
     "mode": "Warfare",
     "weapon_type": "LMG",
-    "weapon": "QJB201",
+    "weapon": "QJB-201",
     "classification": "Good for mid and long range",
     "tags": [
       "DFBuilds",
@@ -29103,7 +28256,7 @@
     "server": "Infinity",
     "mode": "Warfare",
     "weapon_type": "LMG",
-    "weapon": "QJB201",
+    "weapon": "QJB-201",
     "classification": "No recoil light machine gun",
     "tags": [
       "DFBuilds",
@@ -29117,7 +28270,7 @@
     "server": "Infinity",
     "mode": "Operations",
     "weapon_type": "LMG",
-    "weapon": "QJB201",
+    "weapon": "QJB-201",
     "classification": "THIS QJB HAS ALMOST ZERO RECOIL",
     "tags": [
       "DFBuilds",
@@ -29132,7 +28285,7 @@
     "server": "Infinity",
     "mode": "Warfare",
     "weapon_type": "LMG",
-    "weapon": "QJB201",
+    "weapon": "QJB-201",
     "classification": "The meta LMG build.All in all in the warfare mood",
     "tags": [
       "DFBuilds",
@@ -29146,7 +28299,7 @@
     "server": "Infinity",
     "mode": "Operations",
     "weapon_type": "LMG",
-    "weapon": "QJB201",
+    "weapon": "QJB-201",
     "classification": "Cộng đồng QJB201",
     "tags": [
       "DFBuilds",
@@ -29161,7 +28314,7 @@
     "server": "Infinity",
     "mode": "Operations",
     "weapon_type": "LMG",
-    "weapon": "QJB201",
+    "weapon": "QJB-201",
     "classification": "Monster",
     "tags": [
       "DFBuilds",
@@ -29175,7 +28328,7 @@
     "server": "Infinity",
     "mode": "Warfare",
     "weapon_type": "LMG",
-    "weapon": "QJB201",
+    "weapon": "QJB-201",
     "classification": "Long range, head hunter",
     "tags": [
       "DFBuilds",
@@ -29189,7 +28342,7 @@
     "server": "Infinity",
     "mode": "Warfare",
     "weapon_type": "LMG",
-    "weapon": "QJB201",
+    "weapon": "QJB-201",
     "classification": "No recoil, best build for all ranges.",
     "tags": [
       "DFBuilds",
@@ -29203,7 +28356,7 @@
     "server": "Infinity",
     "mode": "Operations",
     "weapon_type": "LMG",
-    "weapon": "QJB201",
+    "weapon": "QJB-201",
     "classification": "Low recoil . Close,Medium,Long rage",
     "tags": [
       "DFBuilds",
@@ -29951,7 +29104,7 @@
     "server": "Infinity",
     "mode": "Warfare",
     "weapon_type": "Special",
-    "weapon": "G17",
+    "weapon": "G-17",
     "classification": "Good Stability and Accuracy.",
     "tags": [
       "DFBuilds",
@@ -29965,7 +29118,7 @@
     "server": "Infinity",
     "mode": "Warfare",
     "weapon_type": "Special",
-    "weapon": "G17",
+    "weapon": "G-17",
     "classification": "Though it's not a popular gun in Delta Force I've worked to get the best out of it. Extended range, more capacity and stability. This build has made it suitable as a panic button",
     "tags": [
       "DFBuilds",
@@ -29979,7 +29132,7 @@
     "server": "Infinity",
     "mode": "Operations",
     "weapon_type": "Special",
-    "weapon": "G17",
+    "weapon": "G-17",
     "classification": "200k worth the build of G17. Not automatic but gives you very low TTK.",
     "tags": [
       "DFBuilds",
