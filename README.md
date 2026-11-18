@@ -22,7 +22,7 @@ Người dùng thông thường chỉ cần tải bản đóng gói sẵn trên 
 ## Tác giả / Developed By
 
 - **Anh Bảy Chọ / Tài Giáp**
-- **Phiên bản / Version:** v1.3.0 - Web Source Filter & Popularity Ranking Edition (Garena & Level Infinite / Steam)
+- **Phiên bản / Version:** v1.3.1 - Custom Hotkey & Mouse Button Edition (Garena & Level Infinite / Steam)
 
 ---
 
@@ -30,7 +30,10 @@ Người dùng thông thường chỉ cần tải bản đóng gói sẵn trên 
 
 ### Tiếng Việt
 
-1. **Quét vũ khí thời gian thực (Phím tắt `F9`) & Tự động chọn build hot nhất:**
+1. **Quét vũ khí thời gian thực & Tùy biến phím tắt (Mặc định `F9` / Hỗ trợ Chuột 4 & 5):**
+   - Nút bấm đổi phím tắt trực tiếp `[⌨]` ngay cạnh nút quét trên thanh Header.
+   - Chế độ nhận phím thông minh (Key Capture Mode): hỗ trợ đổi ngay sang `F1`–`F12`, cụm phím điều hướng (`Insert`, `Delete`, `Home`, `End`, `PageUp`, `PageDown`), bàn phím số `Numpad`, phím đặc biệt (`CapsLock`, `Tab`, `~`), và đặc biệt là **hai nút chuột phụ bên hông** (`Mouse 4` / `Mouse 5`).
+   - Nhấn `Esc` để hủy đổi phím. Phím tắt mới được tự động lưu vĩnh viễn vào `config.json`.
    - Tự động chụp vùng tên súng từ màn hình chính bằng thư viện `xcap`.
    - Nhận diện ký tự qua Windows Native Media OCR (`Windows.Media.Ocr.OcrEngine`).
    - Tự động sửa lỗi đọc ký tự bằng thuật toán so khớp mờ Jaro-Winkler (> 0.72).
@@ -76,7 +79,10 @@ Người dùng thông thường chỉ cần tải bản đóng gói sẵn trên 
 
 ### English
 
-1. **Real-time Weapon Scanner (Global Hotkey `F9`) & Smart Best Build Auto-Pick:**
+1. **Real-time Weapon Scanner & Customizable Global Hotkey (Default `F9` / Mouse 4 & 5 Support):**
+   - Quick hotkey rebind button `[⌨]` placed directly beside the scan button on the Header toolbar.
+   - Interactive Key Capture Mode: effortlessly assign `F1`–`F12`, navigation cluster (`Insert`, `Delete`, `Home`, `End`, `PageUp`, `PageDown`), `Numpad 0`–`9`, special keys (`CapsLock`, `Tab`, `~`), and **side mouse buttons** (`Mouse 4` / `Mouse 5`).
+   - Press `Esc` to cancel rebinding. Your customized hotkey is automatically saved to `config.json`.
    - Captures the weapon title region using native Windows OCR and matches it via Jaro-Winkler fuzzy string distance (> 0.72).
    - Automatically selects the build with the highest copy count matching current Server, Mode, and Web Source, feeding it into active clipboard (`Ctrl + V`).
 
@@ -114,7 +120,7 @@ Người dùng thông thường chỉ cần tải bản đóng gói sẵn trên 
 
 ### 1. Cài đặt hệ thống / System Setup
 
-- **Quyền Administrator (UAC):** File `.exe` tự động yêu cầu quyền Administrator khi mở. Quyền này bắt buộc để Windows cho phép lắng nghe phím tắt toàn cục `F9` khi cửa sổ game Delta Force đang chiếm tiêu điểm (hoàn toàn không can thiệp bộ nhớ hay tiến trình game).
+- **Quyền Administrator (UAC):** File `.exe` tự động yêu cầu quyền Administrator khi mở. Quyền này bắt buộc để Windows cho phép lắng nghe phím tắt toàn cục (mặc định `F9` hoặc phím tùy chỉnh) khi cửa sổ game Delta Force đang chiếm tiêu điểm (hoàn toàn không can thiệp bộ nhớ hay tiến trình game).
 - **Trong game Delta Force:** Chuyển chế độ hiển thị sang **Borderless Windowed (Không viền)**.
 - **Trên Windows:** Nhấn `Win + V` và bật tính năng **Clipboard History (Lưu lịch sử Clipboard)**.
 
@@ -122,8 +128,9 @@ Người dùng thông thường chỉ cần tải bản đóng gói sẵn trên 
 
 1. Mở file `DF-Loadout-Scanner-Windows-x64.exe` (hoặc `df_clipboard_helper.exe`).
 2. Chọn **Server** (`Garena` hoặc `Infinity`) và **Chế độ chơi** (`Warfare` hoặc `Operations`) phù hợp.
-3. Trong game, vào giao diện tùy biến vũ khí và nhấn phím **`F9`**.
-4. Ứng dụng phát tiếng bíp xác nhận. Nhấn **`Ctrl + V`** để dán ngay bản Meta, hoặc **`Win + V`** để chọn các build khác.
+3. Tùy chọn: Nhấn nút **`[⌨]`** cạnh nút quét để đổi phím tắt sang phím bạn thích hoặc nút chuột hông (`Mouse 4` / `Mouse 5`).
+4. Trong game, vào giao diện tùy biến vũ khí và nhấn phím quét (mặc định **`F9`** hoặc phím đã đổi).
+5. Ứng dụng phát tiếng bíp xác nhận. Nhấn **`Ctrl + V`** để dán ngay bản Meta, hoặc **`Win + V`** để chọn các build khác.
 
 ---
 
