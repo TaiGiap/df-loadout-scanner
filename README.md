@@ -11,10 +11,10 @@ Công cụ tự động nhận diện vũ khí thời gian thực qua Windows OC
 Người dùng thông thường chỉ cần tải bản đóng gói sẵn tại mục GitHub Releases:
 
 - **Phiên bản mới nhất (Latest Release):** [DF-Loadout-Scanner Releases](https://github.com/TaiGiap/df-loadout-scanner/releases/latest)
-- **Tệp cài đặt:** `DF-Loadout-Scanner-v1.4.0-Windows-x64.zip` (Đã đóng gói trọn gói file thực thi `.exe`, tài liệu hướng dẫn và giấy phép).
+- **Tệp cài đặt:** `DF-Loadout-Scanner-v1.4.1-Windows-x64.zip` (Đã đóng gói trọn gói file thực thi `.exe`, tài liệu hướng dẫn và giấy phép).
 
 > **Tác giả / Developed By:** Anh Bảy Chọ / Tài Giáp  
-> **Phiên bản / Version:** `v1.4.0` (Favorites & Custom Codes System, OCR Confidence Threshold)
+> **Phiên bản / Version:** `v1.4.1` (Dedicated Favorites Tab, ESC Quick Exit & Weapon Jump)
 
 ---
 
@@ -83,11 +83,13 @@ Người dùng thông thường chỉ cần tải bản đóng gói sẵn tại 
    - Tích hợp mã VietQR động Techcombank tự điền đúng số tiền với 3 mốc nhanh (`1.000đ` - 4 xu delta, `5.000đ` - 20 xu delta, `10.000đ` - ly trà tắc) hoặc số tiền tùy ý.
    - Hỗ trợ sao chép số tài khoản (`1903 9673 0960 12` - GIÁP ĐỨC TÀI) và mở mã QR trên trình duyệt khi cần.
 
-11. **Hệ thống Build Yêu Thích & Quản lý Mã Cá Nhân (`favorites.json`):**
-   - **Lưu trữ độc lập:** Tách biệt hoàn toàn vào tệp `favorites.json`, không bao giờ bị ghi đè hay mất dữ liệu khi người dùng cập nhật cơ sở dữ liệu (`[CẬP NHẬT DB]`).
-   - **Ghim bản build yêu thích:** Nút ngôi sao `[☆ Lưu]` / `[★ Đã ghim]` trên từng thẻ cấu hình giúp đẩy ngay bản build lên vị trí ưu tiên số 1 (Tier -1, badge `★ YÊU THÍCH`) và đưa trực tiếp vào `Ctrl + V`.
-   - **Tự thêm mã cá nhân:** Nút `[+ THÊM MÃ RIÊNG]` mở cửa sổ cho phép nhập súng, chế độ, mô tả và mã loadout riêng; hỗ trợ nút `[🗑 Xóa]` khi cần dọn dẹp.
-   - **Lọc nhanh yêu thích:** Nút `[★ CHỈ YÊU THÍCH]` trên thanh vũ khí giúp lọc ngay các bản build và súng đã được ghim/tạo riêng.
+11. **Tab Chuyên Biệt Yêu Thích & Quản Lý Mã Cá Nhân (`favorites.json`):**
+   - **Tab riêng biệt `[★ YÊU THÍCH]`:** Thay thế nút lọc toggle cũ bằng hệ thống 2 Tab rõ ràng trên Header: `[🔍 QUÉT & TRA CỨU]` và `[★ YÊU THÍCH (N)]` hiển thị số lượng cấu hình đã lưu.
+   - **Thoát nhanh bằng phím `ESC`:** Khi đang ở Tab Yêu thích, nhấn phím `ESC` hoặc nút bấm nổi bật `[← QUAY LẠI (ESC)]` trên banner để lập tức quay lại màn hình quét chính.
+   - **Quản lý tập trung toàn bộ súng:** Hiển thị danh sách tất cả các bản build đã ghim và mã cá nhân của toàn bộ súng trong game.
+   - **Nút `[🔍 Xem súng]`:** Nhảy ngay đến khẩu súng tương ứng ở màn hình chính và chuyển về Tab `QUÉT & TRA CỨU`.
+   - **Lưu trữ độc lập & an toàn:** Tách biệt hoàn toàn vào tệp `favorites.json`, không bao giờ bị ghi đè hay mất dữ liệu khi cập nhật DB (`[CẬP NHẬT DB]`).
+   - **Ghim bản build yêu thích & mã riêng:** Nút ngôi sao `[☆ Lưu]` / `[★ Đã ghim]` đẩy cấu hình lên ưu tiên số 1 (Tier -1), modal `[+ THÊM MÃ RIÊNG]` và nút `[📋 COPY TẤT CẢ VÀO WIN+V]` ngay trong Tab.
 
 12. **Cơ chế Ngưỡng Tin Cậy OCR (Confidence Threshold - Chống Copy Nhầm):**
    - **Độ tin cậy cao (`>= 90%`):** Tự động nhận diện và đồng bộ ngay mã tối ưu vào Clipboard (`Ctrl + V` và `Win + V`).
@@ -101,12 +103,12 @@ Người dùng thông thường chỉ cần tải bản đóng gói sẵn tại 
 **DF Loadout Scanner** is a lightweight, real-time weapon recognition and loadout synchronizer for Delta Force (Garena & Level Infinite / Steam).
 
 ### Quick Start (3 Steps)
-1. **Download:** Grab `DF-Loadout-Scanner-v1.4.0-Windows-x64.zip` from [GitHub Releases](https://github.com/TaiGiap/df-loadout-scanner/releases/latest) and extract it.
+1. **Download:** Grab `DF-Loadout-Scanner-v1.4.1-Windows-x64.zip` from [GitHub Releases](https://github.com/TaiGiap/df-loadout-scanner/releases/latest) and extract it.
 2. **Launch:** Run `DF-Loadout-Scanner-Windows-x64.exe`. If the Windows SmartScreen prompt appears, click **More info** $\rightarrow$ **Run anyway** (requires admin rights for global hotkey capture and stable fullscreen screenshot).
 3. **Use in Game:** Set game display to **Borderless Windowed** and enable Windows **Clipboard History (`Win + V`)**. In gunsmith menu, press hotkey (default `F9` or customizable to `Mouse 4/5` / `F1-F12`). Hit `Ctrl + V` to paste the top build, or `Win + V` to browse alternate builds.
 
 ### Key Highlights
-- **Favorites & Custom Codes System (`favorites.json`):** Independent persistent storage preserved across database updates, one-click star pinning (`[☆ Lưu]` / `[★ Đã ghim]`) elevating favorite builds to Tier -1 (`Ctrl + V`), custom loadout modal (`[+ THÊM MÃ RIÊNG]`), and quick favorite filter toggle.
+- **Dedicated Favorites Tab & ESC Quick Exit (`favorites.json`):** Dedicated `[★ FAVORITES (N)]` tab displaying all pinned builds and custom loadouts for all weapons with quick jump button (`[🔍 View Gun]`) to weapon page, fast exit via `ESC` key or `[← BACK (ESC)]` banner button, independent storage (`favorites.json`), and instant custom code modal (`[+ ADD CUSTOM]`).
 - **OCR Confidence Thresholding (Anti-Miscopy Protection):** Tiered recognition prevents unwanted clipboard overwrites: high confidence (`>= 90%`) auto-syncs, suspicious matches (`75%-89%`) require explicit confirmation via `[✔ CONFIRM & COPY]`, and low confidence (`< 75%`) triggers rejection.
 - **Semantic Data Validator & Clean Code Guarantee:** Deep cross-validation ensures every weapon code belongs 100% to the matching weapon, removing corrupted/mismatched codes and rogue newlines.
 - **Source-Normalized Ranking:** Dynamically balances popularity scores across multiple sources, allowing high-quality builds from DFBuilds and FPSMeta to be fairly interleaved with DFTools without getting pushed to the bottom.
@@ -146,7 +148,8 @@ Tác giả tôn trọng quyền sở hữu trí tuệ và mong muốn của các
 
 | Phiên bản | Điểm mới & Cải tiến chính |
 | :--- | :--- |
-| **v1.4.0 (Mới nhất)** | Tích hợp hệ thống Build Yêu Thích và Mã Cá Nhân độc lập (`favorites.json`) không lo mất dữ liệu khi cập nhật DB; Thêm nút ghim `[☆ Lưu]` / `[★ Đã ghim]` đẩy cấu hình lên ưu tiên số 1 (Tier -1, badge `★ YÊU THÍCH`); Thêm modal `[+ THÊM MÃ RIÊNG]` và nút lọc `[★ CHỈ YÊU THÍCH]`; Bổ sung cơ chế phân tầng ngưỡng tin cậy OCR (Confidence Threshold) chống tự động ghi đè Clipboard khi kết quả ở vùng nghi ngờ 75%–89% và yêu cầu xác nhận thủ công `[✔ XÁC NHẬN & COPY]`. |
+| **v1.4.1 (Mới nhất)** | Nâng cấp toàn diện trải nghiệm quản lý Yêu thích: Thay thế nút lọc toggle bằng hệ thống Tab chuyên biệt `[🔍 QUÉT & TRA CỨU]` và `[★ YÊU THÍCH (N)]` ngay trên Header; Quản lý tập trung toàn bộ cấu hình đã ghim và mã cá nhân của tất cả các súng; Bổ sung phím tắt `ESC` và nút `[← QUAY LẠI (ESC)]` thoát nhanh về màn hình quét; Thêm nút `[🔍 Xem súng]` nhảy thẳng đến trang tra cứu của súng; Tích hợp nút `[+ THÊM MÃ RIÊNG]` và `[COPY TẤT CẢ VÀO WIN+V]` trực tiếp trong Tab Yêu thích. |
+| **v1.4.0** | Tích hợp hệ thống Build Yêu Thích và Mã Cá Nhân độc lập (`favorites.json`) không lo mất dữ liệu khi cập nhật DB; Thêm nút ghim `[☆ Lưu]` / `[★ Đã ghim]` đẩy cấu hình lên ưu tiên số 1 (Tier -1, badge `★ YÊU THÍCH`); Thêm modal `[+ THÊM MÃ RIÊNG]`; Bổ sung cơ chế phân tầng ngưỡng tin cậy OCR (Confidence Threshold) chống tự động ghi đè Clipboard khi kết quả ở vùng nghi ngờ 75%–89% và yêu cầu xác nhận thủ công `[✔ XÁC NHẬN & COPY]`. |
 | **v1.3.7** | Nâng cấp bộ kiểm duyệt ngữ nghĩa (Semantic Data Validator) loại bỏ 100% bản ghi sai tên súng bên trong loadout code và mã rác; áp dụng thuật toán xếp hạng cân bằng đa nguồn (Source-Normalized Ranking) hiển thị đan xen công bằng các bản build giữa DFTools, DFBuilds và FPSMeta; chuẩn hóa tuyên bố tương thích Anti-Cheat chính xác và khách quan. |
 | **v1.3.6** | Nâng cấp toàn diện độ nét OCR: Phóng to 2.5x kèm lọc ngưỡng tương phản cao (triệt tiêu nền mờ bảng 18+), cơ chế quét dự phòng thông minh (Fallback ROI) tự động nhận diện thẻ súng đang chọn ở cột bên trái và cắt bỏ tên skin, lọc triệt để từ rác bảng cảnh báo 18+ và sửa 14 lỗi nhận diện súng thực tế (G3, P90, AR-57, PSG-1, M82, M7, MK4, R93, QBZ95-1, SG552, CI-19, SR-3M, VECTOR, 725 Double-Barrel). |
 | **v1.3.5** | Nâng cấp toàn diện bộ nhận diện vũ khí OCR: Tự động loại bỏ hậu tố phân loại súng (Tiếng Anh & Tiếng Việt), bổ sung bảng ánh xạ bí danh (`Shotgun Hai Nòng` $\rightarrow$ `725 Double-Barrel`, `Cung phức hợp` $\rightarrow$ `Compound Bow`...), siết chặt thuật toán so khớp 5 tầng (sửa triệt để lỗi nhận nhầm `G3`, `M249`, `PKM`, `M14`, `R93`) và hiển thị cảnh báo thông minh khi bộ lọc hiện tại chưa có cấu hình. |
