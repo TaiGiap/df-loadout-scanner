@@ -123,6 +123,18 @@ Tác giả tôn trọng quyền sở hữu trí tuệ và mong muốn của các
 
 ---
 
+## 📋 Nhật Ký Cập Nhật / Changelog
+
+| Phiên bản | Điểm mới & Cải tiến chính |
+| :--- | :--- |
+| **v1.3.4 (Mới nhất)** | Tích hợp cửa sổ `[❤ ỦNG HỘ / SUPPORT]` với mã VietQR Techcombank động (tự điền số tiền theo 3 mốc `1.000đ`, `5.000đ`, `10.000đ` hoặc tùy ý), sao chép nhanh STK và chuẩn hóa tuyên bố Freeware 100% cho cộng đồng. |
+| **v1.3.3** | Bổ sung bộ kiểm duyệt dữ liệu `Data Validator` trong bộ cào lọc sạch mã build lỗi/rác, tự động đối chiếu sửa `mode` và ưu tiên thứ tự khớp chính xác tên súng OCR 100%. |
+| **v1.3.2** | Tối ưu hóa hiệu năng tạm dừng render khi game fullscreen (giảm tải CPU/GPU chạy nền), tự động sửa lỗi OCR đọc nhầm ký tự tương đồng (`0/O`, `1/I/L`, `5/S`, `8/B`) và huy hiệu thông báo khi có bản cập nhật mới trên Header. |
+| **v1.3.1** | Thêm nút `[⌨]` đổi phím tắt quét súng trực tiếp trên thanh Header (hỗ trợ toàn diện `F1–F12`, `Numpad`, các phím điều hướng và 2 phím chuột phụ `Mouse 4/5`). |
+| **v1.3.0** | Hỗ trợ bộ lọc theo 4 nguồn dữ liệu (`ALL`, `DFTools`, `DFBuilds`, `FPSMeta`), hiển thị lượt copy thực tế trên thẻ trang bị và thuật toán tự động chọn bản build có lượt copy cao nhất vào `Ctrl + V`. |
+
+---
+
 ## Bản Quyền & Giấy Phép / License & Disclaimer
 
 Phần mềm được phát hành theo giấy phép **Proprietary Freeware License - All Rights Reserved** (Copyright © 2026 Anh Bảy Chọ / Tài Giáp).
