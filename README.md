@@ -1,169 +1,121 @@
 # DF Loadout Scanner
 
-Công cụ tự động nhận diện vũ khí thời gian thực qua Windows OCR và đồng bộ mã trang bị cho game Delta Force (Garena & Level Infinite / Steam).
+Công cụ tự động nhận diện vũ khí thời gian thực qua Windows OCR và đồng bộ mã trang bị (loadout code) cho game Delta Force (Garena & Level Infinite / Steam).
 
 *Real-time weapon OCR scanner and loadout clipboard synchronizer for Delta Force.*
 
 ---
 
-## Tải Về & Cài Đặt Nhanh / Quick Download
+## Tải Về Nhanh / Quick Download
 
-Người dùng thông thường chỉ cần tải bản đóng gói sẵn trên GitHub Releases, không cần cài đặt môi trường Rust:
+Người dùng thông thường chỉ cần tải bản đóng gói sẵn tại mục GitHub Releases:
 
-- **Tải phiên bản mới nhất (Latest Release):** [DF-Loadout-Scanner Releases](https://github.com/TaiGiap/df-loadout-scanner/releases/latest)
-  - `DF-Loadout-Scanner-Windows-x64.zip` (Thư mục nén đóng gói đầy đủ, khuyến nghị).
-  - `DF-Loadout-Scanner-Windows-x64.exe` (File thực thi độc lập Portable).
-- **Hướng dẫn:** Giải nén hoặc mở trực tiếp file `DF-Loadout-Scanner-Windows-x64.exe` để chạy. Ứng dụng sẽ tự động tạo thư mục con `DF-Loadout-Scanner-Data` để lưu trữ dữ liệu cấu hình một cách ngăn nắp.
+- **Phiên bản mới nhất (Latest Release):** [DF-Loadout-Scanner Releases](https://github.com/TaiGiap/df-loadout-scanner/releases/latest)
+- **Tệp cài đặt:** `DF-Loadout-Scanner-Windows-x64.zip` (Đã đóng gói trọn gói file thực thi `.exe`, tài liệu hướng dẫn và giấy phép).
 
-*For regular users, download the pre-built release package directly from [GitHub Releases](https://github.com/TaiGiap/df-loadout-scanner/releases/latest). You can choose between the recommended `DF-Loadout-Scanner-Windows-x64.zip` archive or the standalone `DF-Loadout-Scanner-Windows-x64.exe` binary (portable, no installation required).*
+> **Tác giả / Developed By:** Anh Bảy Chọ / Tài Giáp  
+> **Phiên bản / Version:** `v1.3.1` (Custom Hotkey & Mouse Button Edition)
 
 ---
 
-## Tác giả / Developed By
+## Hướng Dẫn Cài Đặt & Sử Dụng (3 Bước)
 
-- **Anh Bảy Chọ / Tài Giáp**
-- **Phiên bản / Version:** v1.3.1 - Custom Hotkey & Mouse Button Edition (Garena & Level Infinite / Steam)
+### Bước 1: Tải về & Giải nén
+- Tải gói file nén `DF-Loadout-Scanner-Windows-x64.zip` từ trang [Releases](https://github.com/TaiGiap/df-loadout-scanner/releases/latest).
+- Giải nén tệp zip vào một thư mục bất kỳ trên máy tính.
+
+### Bước 2: Khởi chạy ứng dụng
+- Mở file `DF-Loadout-Scanner-Windows-x64.exe`.
+- *Lưu ý:* Nếu Windows SmartScreen hiển thị hộp thoại màu xanh *"Windows protected your PC"*, hãy nhấn **More info** $\rightarrow$ chọn **Run anyway** để tiếp tục. Ứng dụng tự động yêu cầu quyền Administrator để Windows cho phép bắt phím tắt toàn cục khi cửa sổ game đang hoạt động.
+
+### Bước 3: Thiết lập & Quét trong game
+1. **Thiết lập hệ thống & game:**
+   - Trong game Delta Force: Chuyển chế độ hiển thị sang **Borderless Windowed (Không viền)**.
+   - Trên Windows: Nhấn tổ hợp phím `Win + V` và kích hoạt tính năng **Clipboard History (Lưu lịch sử Clipboard)**.
+2. **Chọn bộ lọc:** Trên giao diện ứng dụng, chọn **Nguồn** (`Tất cả`, `DFTools`, `DFBuilds`, `FPSMeta`), **Server** (`Garena` hoặc `Infinity`), và **Chế độ chơi** (`Warfare` hoặc `Operations`).
+3. **Tùy biến phím tắt (tùy chọn):** Nhấn nút `[⌨]` cạnh nút quét để đổi sang phím bạn muốn (`F1`–`F12`, `Mouse 4`, `Mouse 5`, `Numpad`...). Nhấn `Esc` để hủy.
+4. **Quét súng:** Vào giao diện tùy biến vũ khí trong game, nhấn phím tắt (mặc định `F9` hoặc nút đã đổi).
+   - Ứng dụng phát âm báo bíp xác nhận.
+   - Nhấn `Ctrl + V` để dán ngay bản build có số lượt copy cao nhất vào ô nhập mã trong game.
+   - Nhấn `Win + V` để chọn nhanh các cấu hình đề xuất khác đã được lưu sẵn trong lịch sử khay nhớ tạm.
 
 ---
 
 ## Tính Năng Nổi Bật / Key Features
 
-### Tiếng Việt
+1. **Quét vũ khí thời gian thực & Phím tắt linh hoạt:**
+   - Tự động nhận diện tên vũ khí chính xác qua Windows Native OCR (`Windows.Media.Ocr`) và thuật toán so khớp mờ Jaro-Winkler.
+   - Đổi phím tắt quét tức thì ngay trên thanh điều khiển với nút `[⌨]`, hỗ trợ đầy đủ `F1`–`F12`, phím điều hướng, phím số `Numpad`, phím đặc biệt và **hai nút chuột phụ bên hông** (`Mouse 4` / `Mouse 5`).
 
-1. **Quét vũ khí thời gian thực & Tùy biến phím tắt (Mặc định `F9` / Hỗ trợ Chuột 4 & 5):**
-   - Nút bấm đổi phím tắt trực tiếp `[⌨]` ngay cạnh nút quét trên thanh Header.
-   - Chế độ nhận phím thông minh (Key Capture Mode): hỗ trợ đổi ngay sang `F1`–`F12`, cụm phím điều hướng (`Insert`, `Delete`, `Home`, `End`, `PageUp`, `PageDown`), bàn phím số `Numpad`, phím đặc biệt (`CapsLock`, `Tab`, `~`), và đặc biệt là **hai nút chuột phụ bên hông** (`Mouse 4` / `Mouse 5`).
-   - Nhấn `Esc` để hủy đổi phím. Phím tắt mới được tự động lưu vĩnh viễn vào `config.json`.
-   - Tự động chụp vùng tên súng từ màn hình chính bằng thư viện `xcap`.
-   - Nhận diện ký tự qua Windows Native Media OCR (`Windows.Media.Ocr.OcrEngine`).
-   - Tự động sửa lỗi đọc ký tự bằng thuật toán so khớp mờ Jaro-Winkler (> 0.72).
-   - **Tự động chọn bản build tối ưu nhất:** Lọc theo Server, Mode và Nguồn web đang chọn, tự động nạp cấu hình có số lượt copy cao nhất vào Clipboard hiện thời (`Ctrl + V`).
+2. **Tự động chọn bản build hot nhất theo nguồn & lượt copy:**
+   - Thuật toán thông minh tự động lọc cấu hình có số lượt sao chép (copy count) cao nhất phù hợp với Server, Chế độ và Trang nguồn bạn đang chọn để đưa ngay vào `Ctrl + V`.
+   - Hiển thị huy hiệu số lượt sao chép thực tế (ví dụ: `📋 3,612 lượt copy`) trên từng thẻ trang bị.
 
-2. **Tự động đẩy vào Windows Clipboard History (`Win + V`):**
-   - Đưa cấu hình có lượt copy cao nhất / Meta lên đầu khay nhớ tạm (`Ctrl + V`).
-   - Lần lượt đẩy các cấu hình còn lại vào lịch sử Clipboard (`Win + V`) cách nhau 150ms để tiện tra cứu.
+3. **Lưu hàng đợi vào Windows Clipboard History (`Win + V`):**
+   - Đưa cấu hình tối ưu nhất lên đầu khay nhớ tạm (`Ctrl + V`).
+   - Lần lượt đẩy các cấu hình phụ/đề xuất khác vào lịch sử Clipboard (`Win + V`) cách nhau 150ms để tiện tra cứu và thay đổi nhanh trong trận đấu.
 
-3. **Thanh Bộ Lọc 5 Cấp (5-Level Dynamic Filter Bar):**
-   - **Nguồn web (Source):** `Tất cả nguồn (ALL)`, `DFTools` (DeltaForceTools), `DFBuilds` (DeltaForceBuilds), và `FPSMeta`. Ghi nhớ nguồn đã chọn qua file `config.json`.
-   - **Khu vực máy chủ (Server):** `Garena` và `Infinity (Global / Level Infinite / Steam)`.
-   - **Chế độ chơi (Mode):** `Chiến Trường Toàn Diện (Warfare)`, `Chiến Dịch Sinh Tồn (Operations)`, hoặc `Tất cả chế độ`.
-   - **Phân loại vũ khí (Weapon Type):** `Assault Rifle`, `SMG`, `LMG`, `Marksman Rifle`, `Sniper Rifle`, `Shotgun`, `Pistol`, `Special`.
-   - **Vũ khí (Weapon):** Danh sách 75+ khẩu súng được lọc thông minh theo điều kiện đang chọn, tự động chuyển sang súng đầu tiên có dữ liệu khi đổi bộ lọc.
+4. **Thanh lọc 5 cấp độ chuyên sâu:**
+   - Lọc nhanh theo **Trang nguồn** (`ALL`, `DFTools`, `DFBuilds`, `FPSMeta`), **Server**, **Chế độ chơi**, **Hệ súng** (8 phân loại) và **75+ Vũ khí**. Tự động ghi nhớ các lựa chọn vào cấu hình máy.
 
-4. **Hiển thị số lượt copy & Sắp xếp ưu tiên độ phổ biến:**
-   - Hiển thị huy hiệu số lượt sao chép thực tế (ví dụ: `📋 3,612 lượt copy`) trên từng thẻ build.
-   - Thuật toán sắp xếp ưu tiên hiển thị các bản build có số lượt copy cao nhất lên đầu, kết hợp cùng mức độ ưu tiên Meta/đề xuất.
-
-5. **Cơ sở dữ liệu lớn (2.200+ Cấu hình từ 3 nguồn cộng đồng):**
-   - Thu thập và chuẩn hóa từ các cổng dữ liệu cộng đồng `DeltaForceTools`, `DeltaForceBuilds` và `FPSMeta` với cơ chế lọc trùng lặp tuyệt đối theo `loadout_code`.
-   - Ghi nhận nguồn minh bạch trên giao diện từng bản build giúp người chơi dễ dàng theo dõi.
-   - **Khóa kênh cập nhật an toàn:** Đường dẫn cập nhật mùa mới được khóa cứng vào máy chủ GitHub chính thức của tác giả (`TaiGiap/df-loadout-scanner`), ngăn chặn hoàn toàn nguy cơ giả mạo nguồn dữ liệu (Data Spoofing).
+5. **Cơ sở dữ liệu lớn (2.200+ Cấu hình) & Cập nhật tự động an toàn:**
+   - Dữ liệu chuẩn hóa từ 3 cổng cộng đồng trực tuyến với cơ chế chống trùng lặp theo mã phụ kiện.
+   - Đường dẫn cập nhật dữ liệu mùa mới được khóa cứng vào kênh máy chủ chính thức của tác giả, đảm bảo dữ liệu sạch và an toàn.
 
 6. **Bảo vệ toàn vẹn & Bản quyền:**
    - Ứng dụng được tích hợp cơ chế bảo vệ toàn vẹn tệp thực thi và bản quyền tác giả.
 
-7. **Giao diện Tactical Dark UI:**
-   - Phong cách quân sự Delta Force với bảng màu `#0B1015`, `#131B24`, `#00E5A0`.
-   - Hỗ trợ song ngữ qua nút `[LANG: VI]` / `[LANG: EN]`.
-   - Bảng hướng dẫn sử dụng song ngữ tự động mở khi khởi động.
-   - Chế độ luôn hiển thị trên cùng (Always on Top).
-   - Kích thước chuẩn cố định 1140x680 tối ưu không gian hiển thị, căn chỉnh hoàn hảo các dropdown lọc.
-
-8. **An toàn 100% (Anti-Cheat Safe):**
-   - Chỉ chụp ảnh màn hình qua Windows API và ghi vào Clipboard hệ thống.
-   - Hoàn toàn không can thiệp bộ nhớ (RAM), không chèn DLL, không chỉnh sửa tệp hay tiến trình game.
+7. **An toàn 100% (Anti-Cheat Safe):**
+   - Chỉ sử dụng Windows API chuẩn để chụp ảnh màn hình và ghi dữ liệu văn bản vào Clipboard.
+   - Hoàn toàn không can thiệp bộ nhớ (RAM), không inject DLL, không chỉnh sửa file hay tiến trình game.
 
 ---
 
-### English
+## English Summary
 
-1. **Real-time Weapon Scanner & Customizable Global Hotkey (Default `F9` / Mouse 4 & 5 Support):**
-   - Quick hotkey rebind button `[⌨]` placed directly beside the scan button on the Header toolbar.
-   - Interactive Key Capture Mode: effortlessly assign `F1`–`F12`, navigation cluster (`Insert`, `Delete`, `Home`, `End`, `PageUp`, `PageDown`), `Numpad 0`–`9`, special keys (`CapsLock`, `Tab`, `~`), and **side mouse buttons** (`Mouse 4` / `Mouse 5`).
-   - Press `Esc` to cancel rebinding. Your customized hotkey is automatically saved to `config.json`.
-   - Captures the weapon title region using native Windows OCR and matches it via Jaro-Winkler fuzzy string distance (> 0.72).
-   - Automatically selects the build with the highest copy count matching current Server, Mode, and Web Source, feeding it into active clipboard (`Ctrl + V`).
+**DF Loadout Scanner** is a lightweight, real-time weapon recognition and loadout synchronizer for Delta Force (Garena & Level Infinite / Steam).
 
-2. **Auto-Clipboard History Sync (`Win + V`):**
-   - Places the top/most popular build on active clipboard (`Ctrl + V`), then feeds recommended builds into Windows Clipboard History (`Win + V`) spaced 150ms apart.
+### Quick Start (3 Steps)
+1. **Download:** Grab the latest `DF-Loadout-Scanner-Windows-x64.zip` from [GitHub Releases](https://github.com/TaiGiap/df-loadout-scanner/releases/latest) and extract it.
+2. **Launch:** Run `DF-Loadout-Scanner-Windows-x64.exe`. If the Windows SmartScreen blue prompt appears, click **More info** $\rightarrow$ **Run anyway** (requires admin rights for global hotkey capture).
+3. **Use in Game:** Set game display to **Borderless Windowed** and enable Windows **Clipboard History (`Win + V`)**. In game gunsmith menu, press hotkey (default `F9` or customizable to `Mouse 4/5` / `F1-F12`). Hit `Ctrl + V` to paste the most popular build directly into the game, or `Win + V` to browse alternate builds.
 
-3. **5-Level Dynamic Filter Bar:**
-   - Filter by Web Source (`ALL`, `DFTools`, `DFBuilds`, `FPSMeta`), Server (`Garena` / `Infinity`), Game Mode (`Warfare` / `Operations` / `All`), Weapon Type (8 categories), and Weapon (75+ weapons).
-   - Automatically resets to the first available weapon when filters change, preventing empty result states.
-   - Persists selected source across sessions in `config.json`.
-
-4. **Copy Count Badge & Popularity Ranking:**
-   - Displays real-world copy count badges (e.g. `📋 3,612 copies`) on each card.
-   - Prioritizes most copied loadouts at the top alongside Meta/Recommended status.
-
-5. **Large Multi-Source Database (2,200+ Builds):**
-   - Aggregated from online community repositories (`DeltaForceTools`, `DeltaForceBuilds`, `FPSMeta`) with strict deduplication by `loadout_code`.
-   - Transparent attribution displayed for each loadout card.
-   - **Locked Official Update Pipeline:** Hardcoded to the author's verified GitHub repository, preventing malicious data spoofing attacks.
-
-6. **Integrity & Copyright Protection:**
-   - Equipped with built-in binary integrity and author copyright protection.
-
-7. **Tactical Military Dark UI:**
-   - Delta Force emerald accent palette, bilingual `[LANG: VI / EN]` switcher, User Guide modal, Always on Top toggle, and fixed 1140x680 resolution with compactly tuned dropdowns.
-
-8. **100% Anti-Cheat Compliant:**
-   - Operates strictly through Windows display capture and clipboard APIs. Zero memory injection, zero game hook.
+### Key Highlights
+- **Real-time OCR:** Captures weapon title with native Windows OCR and fuzzy matching.
+- **Custom Hotkey:** Dedicated `[⌨]` rebind button supporting `F1`–`F12`, `Numpad`, and side mouse buttons (`Mouse 4` / `Mouse 5`).
+- **Smart Auto-Pick:** Automatically feeds the loadout with the highest copy count to `Ctrl + V`.
+- **Clipboard History Sync:** Populates Windows Clipboard History (`Win + V`) with alternative loadouts spaced 150ms apart.
+- **Multi-Source Database:** Over 2,200 builds aggregated from `DFTools`, `DFBuilds`, and `FPSMeta`.
+- **100% Safe:** Pure Windows display/clipboard APIs — zero memory scanning, zero game injection.
 
 ---
 
-## Hướng Dẫn Sử Dụng / Quick Start
-
-### 1. Cài đặt hệ thống / System Setup
-
-- **Quyền Administrator (UAC):** File `.exe` tự động yêu cầu quyền Administrator khi mở. Quyền này bắt buộc để Windows cho phép lắng nghe phím tắt toàn cục (mặc định `F9` hoặc phím tùy chỉnh) khi cửa sổ game Delta Force đang chiếm tiêu điểm (hoàn toàn không can thiệp bộ nhớ hay tiến trình game).
-- **Trong game Delta Force:** Chuyển chế độ hiển thị sang **Borderless Windowed (Không viền)**.
-- **Trên Windows:** Nhấn `Win + V` và bật tính năng **Clipboard History (Lưu lịch sử Clipboard)**.
-
-### 2. Sử dụng công cụ / Usage
-
-1. Mở file `DF-Loadout-Scanner-Windows-x64.exe` (hoặc `df_clipboard_helper.exe`).
-2. Chọn **Server** (`Garena` hoặc `Infinity`) và **Chế độ chơi** (`Warfare` hoặc `Operations`) phù hợp.
-3. Tùy chọn: Nhấn nút **`[⌨]`** cạnh nút quét để đổi phím tắt sang phím bạn thích hoặc nút chuột hông (`Mouse 4` / `Mouse 5`).
-4. Trong game, vào giao diện tùy biến vũ khí và nhấn phím quét (mặc định **`F9`** hoặc phím đã đổi).
-5. Ứng dụng phát tiếng bíp xác nhận. Nhấn **`Ctrl + V`** để dán ngay bản Meta, hoặc **`Win + V`** để chọn các build khác.
-
----
-
-## Nguồn Dữ Liệu, Ghi Nhận & Chính Sách Gỡ Bỏ / Data Sources, Attribution & Takedown Policy
+## Nguồn Dữ Liệu, Ghi Nhận & Chính Sách Gỡ Bỏ / Data Attribution & Takedown
 
 ### 1. Nguồn Dữ Liệu Tham Khảo Cộng Đồng (Community Attribution)
-Cơ sở dữ liệu cấu hình trang bị được tổng hợp nhằm mục đích tra cứu phi lợi nhuận cho người chơi từ 3 cổng cộng đồng trực tuyến:
+Cơ sở dữ liệu cấu hình trang bị được tổng hợp nhằm mục đích tra cứu phi lợi nhuận cho cộng đồng người chơi từ 3 cổng thông tin trực tuyến:
 - **DeltaForceTools:** [deltaforcetools.gg](https://deltaforcetools.gg/vi/weapon-builds)
 - **DeltaForceBuilds:** [deltaforcebuilds.com](https://deltaforcebuilds.com)
 - **FPSMeta:** [fpsmeta.com](https://fpsmeta.com) ([fpsmeta.gg](https://fpsmeta.gg/delta-force-meta))
 
-Ứng dụng hoàn toàn độc lập, phi thương mại, không có mối liên kết hay tài trợ từ các chủ sở hữu trang web nêu trên cũng như nhà phát hành trò chơi Delta Force (Team Jade / TiMi Studio Group / Garena).
+Ứng dụng hoàn toàn độc lập, phi lợi nhuận, không có mối liên kết hay tài trợ từ các trang web nêu trên cũng như nhà phát hành trò chơi Delta Force (Team Jade / TiMi Studio Group / Garena).
 
-### 2. Quy Trình Tiếp Nhận Khiếu Nại & Gỡ Bỏ Dữ Liệu (Notice & Takedown Policy)
-Tác giả tôn trọng quyền sở hữu trí tuệ và mong muốn của các quản trị viên/chủ sở hữu nguồn dữ liệu cộng đồng:
-- Nếu quý đơn vị hoặc chủ sở hữu không muốn dữ liệu được trích dẫn hay tổng hợp trong công cụ này, vui lòng gửi yêu cầu gỡ bỏ (Takedown / Opt-out Request) thông qua:
+### 2. Tiếp Nhận Khiếu Nại & Gỡ Bỏ Dữ Liệu (Notice & Takedown Policy)
+Tác giả tôn trọng quyền sở hữu trí tuệ và mong muốn của các đơn vị quản trị nguồn dữ liệu:
+- Mọi yêu cầu gỡ bỏ nguồn hoặc dữ liệu trích dẫn (Opt-out / Takedown Request) xin vui lòng gửi qua:
   - **GitHub Issues:** [Tạo Issue Yêu Cầu Gỡ Bỏ](https://github.com/TaiGiap/df-loadout-scanner/issues)
   - **Email Liên Hệ Trực Tiếp:** [tai.gd361@gmail.com](mailto:tai.gd361@gmail.com)
-- Mọi yêu cầu hợp lệ từ chủ sở hữu nguồn sẽ được xử lý, loại bỏ hoàn toàn khỏi bộ cào và cơ sở dữ liệu phân phối trong vòng **24–48 giờ**.
+- Yêu cầu hợp lệ sẽ được xử lý và gỡ bỏ hoàn toàn khỏi hệ thống phân phối trong vòng **24–48 giờ**.
 
 ---
 
-## Phân Phối & Bản Quyền Nhị Phân / Distribution
-
-Ứng dụng được biên dịch và đóng gói sẵn dưới dạng Portable Executable độc lập (`.exe`) và kho lưu trữ nén (`.zip`) tại mục [GitHub Releases](https://github.com/TaiGiap/df-loadout-scanner/releases/latest).
-
-Mã nguồn được quản lý và bảo vệ trong kho lưu trữ riêng biệt (Private Repository) nhằm đảm bảo an toàn, bảo lưu quyền sở hữu trí tuệ và chống các hành vi can thiệp trái phép. Dữ liệu cấu hình trang bị mùa mới được đồng bộ công khai tự động tại file [builds.json](builds.json).
-
----
-
-## Bản Quyền & Giấy Phép / License & Proprietary Notice
+## Bản Quyền & Giấy Phép / License & Disclaimer
 
 Phần mềm được phát hành theo giấy phép **Proprietary Freeware License - All Rights Reserved** (Copyright © 2026 Anh Bảy Chọ / Tài Giáp).
 
 - **Quyền sử dụng:** Người dùng được phép tải về và sử dụng miễn phí bản thực thi nguyên trạng cho mục đích cá nhân, phi thương mại.
-- **Nghiêm cấm:** Mọi hành vi sao chép mã nguồn, dịch ngược, giải mã, can thiệp file thực thi, sửa đổi/xóa tên tác giả hoặc kinh doanh thương mại hóa dưới bất kỳ hình thức nào khi chưa có sự đồng ý bằng văn bản từ tác giả.
+- **Nghiêm cấm:** Mọi hành vi sao chép mã nguồn, dịch ngược, giải mã, can thiệp file thực thi, sửa đổi/xóa tên tác giả hoặc thương mại hóa dưới bất kỳ hình thức nào khi chưa có sự đồng ý bằng văn bản từ tác giả.
 
-### Tuyên Bố Miễn Trừ Trách Nhiệm & Nhãn Hiệu (Disclaimer & Trademarks)
+### Tuyên Bố Miễn Trừ Trách Nhiệm (Disclaimer)
 - Công cụ độc lập hoạt động hoàn toàn qua Windows OCR API chuẩn, không chứa bất kỳ tài sản trí tuệ, hình ảnh hay mã nguồn nào của trò chơi Delta Force (Team Jade / TiMi Studio Group / Garena).
 - *An independent utility operating strictly via standard Windows OCR APIs, containing no intellectual property, assets, images, or source code from Delta Force (Team Jade / TiMi Studio Group / Garena).*
