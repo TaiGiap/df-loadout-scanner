@@ -14,7 +14,7 @@ Người dùng thông thường chỉ cần tải bản đóng gói sẵn tại 
 - **Tệp cài đặt:** `DF-Loadout-Scanner-Windows-x64.zip` (Đã đóng gói trọn gói file thực thi `.exe`, tài liệu hướng dẫn và giấy phép).
 
 > **Tác giả / Developed By:** Anh Bảy Chọ / Tài Giáp  
-> **Phiên bản / Version:** `v1.3.1` (Custom Hotkey & Mouse Button Edition)
+> **Phiên bản / Version:** `v1.3.2` (Performance & OCR Accuracy Edition)
 
 ---
 
@@ -43,29 +43,36 @@ Người dùng thông thường chỉ cần tải bản đóng gói sẵn tại 
 
 ## Tính Năng Nổi Bật / Key Features
 
-1. **Quét vũ khí thời gian thực & Phím tắt linh hoạt:**
-   - Tự động nhận diện tên vũ khí chính xác qua Windows Native OCR (`Windows.Media.Ocr`) và thuật toán so khớp mờ Jaro-Winkler.
+1. **Quét vũ khí thời gian thực & Bộ lọc sửa lỗi OCR thông minh:**
+   - Tự động nhận diện tên vũ khí chính xác qua Windows Native OCR (`Windows.Media.Ocr`) kết hợp thuật toán so khớp mờ Jaro-Winkler.
+   - **Bộ lọc sửa lỗi đọc nhầm OCR:** Tự động chuẩn hóa các cặp ký tự dễ nhầm lẫn trên font game (`0` <-> `O`, `1` <-> `I`/`L`, `5` <-> `S`, `8` <-> `B`, loại bỏ khoảng trắng và dấu gạch nối thừa) giúp độ chính xác đạt mức tối đa.
    - Đổi phím tắt quét tức thì ngay trên thanh điều khiển với nút `[⌨]`, hỗ trợ đầy đủ `F1`–`F12`, phím điều hướng, phím số `Numpad`, phím đặc biệt và **hai nút chuột phụ bên hông** (`Mouse 4` / `Mouse 5`).
 
-2. **Tự động chọn bản build hot nhất theo nguồn & lượt copy:**
+2. **Tối ưu hóa hiệu năng nền (Zero Background Overhead):**
+   - Ứng dụng tự động phát hiện trạng thái cửa sổ (`focused` / `minimized`). Khi người dùng đang trong trận đấu, toàn bộ việc vẽ lại giao diện được tạm dừng, giảm tải CPU/GPU về mức 0% và chỉ kích hoạt vẽ khi có thao tác quét súng hoặc mở lại cửa sổ.
+
+3. **Tự động kiểm tra bản cập nhật mới (Auto Update Checker):**
+   - Tự động kiểm tra phiên bản mới từ GitHub Releases khi khởi động; hiển thị huy hiệu `[BẢN MỚI]` trên thanh Header giúp người dùng mở nhanh trang tải về chỉ với 1 cú click.
+
+4. **Tự động chọn bản build hot nhất theo nguồn & lượt copy:**
    - Thuật toán thông minh tự động lọc cấu hình có số lượt sao chép (copy count) cao nhất phù hợp với Server, Chế độ và Trang nguồn bạn đang chọn để đưa ngay vào `Ctrl + V`.
    - Hiển thị huy hiệu số lượt sao chép thực tế (ví dụ: `📋 3,612 lượt copy`) trên từng thẻ trang bị.
 
-3. **Lưu hàng đợi vào Windows Clipboard History (`Win + V`):**
+5. **Lưu hàng đợi vào Windows Clipboard History (`Win + V`):**
    - Đưa cấu hình tối ưu nhất lên đầu khay nhớ tạm (`Ctrl + V`).
    - Lần lượt đẩy các cấu hình phụ/đề xuất khác vào lịch sử Clipboard (`Win + V`) cách nhau 150ms để tiện tra cứu và thay đổi nhanh trong trận đấu.
 
-4. **Thanh lọc 5 cấp độ chuyên sâu:**
+6. **Thanh lọc 5 cấp độ chuyên sâu:**
    - Lọc nhanh theo **Trang nguồn** (`ALL`, `DFTools`, `DFBuilds`, `FPSMeta`), **Server**, **Chế độ chơi**, **Hệ súng** (8 phân loại) và **75+ Vũ khí**. Tự động ghi nhớ các lựa chọn vào cấu hình máy.
 
-5. **Cơ sở dữ liệu lớn (2.200+ Cấu hình) & Cập nhật tự động an toàn:**
+7. **Cơ sở dữ liệu lớn (2.200+ Cấu hình) & Cập nhật tự động an toàn:**
    - Dữ liệu chuẩn hóa từ 3 cổng cộng đồng trực tuyến với cơ chế chống trùng lặp theo mã phụ kiện.
    - Đường dẫn cập nhật dữ liệu mùa mới được khóa cứng vào kênh máy chủ chính thức của tác giả, đảm bảo dữ liệu sạch và an toàn.
 
-6. **Bảo vệ toàn vẹn & Bản quyền:**
+8. **Bảo vệ toàn vẹn & Bản quyền:**
    - Ứng dụng được tích hợp cơ chế bảo vệ toàn vẹn tệp thực thi và bản quyền tác giả.
 
-7. **An toàn 100% (Anti-Cheat Safe):**
+9. **An toàn 100% (Anti-Cheat Safe):**
    - Chỉ sử dụng Windows API chuẩn để chụp ảnh màn hình và ghi dữ liệu văn bản vào Clipboard.
    - Hoàn toàn không can thiệp bộ nhớ (RAM), không inject DLL, không chỉnh sửa file hay tiến trình game.
 
@@ -81,12 +88,13 @@ Người dùng thông thường chỉ cần tải bản đóng gói sẵn tại 
 3. **Use in Game:** Set game display to **Borderless Windowed** and enable Windows **Clipboard History (`Win + V`)**. In game gunsmith menu, press hotkey (default `F9` or customizable to `Mouse 4/5` / `F1-F12`). Hit `Ctrl + V` to paste the most popular build directly into the game, or `Win + V` to browse alternate builds.
 
 ### Key Highlights
-- **Real-time OCR:** Captures weapon title with native Windows OCR and fuzzy matching.
+- **Real-time OCR with Homoglyph Correction:** Captures weapon title with native Windows OCR and fuzzy matching, automatically correcting confused character pairs (`0`/`O`, `1`/`I`/`L`, `5`/`S`, `8`/`B`).
+- **Zero Background Overhead:** Window focus/minimize detection ensures zero CPU/GPU consumption while in game, waking up only upon scan trigger.
+- **Auto Release Check:** Built-in update notifier surfaces a clickable badge in Header when a new release is available.
 - **Custom Hotkey:** Dedicated `[⌨]` rebind button supporting `F1`–`F12`, `Numpad`, and side mouse buttons (`Mouse 4` / `Mouse 5`).
-- **Smart Auto-Pick:** Automatically feeds the loadout with the highest copy count to `Ctrl + V`.
-- **Clipboard History Sync:** Populates Windows Clipboard History (`Win + V`) with alternative loadouts spaced 150ms apart.
+- **Smart Auto-Pick & Clipboard Sync:** Automatically feeds the loadout with highest copy count to `Ctrl + V`, populating alternate builds to `Win + V`.
 - **Multi-Source Database:** Over 2,200 builds aggregated from `DFTools`, `DFBuilds`, and `FPSMeta`.
-- **100% Safe:** Pure Windows display/clipboard APIs — zero memory scanning, zero game injection.
+- **100% Anti-Cheat Compliant:** Pure Windows display/clipboard APIs — zero memory scanning, zero game injection.
 
 ---
 
