@@ -11,7 +11,7 @@
       "Sát thương bùng nổ",
       "Đột kích"
     ],
-    "copy_count": 3612,
+    "copy_count": 3613,
     "loadout_code": "AK-12 Assault Rifle-Warfare-6IKIIVC0AE23UE8LS84Q7"
   },
   {
@@ -25,7 +25,7 @@
       "Dễ dùng cho người mới",
       "Đột kích"
     ],
-    "copy_count": 3177,
+    "copy_count": 3178,
     "loadout_code": "M7戰鬥步槍-全面戰場-6JF5RBO0B1U4GH9U0RGNM"
   },
   {
@@ -40,7 +40,7 @@
       "Thao tác linh hoạt",
       "Tất cả binh chủng"
     ],
-    "copy_count": 2408,
+    "copy_count": 2409,
     "loadout_code": "K416 Taarruz Tüfeği-Savaş-6JA1T6O025LSKC7G17SKR"
   },
   {
@@ -55,12 +55,12 @@
       "Thao tác linh hoạt",
       "Đột kích"
     ],
-    "copy_count": 2186,
+    "copy_count": 2187,
     "loadout_code": "M16A4突擊步槍-全面戰場-6IL9U00091VQRR66QIQN7"
   },
   {
     "server": "Garena",
-    "mode": "Warfare",
+    "mode": "Operations",
     "weapon_type": "Assault Rifle",
     "weapon": "M4A1",
     "classification": "DFTools, Đáng tiền nhất, Độ ổn định cao, Trinh sát",
@@ -99,7 +99,7 @@
       "Cấu hình meta",
       "Đột kích"
     ],
-    "copy_count": 1590,
+    "copy_count": 1592,
     "loadout_code": "AKM Assault Rifle-Warfare-6L52TIC0DAUOEF7C5OJHD"
   },
   {
@@ -114,7 +114,7 @@
       "Tầm gần",
       "Đột kích"
     ],
-    "copy_count": 1515,
+    "copy_count": 1516,
     "loadout_code": "QBZ95-1突擊步槍-全面戰場-6JP44G40APABFKUARLQMP"
   },
   {
@@ -128,7 +128,7 @@
       "Đa dụng",
       "Đột kích"
     ],
-    "copy_count": 1440,
+    "copy_count": 1441,
     "loadout_code": "AS Val Assault Rifle-Warfare-6JOT4H002RRP9CH1BAAO4"
   },
   {
@@ -157,7 +157,7 @@
       "Sát thương bùng nổ",
       "Đột kích"
     ],
-    "copy_count": 1183,
+    "copy_count": 1184,
     "loadout_code": "K416 Assault Rifle-Warfare-6L031RK0DAUOEF7C5OJHD"
   },
   {
@@ -228,7 +228,7 @@
       "Đa dụng",
       "Tất cả binh chủng"
     ],
-    "copy_count": 834,
+    "copy_count": 835,
     "loadout_code": "SCAR-H Battle Rifle-Chiến Trường Toàn Diện-6JFFR1C0B696DS05MN9QD"
   },
   {
@@ -272,7 +272,7 @@
       "Cấu hình đề xuất",
       "Đột kích"
     ],
-    "copy_count": 745,
+    "copy_count": 746,
     "loadout_code": "AS Val Assault Rifle-Warfare-6JHJ0UK0B1U4GH9U0RGNM\n"
   },
   {
@@ -287,7 +287,7 @@
       "Đa dụng",
       "Công binh"
     ],
-    "copy_count": 722,
+    "copy_count": 723,
     "loadout_code": "AUG Assault Rifle-Warfare-6KRE3D407BHL9TP13V12I"
   },
   {
@@ -302,7 +302,7 @@
       "Dễ dùng cho người mới",
       "Hỗ trợ"
     ],
-    "copy_count": 716,
+    "copy_count": 717,
     "loadout_code": "QCQ171 Submachine Gun-Warfare-6JMHT9K0ARVM6F7KNA3VB"
   },
   {
@@ -316,7 +316,7 @@
       "Tầm xa",
       "Tất cả binh chủng"
     ],
-    "copy_count": 702,
+    "copy_count": 703,
     "loadout_code": "AWM Sniper Rifle-Warfare-6JLGH3K0B1U4GH9U0RGNM"
   },
   {
@@ -461,7 +461,7 @@
       "Cấu hình đề xuất",
       "Đột kích"
     ],
-    "copy_count": 520,
+    "copy_count": 521,
     "loadout_code": "M4A1 Assault Rifle-Warfare-6L2GHQO0DAUOEF7C5OJHD"
   },
   {
@@ -650,7 +650,7 @@
       "Tầm gần",
       "Công binh"
     ],
-    "copy_count": 304,
+    "copy_count": 305,
     "loadout_code": "QJB201 Light Machine Gun-Warfare-6JJRU400B1U4GH9U0RGNM"
   },
   {
@@ -811,7 +811,7 @@
       "Tầm gần",
       "Đột kích"
     ],
-    "copy_count": 237,
+    "copy_count": 238,
     "loadout_code": "K437 Assault Rifle-Warfare-6L9JB6O0DAUOEF7C5OJHD"
   },
   {
@@ -907,6 +907,21 @@
   {
     "server": "Garena",
     "mode": "Warfare",
+    "weapon_type": "Marksman Rifle",
+    "weapon": "VSS",
+    "classification": "DFTools, Độ ổn định cao, Tầm gần, Trinh sát",
+    "tags": [
+      "DFTools",
+      "Độ ổn định cao",
+      "Tầm gần",
+      "Trinh sát"
+    ],
+    "copy_count": 177,
+    "loadout_code": "VSS Marksman Rifle-Warfare-6L61L300DAUOEF7C5OJHD"
+  },
+  {
+    "server": "Garena",
+    "mode": "Warfare",
     "weapon_type": "Assault Rifle",
     "weapon": "AKM",
     "classification": "DFTools, Độ ổn định cao, Đáng tiền nhất, Đột kích",
@@ -918,21 +933,6 @@
     ],
     "copy_count": 176,
     "loadout_code": "AKM Assault Rifle-Warfare-6G4HAT801VDG21UT7H030"
-  },
-  {
-    "server": "Garena",
-    "mode": "Warfare",
-    "weapon_type": "Marksman Rifle",
-    "weapon": "VSS",
-    "classification": "DFTools, Độ ổn định cao, Tầm gần, Trinh sát",
-    "tags": [
-      "DFTools",
-      "Độ ổn định cao",
-      "Tầm gần",
-      "Trinh sát"
-    ],
-    "copy_count": 176,
-    "loadout_code": "VSS Marksman Rifle-Warfare-6L61L300DAUOEF7C5OJHD"
   },
   {
     "server": "Garena",
@@ -1004,7 +1004,7 @@
       "Độ ổn định cao",
       "Đột kích"
     ],
-    "copy_count": 153,
+    "copy_count": 154,
     "loadout_code": "SVCH Marksman Rifle-Warfare-6KVR3I00DAUOEF7C5OJHD"
   },
   {
@@ -1034,7 +1034,7 @@
       "Đáng tiền nhất",
       "Trinh sát"
     ],
-    "copy_count": 146,
+    "copy_count": 147,
     "loadout_code": "K416 Assault Rifle-Chiến Trường Toàn Diện-6LJ3OF40DLOTJJPMHJQ7A"
   },
   {
@@ -1207,7 +1207,7 @@
       "Tầm xa",
       "Đột kích"
     ],
-    "copy_count": 90,
+    "copy_count": 91,
     "loadout_code": "AS Val Assault Rifle-Warfare-6LDMA8K0DAUOEF7C5OJHD"
   },
   {
@@ -1440,7 +1440,7 @@
       "Sát thương bùng nổ",
       "Cấu hình meta"
     ],
-    "copy_count": 4060,
+    "copy_count": 4062,
     "loadout_code": "CAR-15突擊步槍-烽火地帶-6JF659K0B1U4GH9U0RGNM"
   },
   {
@@ -1523,7 +1523,7 @@
       "Tầm gần",
       "Đáng tiền nhất"
     ],
-    "copy_count": 1639,
+    "copy_count": 1640,
     "loadout_code": "MP5 Submachine Gun-Operations-6JA2HD401KUO3HEH1KOS3"
   },
   {
@@ -1564,7 +1564,7 @@
       "DFTools",
       "Cấu hình đề xuất"
     ],
-    "copy_count": 1302,
+    "copy_count": 1304,
     "loadout_code": "MK4 Submachine Gun-Operations-6JHIU7O0B1U4GH9U0RGNM\n"
   },
   {
@@ -1578,7 +1578,7 @@
       "Cấu hình đề xuất",
       "Thao tác linh hoạt"
     ],
-    "copy_count": 1052,
+    "copy_count": 1053,
     "loadout_code": "K437突擊步槍-烽火地帶-6JCBNQ40795K6TILNH843"
   },
   {
@@ -1592,7 +1592,7 @@
       "Cấu hình đề xuất",
       "Đáng tiền nhất"
     ],
-    "copy_count": 1051,
+    "copy_count": 1052,
     "loadout_code": "AK-12 Assault Rifle-Operations-6JHIOM00B1U4GH9U0RGNM\n"
   },
   {
@@ -1659,7 +1659,7 @@
       "DFTools",
       "Cấu hình đề xuất"
     ],
-    "copy_count": 792,
+    "copy_count": 794,
     "loadout_code": "M249 Light Machine Gun-Operations-6JHITB00B1U4GH9U0RGNM\n"
   },
   {
@@ -1673,7 +1673,7 @@
       "Cấu hình đề xuất",
       "Đáng tiền nhất"
     ],
-    "copy_count": 775,
+    "copy_count": 778,
     "loadout_code": "CAR-15 Assault Rifle-Operations-6JHILRG0B1U4GH9U0RGNM\n"
   },
   {
@@ -1686,7 +1686,7 @@
       "DFTools",
       "Độ ổn định cao"
     ],
-    "copy_count": 749,
+    "copy_count": 751,
     "loadout_code": "MK47 Assault Rifle-Operations-6JLGDGS0B1U4GH9U0RGNM"
   },
   {
@@ -1699,7 +1699,7 @@
       "DFTools",
       "Thao tác linh hoạt"
     ],
-    "copy_count": 726,
+    "copy_count": 727,
     "loadout_code": "M14 Marksman Rifle-Operations-6JLGICK0B1U4GH9U0RGNM"
   },
   {
@@ -1754,7 +1754,7 @@
       "Cấu hình đề xuất",
       "Đáng tiền nhất"
     ],
-    "copy_count": 597,
+    "copy_count": 598,
     "loadout_code": "G3 Battle Rifle-Operations-6JHIKO80B1U4GH9U0RGNM\n"
   },
   {
@@ -1767,7 +1767,7 @@
       "DFTools",
       "Cấu hình đề xuất"
     ],
-    "copy_count": 585,
+    "copy_count": 586,
     "loadout_code": "K437突擊步槍-烽火地帶-6JGHTMG0B1U4GH9U0RGNM"
   },
   {
@@ -1821,7 +1821,7 @@
       "DFTools",
       "Tầm xa"
     ],
-    "copy_count": 525,
+    "copy_count": 526,
     "loadout_code": "M700 Sniper Rifle-Operations-6JJPPE80B1U4GH9U0RGNM"
   },
   {
@@ -1834,7 +1834,7 @@
       "DFTools",
       "Cấu hình đề xuất"
     ],
-    "copy_count": 506,
+    "copy_count": 507,
     "loadout_code": "MCX LT突擊步槍-烽火地帶-6JGHPJS0B1U4GH9U0RGNM"
   },
   {
@@ -1987,6 +1987,20 @@
   {
     "server": "Garena",
     "mode": "Operations",
+    "weapon_type": "Assault Rifle",
+    "weapon": "MCX LT",
+    "classification": "DFTools, Dễ dùng cho người mới, Thao tác linh hoạt",
+    "tags": [
+      "DFTools",
+      "Dễ dùng cho người mới",
+      "Thao tác linh hoạt"
+    ],
+    "copy_count": 388,
+    "loadout_code": "MCX LT Assault Rifle-Operations-6JLGKBS0B1U4GH9U0RGNM"
+  },
+  {
+    "server": "Garena",
+    "mode": "Operations",
     "weapon_type": "LMG",
     "weapon": "QJB201",
     "classification": "DFTools, Cấu hình đề xuất",
@@ -1996,20 +2010,6 @@
     ],
     "copy_count": 388,
     "loadout_code": "QJB201 Light Machine Gun-Operations-6JHIQ2C0B1U4GH9U0RGNM\n"
-  },
-  {
-    "server": "Garena",
-    "mode": "Operations",
-    "weapon_type": "Assault Rifle",
-    "weapon": "MCX LT",
-    "classification": "DFTools, Dễ dùng cho người mới, Thao tác linh hoạt",
-    "tags": [
-      "DFTools",
-      "Dễ dùng cho người mới",
-      "Thao tác linh hoạt"
-    ],
-    "copy_count": 387,
-    "loadout_code": "MCX LT Assault Rifle-Operations-6JLGKBS0B1U4GH9U0RGNM"
   },
   {
     "server": "Garena",
@@ -2218,20 +2218,6 @@
   {
     "server": "Garena",
     "mode": "Operations",
-    "weapon_type": "Assault Rifle",
-    "weapon": "MK47",
-    "classification": "DFTools, Thao tác linh hoạt, Độ ổn định cao",
-    "tags": [
-      "DFTools",
-      "Thao tác linh hoạt",
-      "Độ ổn định cao"
-    ],
-    "copy_count": 263,
-    "loadout_code": "MK47 Assault Rifle-Operations-6JLGCUC0B1U4GH9U0RGNM-"
-  },
-  {
-    "server": "Garena",
-    "mode": "Operations",
     "weapon_type": "SMG",
     "weapon": "P90",
     "classification": "DFTools, Dễ dùng cho người mới, Độ ổn định cao",
@@ -2240,7 +2226,7 @@
       "Dễ dùng cho người mới",
       "Độ ổn định cao"
     ],
-    "copy_count": 260,
+    "copy_count": 261,
     "loadout_code": "P90 Submachine Gun-Operations (Extraction Mode)-6L9R3HO09I07UMH3PNO7C"
   },
   {
@@ -2295,7 +2281,7 @@
       "Tầm gần",
       "Dễ dùng cho người mới"
     ],
-    "copy_count": 244,
+    "copy_count": 245,
     "loadout_code": "MCX LT Assault Rifle-Operations-6JLGBAK0B1U4GH9U0RGNM"
   },
   {
@@ -2362,7 +2348,7 @@
       "DFTools",
       "Đáng tiền nhất"
     ],
-    "copy_count": 220,
+    "copy_count": 221,
     "loadout_code": "QJB-201 Light Machine Gun-Operations-6JDVNQ006D8SCCUPQ1VT0"
   },
   {
@@ -2553,7 +2539,7 @@
       "Dễ dùng cho người mới",
       "Tầm gần"
     ],
-    "copy_count": 137,
+    "copy_count": 138,
     "loadout_code": "MCX LT Assault Rifle-Operations-6JLGKM40B1U4GH9U0RGNM"
   },
   {
@@ -2608,7 +2594,7 @@
       "DFTools",
       "Tầm gần"
     ],
-    "copy_count": 122,
+    "copy_count": 123,
     "loadout_code": "MCX LT突擊步槍-烽火地帶-6K437DK0795K6TILNH843"
   },
   {
@@ -2789,7 +2775,7 @@
       "Cấu hình meta",
       "Đột kích"
     ],
-    "copy_count": 27050,
+    "copy_count": 27062,
     "loadout_code": "CI-19 Assault Rifle-Warfare-6HNEL2G0EIPHRNLI0J8JI"
   },
   {
@@ -2804,7 +2790,7 @@
       "Cấu hình đề xuất",
       "Đột kích"
     ],
-    "copy_count": 13160,
+    "copy_count": 13166,
     "loadout_code": "AKM Assault Rifle-Warfare-6HE0B9808M3TET99CEP38"
   },
   {
@@ -2819,7 +2805,7 @@
       "Hỏa lực duy trì",
       "Tất cả binh chủng"
     ],
-    "copy_count": 10392,
+    "copy_count": 10393,
     "loadout_code": "K416 Assault Rifle-Warfare-6HS36340FSH6GRF76DG60"
   },
   {
@@ -2831,7 +2817,7 @@
     "tags": [
       "DFTools"
     ],
-    "copy_count": 8273,
+    "copy_count": 8276,
     "loadout_code": "AS Val Assault Rifle-Warfare-6HLPMQ80EIPHRNLI0J8JI"
   },
   {
@@ -2845,7 +2831,7 @@
       "Cấu hình meta",
       "Tất cả binh chủng"
     ],
-    "copy_count": 7653,
+    "copy_count": 7655,
     "loadout_code": "AK-12 Assault Rifle-Warfare-6HSGLAG0FSH6GRF76DG60"
   },
   {
@@ -2857,7 +2843,7 @@
     "tags": [
       "DFTools"
     ],
-    "copy_count": 5976,
+    "copy_count": 5978,
     "loadout_code": "SMG-45 Submachine Gun-Warfare-6EO15NC057RAU0E7AE9HI"
   },
   {
@@ -2869,7 +2855,7 @@
     "tags": [
       "DFTools"
     ],
-    "copy_count": 5744,
+    "copy_count": 5745,
     "loadout_code": "AKS-74 Assault Rifle-Warfare-6I6KK3S00RR8JACO27GDL"
   },
   {
@@ -2881,7 +2867,7 @@
     "tags": [
       "DFTools"
     ],
-    "copy_count": 5168,
+    "copy_count": 5169,
     "loadout_code": "CAR-15 Assault Rifle-Warfare-6HCOJIO08M3TET99CEP38"
   },
   {
@@ -2893,23 +2879,8 @@
     "tags": [
       "DFTools"
     ],
-    "copy_count": 4753,
+    "copy_count": 4760,
     "loadout_code": "M4A1 Assault Rifle-Warfare-6HGO8DS0ED9CPMQ5GIFT9"
-  },
-  {
-    "server": "Infinity",
-    "mode": "Warfare",
-    "weapon_type": "Shotgun",
-    "weapon": "S12K",
-    "classification": "DFTools, Tầm gần, Cấu hình đề xuất, Đột kích",
-    "tags": [
-      "DFTools",
-      "Tầm gần",
-      "Cấu hình đề xuất",
-      "Đột kích"
-    ],
-    "copy_count": 4576,
-    "loadout_code": "6IJ42PS00RSEV0P3C3K7R"
   },
   {
     "server": "Infinity",
@@ -2920,7 +2891,7 @@
     "tags": [
       "DFTools"
     ],
-    "copy_count": 3645,
+    "copy_count": 3646,
     "loadout_code": "AUG Assault Rifle-Warfare-6HHH46C0EIPHRNLI0J8JI"
   },
   {
@@ -2935,7 +2906,7 @@
       "Tầm xa",
       "Đột kích"
     ],
-    "copy_count": 3475,
+    "copy_count": 3482,
     "loadout_code": "M4A1 Assault Rifle-Warfare-6JIRLMC073PI62OT9AFJ2"
   },
   {
@@ -2947,7 +2918,7 @@
     "tags": [
       "DFTools"
     ],
-    "copy_count": 3350,
+    "copy_count": 3352,
     "loadout_code": "R93: R93 Sniper Rifle-Warfare-6ESARI80BPQR609FCOJ8N"
   },
   {
@@ -3000,7 +2971,7 @@
       "Đáng tiền nhất",
       "Trinh sát"
     ],
-    "copy_count": 2767,
+    "copy_count": 2770,
     "loadout_code": "Снайперская винтовка M82-Сражения-6K71NQ0073PG53222MOI2"
   },
   {
@@ -3014,7 +2985,7 @@
       "Đáng tiền nhất",
       "Đột kích"
     ],
-    "copy_count": 2460,
+    "copy_count": 2461,
     "loadout_code": "Автомат AR-57-Сражения-6JPPIOC01KLPVBIAJFKFN"
   },
   {
@@ -3121,7 +3092,7 @@
       "Độ ổn định cao",
       "Tất cả binh chủng"
     ],
-    "copy_count": 1986,
+    "copy_count": 1987,
     "loadout_code": "P90 Submachine Gun-Warfare-6HQ5DO80FSH6GRF76DG60"
   },
   {
@@ -3210,7 +3181,7 @@
     "tags": [
       "DFTools"
     ],
-    "copy_count": 1545,
+    "copy_count": 1547,
     "loadout_code": "G3 Battle Rifle-Warfare-6EME6M003PCD6I8KP0DLE"
   },
   {
@@ -3224,7 +3195,7 @@
       "Tầm xa",
       "Tất cả binh chủng"
     ],
-    "copy_count": 1543,
+    "copy_count": 1544,
     "loadout_code": "Fusil de asalto AUG-Conflicto Bélico-6IPO3H8073PLKDGT2OU3K"
   },
   {
@@ -3238,32 +3209,6 @@
     ],
     "copy_count": 1521,
     "loadout_code": "Pistolet-mitrailleur UZI-Guerre-6HKOMFO09IK6448JCVE98"
-  },
-  {
-    "server": "Infinity",
-    "mode": "Warfare",
-    "weapon_type": "Marksman Rifle",
-    "weapon": "VSS",
-    "classification": "DFTools",
-    "tags": [
-      "DFTools"
-    ],
-    "copy_count": 1491,
-    "loadout_code": "6H1TUPC02L400JRD1UIHB"
-  },
-  {
-    "server": "Infinity",
-    "mode": "Warfare",
-    "weapon_type": "Assault Rifle",
-    "weapon": "CAR-15",
-    "classification": "DFTools, Sát thương bùng nổ, Tất cả binh chủng",
-    "tags": [
-      "DFTools",
-      "Sát thương bùng nổ",
-      "Tất cả binh chủng"
-    ],
-    "copy_count": 1394,
-    "loadout_code": "6IPO820073PLKDGT2OU3K"
   },
   {
     "server": "Infinity",
@@ -3391,7 +3336,7 @@
     "tags": [
       "DFTools"
     ],
-    "copy_count": 1120,
+    "copy_count": 1121,
     "loadout_code": "ASh-12 Assault Rifle-Warfare-6ENTK8000U98BTLV400GS"
   },
   {
@@ -3424,7 +3369,7 @@
   },
   {
     "server": "Infinity",
-    "mode": "Warfare",
+    "mode": "Operations",
     "weapon_type": "Assault Rifle",
     "weapon": "MCX LT",
     "classification": "DFTools, Độ ổn định cao, Thao tác linh hoạt, Đột kích",
@@ -3434,7 +3379,7 @@
       "Thao tác linh hoạt",
       "Đột kích"
     ],
-    "copy_count": 1021,
+    "copy_count": 1022,
     "loadout_code": "MCX LT Assault Rifle-Operations-6K588OO073PK2EQRTKOGH"
   },
   {
@@ -3460,7 +3405,7 @@
     "tags": [
       "DFTools"
     ],
-    "copy_count": 968,
+    "copy_count": 969,
     "loadout_code": "AKM Assault Rifle-Warfare-6HKFALC0EIPHRNLI0J8JI"
   },
   {
@@ -3542,7 +3487,7 @@
       "Đa dụng",
       "Đột kích"
     ],
-    "copy_count": 861,
+    "copy_count": 862,
     "loadout_code": "AR-57 Assault Rifle-Warfare-6K7APL40F1K14S136TTBV"
   },
   {
@@ -3627,7 +3572,7 @@
       "Cấu hình đề xuất",
       "Đột kích"
     ],
-    "copy_count": 717,
+    "copy_count": 718,
     "loadout_code": "AS Val Assault Rifle-Warfare-6JDSDRG097DB490N0EHLA"
   },
   {
@@ -3707,7 +3652,7 @@
       "Sát thương bùng nổ",
       "Trinh sát"
     ],
-    "copy_count": 610,
+    "copy_count": 611,
     "loadout_code": "SG552 Assault Rifle-Warfare-6HIIVEO0FSH6GRF76DG60"
   },
   {
@@ -3748,7 +3693,7 @@
       "Đa dụng",
       "Trinh sát"
     ],
-    "copy_count": 588,
+    "copy_count": 589,
     "loadout_code": "AUG Assault Rifle-Warfare-6JFC0900BRKR6R0Q1JAMR"
   },
   {
@@ -3763,7 +3708,7 @@
       "Thao tác linh hoạt",
       "Công binh"
     ],
-    "copy_count": 586,
+    "copy_count": 587,
     "loadout_code": "QJB201 Light Machine Gun-Warfare-6K5VNPS01OFUTMCJJKLM0"
   },
   {
@@ -3812,6 +3757,18 @@
     "server": "Infinity",
     "mode": "Warfare",
     "weapon_type": "Assault Rifle",
+    "weapon": "M4A1",
+    "classification": "DFTools",
+    "tags": [
+      "DFTools"
+    ],
+    "copy_count": 560,
+    "loadout_code": "M4A1 Assault Rifle-Warfare-6F3U0QS08EVAS5MG88P0S"
+  },
+  {
+    "server": "Infinity",
+    "mode": "Warfare",
+    "weapon_type": "Assault Rifle",
     "weapon": "KC-17",
     "classification": "DFTools, Hỏa lực duy trì, Tầm xa, Đột kích",
     "tags": [
@@ -3841,18 +3798,6 @@
   {
     "server": "Infinity",
     "mode": "Warfare",
-    "weapon_type": "Assault Rifle",
-    "weapon": "M4A1",
-    "classification": "DFTools",
-    "tags": [
-      "DFTools"
-    ],
-    "copy_count": 559,
-    "loadout_code": "M4A1 Assault Rifle-Warfare-6F3U0QS08EVAS5MG88P0S"
-  },
-  {
-    "server": "Infinity",
-    "mode": "Warfare",
     "weapon_type": "Marksman Rifle",
     "weapon": "PSG-1",
     "classification": "DFTools, Dễ dùng cho người mới, Độ ổn định cao, Tất cả binh chủng",
@@ -3862,7 +3807,7 @@
       "Độ ổn định cao",
       "Tất cả binh chủng"
     ],
-    "copy_count": 547,
+    "copy_count": 548,
     "loadout_code": "PSG-1 Marksman Rifle-Warfare-6HM527G0FSH6GRF76DG60"
   },
   {
@@ -4074,7 +4019,7 @@
       "Cấu hình đề xuất",
       "Đột kích"
     ],
-    "copy_count": 420,
+    "copy_count": 421,
     "loadout_code": "M4A1 Assault Rifle-Warfare-6HAV1QC058LRG02J2IIBM"
   },
   {
@@ -4483,7 +4428,7 @@
       "Dễ dùng cho người mới",
       "Tất cả binh chủng"
     ],
-    "copy_count": 276,
+    "copy_count": 277,
     "loadout_code": "AUG Assault Rifle-Warfare-6JIRJ2C073PI62OT9AFJ2"
   },
   {
@@ -4917,7 +4862,7 @@
   },
   {
     "server": "Infinity",
-    "mode": "Warfare",
+    "mode": "Operations",
     "weapon_type": "LMG",
     "weapon": "M250",
     "classification": "DFTools, Độ ổn định cao, Tầm gần, Đột kích",
@@ -5033,6 +4978,18 @@
     "server": "Infinity",
     "mode": "Warfare",
     "weapon_type": "Assault Rifle",
+    "weapon": "QBZ95-1",
+    "classification": "DFTools",
+    "tags": [
+      "DFTools"
+    ],
+    "copy_count": 177,
+    "loadout_code": "QBZ95-1 Assault Rifle-Warfare-6EKTGKS06ST1MR5I9D59U"
+  },
+  {
+    "server": "Infinity",
+    "mode": "Operations",
+    "weapon_type": "Assault Rifle",
     "weapon": "MCX LT",
     "classification": "DFTools, Cấu hình đề xuất, Cấu hình meta, Tất cả binh chủng",
     "tags": [
@@ -5043,18 +5000,6 @@
     ],
     "copy_count": 176,
     "loadout_code": "MCX LT Assault Rifle-Operations-6K4US6G01VON95L7D6Q3B"
-  },
-  {
-    "server": "Infinity",
-    "mode": "Warfare",
-    "weapon_type": "Assault Rifle",
-    "weapon": "QBZ95-1",
-    "classification": "DFTools",
-    "tags": [
-      "DFTools"
-    ],
-    "copy_count": 176,
-    "loadout_code": "QBZ95-1 Assault Rifle-Warfare-6EKTGKS06ST1MR5I9D59U"
   },
   {
     "server": "Infinity",
@@ -5323,7 +5268,7 @@
   },
   {
     "server": "Infinity",
-    "mode": "Warfare",
+    "mode": "Operations",
     "weapon_type": "Special",
     "weapon": "COMPOUND BOW",
     "classification": "DFTools, Cấu hình đề xuất, Đa dụng, Trinh sát",
@@ -5498,18 +5443,6 @@
   {
     "server": "Infinity",
     "mode": "Warfare",
-    "weapon_type": "Assault Rifle",
-    "weapon": "AUG",
-    "classification": "DFTools",
-    "tags": [
-      "DFTools"
-    ],
-    "copy_count": 123,
-    "loadout_code": "6F2N7VK08H31FENUMC4B6"
-  },
-  {
-    "server": "Infinity",
-    "mode": "Warfare",
     "weapon_type": "SMG",
     "weapon": "QCQ171",
     "classification": "DFTools, Tầm xa, Tất cả binh chủng",
@@ -5651,20 +5584,6 @@
   {
     "server": "Infinity",
     "mode": "Warfare",
-    "weapon_type": "SMG",
-    "weapon": "SMG-45",
-    "classification": "DFTools, Tầm gần, Hỗ trợ",
-    "tags": [
-      "DFTools",
-      "Tầm gần",
-      "Hỗ trợ"
-    ],
-    "copy_count": 110,
-    "loadout_code": "6IQD93O073PLKDGT2OU3K"
-  },
-  {
-    "server": "Infinity",
-    "mode": "Warfare",
     "weapon_type": "Assault Rifle",
     "weapon": "M4A1",
     "classification": "DFTools, Độ ổn định cao, Thao tác linh hoạt, Đột kích",
@@ -5688,21 +5607,6 @@
     ],
     "copy_count": 108,
     "loadout_code": "SCAR-H Battle Rifle-Warfare-6ENTJUK00U98BTLV400GS"
-  },
-  {
-    "server": "Infinity",
-    "mode": "Warfare",
-    "weapon_type": "Assault Rifle",
-    "weapon": "AS VAL",
-    "classification": "DFTools, Cấu hình meta, Cấu hình đề xuất, Đột kích",
-    "tags": [
-      "DFTools",
-      "Cấu hình meta",
-      "Cấu hình đề xuất",
-      "Đột kích"
-    ],
-    "copy_count": 107,
-    "loadout_code": "AS “Val” assault rifle – Battles-6LE995K073PKQU27R4H6I"
   },
   {
     "server": "Infinity",
@@ -5983,7 +5887,7 @@
   },
   {
     "server": "Infinity",
-    "mode": "Warfare",
+    "mode": "Operations",
     "weapon_type": "Assault Rifle",
     "weapon": "MCX LT",
     "classification": "DFTools, Tầm gần, Dễ dùng cho người mới, Tất cả binh chủng",
@@ -6182,20 +6086,6 @@
   {
     "server": "Infinity",
     "mode": "Warfare",
-    "weapon_type": "Assault Rifle",
-    "weapon": "AK-12",
-    "classification": "DFTools, Tầm gần, Tất cả binh chủng",
-    "tags": [
-      "DFTools",
-      "Tầm gần",
-      "Tất cả binh chủng"
-    ],
-    "copy_count": 66,
-    "loadout_code": "FGa"
-  },
-  {
-    "server": "Infinity",
-    "mode": "Warfare",
     "weapon_type": "Special",
     "weapon": "COMPOUND BOW",
     "classification": "DFTools, Cấu hình đề xuất, Tất cả binh chủng",
@@ -6283,7 +6173,7 @@
   },
   {
     "server": "Infinity",
-    "mode": "Warfare",
+    "mode": "Operations",
     "weapon_type": "Assault Rifle",
     "weapon": "MCX LT",
     "classification": "DFTools, Tầm xa, Độ ổn định cao, Tất cả binh chủng",
@@ -6331,21 +6221,6 @@
     ],
     "copy_count": 60,
     "loadout_code": "SG552 Assault Rifle-Warfare-6G91AMK0ED9CPMQ5GIFT9"
-  },
-  {
-    "server": "Infinity",
-    "mode": "Warfare",
-    "weapon_type": "Assault Rifle",
-    "weapon": "SG552",
-    "classification": "DFTools, Đáng tiền nhất, Độ ổn định cao, Tất cả binh chủng",
-    "tags": [
-      "DFTools",
-      "Đáng tiền nhất",
-      "Độ ổn định cao",
-      "Tất cả binh chủng"
-    ],
-    "copy_count": 59,
-    "loadout_code": "6JHO4PK04LCQE0C28E7K1"
   },
   {
     "server": "Infinity",
@@ -6587,18 +6462,6 @@
     ],
     "copy_count": 42,
     "loadout_code": "M4A1 Assault Rifle-Warfare-6ETN8RK0CH9JKOV493VV2"
-  },
-  {
-    "server": "Infinity",
-    "mode": "Warfare",
-    "weapon_type": "Assault Rifle",
-    "weapon": "SR-3M",
-    "classification": "DFTools",
-    "tags": [
-      "DFTools"
-    ],
-    "copy_count": 42,
-    "loadout_code": "6F390F000262OSRMGC7PS"
   },
   {
     "server": "Infinity",
@@ -6847,7 +6710,7 @@
       "Đáng tiền nhất",
       "Đột kích"
     ],
-    "copy_count": 26,
+    "copy_count": 27,
     "loadout_code": "Автомат АКМ-Сражения-6LMRONO073PH8BSEFVNEE"
   },
   {
@@ -6924,7 +6787,7 @@
   },
   {
     "server": "Infinity",
-    "mode": "Warfare",
+    "mode": "Operations",
     "weapon_type": "LMG",
     "weapon": "QJB201",
     "classification": "DFTools, Dễ dùng cho người mới, Tầm gần, Tất cả binh chủng",
@@ -6995,21 +6858,6 @@
     ],
     "copy_count": 18,
     "loadout_code": "Автомат M4A1-Сражения-6LBRE84073PNMIPBBG24S"
-  },
-  {
-    "server": "Infinity",
-    "mode": "Warfare",
-    "weapon_type": "Assault Rifle",
-    "weapon": "M4A1",
-    "classification": "DFTools, Cấu hình meta, Đáng tiền nhất, Đột kích",
-    "tags": [
-      "DFTools",
-      "Cấu hình meta",
-      "Đáng tiền nhất",
-      "Đột kích"
-    ],
-    "copy_count": 17,
-    "loadout_code": "6LBRE84073PNMIPBBG24S"
   },
   {
     "server": "Infinity",
@@ -7112,7 +6960,7 @@
       "Cấu hình meta",
       "Tầm xa"
     ],
-    "copy_count": 14828,
+    "copy_count": 14834,
     "loadout_code": "AUG Assault Rifle-Operations-6I04C2G0FSH6GRF76DG60"
   },
   {
@@ -7126,7 +6974,7 @@
       "Đáng tiền nhất",
       "Thao tác linh hoạt"
     ],
-    "copy_count": 6186,
+    "copy_count": 6188,
     "loadout_code": "M7 Battle Rifle-Operations-6I03ITO0FSH6GRF76DG60"
   },
   {
@@ -7138,12 +6986,12 @@
     "tags": [
       "DFTools"
     ],
-    "copy_count": 4271,
+    "copy_count": 4275,
     "loadout_code": "M4A1 Assault Rifle-Operations-6HLUDLK08M3TET99CEP38"
   },
   {
     "server": "Infinity",
-    "mode": "Operations",
+    "mode": "Warfare",
     "weapon_type": "SMG",
     "weapon": "MP5",
     "classification": "DFTools, Cấu hình meta",
@@ -7151,7 +6999,7 @@
       "DFTools",
       "Cấu hình meta"
     ],
-    "copy_count": 4134,
+    "copy_count": 4136,
     "loadout_code": "MP5 Submachine Gun-Warfare-6HSGMUO0FSH6GRF76DG60"
   },
   {
@@ -7163,7 +7011,7 @@
     "tags": [
       "DFTools"
     ],
-    "copy_count": 3662,
+    "copy_count": 3663,
     "loadout_code": "CI-19 Assault Rifle-Operations-6HEQHRS08M3TET99CEP38"
   },
   {
@@ -7191,7 +7039,7 @@
       "Cấu hình meta",
       "Độ ổn định cao"
     ],
-    "copy_count": 3140,
+    "copy_count": 3141,
     "loadout_code": "M14 Marksman Rifle-Operations-6HSGI580FSH6GRF76DG60"
   },
   {
@@ -7205,7 +7053,7 @@
       "Độ ổn định cao",
       "Dễ dùng cho người mới"
     ],
-    "copy_count": 3117,
+    "copy_count": 3119,
     "loadout_code": "MCX LT Assault Rifle-Operations-6JL5U1C073PI62OT9AFJ2"
   },
   {
@@ -7218,7 +7066,7 @@
       "DFTools",
       "Độ ổn định cao"
     ],
-    "copy_count": 3017,
+    "copy_count": 3018,
     "loadout_code": "AS Val Assault Rifle-Operations-6HG75B805KBR2BJ359PNA"
   },
   {
@@ -7231,7 +7079,7 @@
       "DFTools",
       "Thao tác linh hoạt"
     ],
-    "copy_count": 2801,
+    "copy_count": 2802,
     "loadout_code": "RM277-Operations-6KH75O8073PI62OT9AFJ2"
   },
   {
@@ -7259,7 +7107,7 @@
       "Cấu hình đề xuất",
       "Tầm gần"
     ],
-    "copy_count": 2399,
+    "copy_count": 2400,
     "loadout_code": "MK47 Assault Rifle-Operations-6I0476C0FSH6GRF76DG60"
   },
   {
@@ -7324,7 +7172,7 @@
     "tags": [
       "DFTools"
     ],
-    "copy_count": 1927,
+    "copy_count": 1928,
     "loadout_code": "AK-12 Assault Rifle-Operations-6FQ2FN804CN8B128UE6UU"
   },
   {
@@ -7362,7 +7210,7 @@
       "DFTools",
       "Tầm xa"
     ],
-    "copy_count": 1822,
+    "copy_count": 1823,
     "loadout_code": "M4A1 Assault Rifle-0perations-6IMH218073PLDB2QNCRF2"
   },
   {
@@ -7374,7 +7222,7 @@
     "tags": [
       "DFTools"
     ],
-    "copy_count": 1611,
+    "copy_count": 1612,
     "loadout_code": "SR-3M Compact Assault Rifle-Operations-6I5KMSC00RR8JACO27GDL"
   },
   {
@@ -7388,7 +7236,7 @@
       "Cấu hình đề xuất",
       "Đáng tiền nhất"
     ],
-    "copy_count": 1608,
+    "copy_count": 1609,
     "loadout_code": "K416 Assault Rifle-Operations-6HG7D0S05KBR2BJ359PNA"
   },
   {
@@ -7402,7 +7250,7 @@
       "Thao tác linh hoạt",
       "Cấu hình đề xuất"
     ],
-    "copy_count": 1579,
+    "copy_count": 1580,
     "loadout_code": "AR-57 Assault Rifle-Operations-6JS0UO0073PLLBL5PBC5K"
   },
   {
@@ -7430,7 +7278,7 @@
       "Sát thương bùng nổ",
       "Dễ dùng cho người mới"
     ],
-    "copy_count": 1439,
+    "copy_count": 1440,
     "loadout_code": "SG552 Assault Rifle-Operations-6HRGFNK0FSH6GRF76DG60"
   },
   {
@@ -7483,7 +7331,7 @@
       "Độ ổn định cao",
       "Sát thương bùng nổ"
     ],
-    "copy_count": 1228,
+    "copy_count": 1229,
     "loadout_code": "MK47 Assault Rifle-Operations-6HL7JEC0FSH6GRF76DG60"
   },
   {
@@ -7511,7 +7359,7 @@
       "Tầm gần",
       "Sát thương bùng nổ"
     ],
-    "copy_count": 1155,
+    "copy_count": 1156,
     "loadout_code": "Desert Eagle-Operations-6JS2LTO073PLLBL5PBC5K"
   },
   {
@@ -7524,12 +7372,12 @@
       "DFTools",
       "Cấu hình đề xuất"
     ],
-    "copy_count": 1103,
+    "copy_count": 1104,
     "loadout_code": "MK4衝鋒槍-烽火地帶-6JHI75K073PI62OT9AFJ2\n"
   },
   {
     "server": "Infinity",
-    "mode": "Operations",
+    "mode": "Warfare",
     "weapon_type": "SMG",
     "weapon": "QCQ171",
     "classification": "DFTools, Dễ dùng cho người mới",
@@ -7578,18 +7426,6 @@
     ],
     "copy_count": 999,
     "loadout_code": "Fusil d'assaut K416-Opérations-6GJEPPS0FGU21TB2NA8RD"
-  },
-  {
-    "server": "Infinity",
-    "mode": "Operations",
-    "weapon_type": "Assault Rifle",
-    "weapon": "G3",
-    "classification": "DFTools",
-    "tags": [
-      "DFTools"
-    ],
-    "copy_count": 979,
-    "loadout_code": "6EUBMCS0815SGU9N314AH"
   },
   {
     "server": "Infinity",
@@ -7774,7 +7610,7 @@
       "DFTools",
       "Cấu hình đề xuất"
     ],
-    "copy_count": 764,
+    "copy_count": 765,
     "loadout_code": "P90 Submachine Gun-Operations-6HG8LMS0ANDGTQ80UJKN6"
   },
   {
@@ -7828,7 +7664,7 @@
       "Tầm xa",
       "Thao tác linh hoạt"
     ],
-    "copy_count": 728,
+    "copy_count": 729,
     "loadout_code": "MK47 Assault Rifle-Operations-6JLHEGK073PI62OT9AFJ2"
   },
   {
@@ -7867,7 +7703,7 @@
       "DFTools",
       "Độ ổn định cao"
     ],
-    "copy_count": 667,
+    "copy_count": 668,
     "loadout_code": "QCQ171 Submachine Gun-Operations-6HGIAC80ANDGTQ80UJKN6"
   },
   {
@@ -7881,7 +7717,7 @@
       "Cấu hình đề xuất",
       "Dễ dùng cho người mới"
     ],
-    "copy_count": 648,
+    "copy_count": 649,
     "loadout_code": "M700 Sniper Rifle-Operations-6J317AG0CEDI6APUA25OK"
   },
   {
@@ -7895,7 +7731,7 @@
       "Tầm xa",
       "Độ ổn định cao"
     ],
-    "copy_count": 647,
+    "copy_count": 648,
     "loadout_code": "Vector Submachine Gun-Operations-6IGGTH800RR8JACO27GDL"
   },
   {
@@ -7923,20 +7759,6 @@
     ],
     "copy_count": 631,
     "loadout_code": "M14 Marksman Rifle-Operations-6HGI21C0ANDGTQ80UJKN6"
-  },
-  {
-    "server": "Infinity",
-    "mode": "Operations",
-    "weapon_type": "Assault Rifle",
-    "weapon": "SCAR-H",
-    "classification": "DFTools, Đa dụng, Đáng tiền nhất",
-    "tags": [
-      "DFTools",
-      "Đa dụng",
-      "Đáng tiền nhất"
-    ],
-    "copy_count": 616,
-    "loadout_code": "6J9FA8807VF4I7MM3TLLH"
   },
   {
     "server": "Infinity",
@@ -7988,7 +7810,7 @@
       "Thao tác linh hoạt",
       "Dễ dùng cho người mới"
     ],
-    "copy_count": 591,
+    "copy_count": 592,
     "loadout_code": "MCX LT Assault Rifle-Operations-6JS12GC073PLLBL5PBC5K"
   },
   {
@@ -8013,7 +7835,7 @@
     "tags": [
       "DFTools"
     ],
-    "copy_count": 569,
+    "copy_count": 570,
     "loadout_code": "AWM Sniper Rifle-Operations-6I01TBC0FSH6GRF76DG60"
   },
   {
@@ -8160,7 +7982,7 @@
       "Đáng tiền nhất",
       "Tầm gần"
     ],
-    "copy_count": 489,
+    "copy_count": 490,
     "loadout_code": "FS-12 Shotgun-Operations-6JIRDKG073PI62OT9AFJ2"
   },
   {
@@ -8377,7 +8199,7 @@
       "Cấu hình đề xuất",
       "Thao tác linh hoạt"
     ],
-    "copy_count": 410,
+    "copy_count": 411,
     "loadout_code": ".357 Revolver-Operations-6JS2OUG073PLLBL5PBC5K"
   },
   {
@@ -8483,22 +8305,8 @@
       "Cấu hình đề xuất",
       "Dễ dùng cho người mới"
     ],
-    "copy_count": 367,
+    "copy_count": 368,
     "loadout_code": "AR-57 Assault Rifle-Operations-6K6MFDS0423F4TQRLHU99"
-  },
-  {
-    "server": "Infinity",
-    "mode": "Operations",
-    "weapon_type": "Assault Rifle",
-    "weapon": "SG552",
-    "classification": "DFTools, Dễ dùng cho người mới, Cấu hình meta",
-    "tags": [
-      "DFTools",
-      "Dễ dùng cho người mới",
-      "Cấu hình meta"
-    ],
-    "copy_count": 360,
-    "loadout_code": "6JHO5O404LCQE0C28E7K1"
   },
   {
     "server": "Infinity",
@@ -8590,7 +8398,7 @@
       "DFTools",
       "Độ ổn định cao"
     ],
-    "copy_count": 348,
+    "copy_count": 349,
     "loadout_code": "CI-19 Assault Rifle-Operations-6JF8AHO073PLKDGT2OU3K"
   },
   {
@@ -8676,6 +8484,19 @@
   {
     "server": "Infinity",
     "mode": "Operations",
+    "weapon_type": "Assault Rifle",
+    "weapon": "K437",
+    "classification": "DFTools, Cấu hình đề xuất",
+    "tags": [
+      "DFTools",
+      "Cấu hình đề xuất"
+    ],
+    "copy_count": 317,
+    "loadout_code": "K437 Assault Rifle-Operations-6JGS4IK073PLKDGT2OU3K"
+  },
+  {
+    "server": "Infinity",
+    "mode": "Operations",
     "weapon_type": "SMG",
     "weapon": "MP5",
     "classification": "DFTools, Dễ dùng cho người mới, Cấu hình đề xuất",
@@ -8686,19 +8507,6 @@
     ],
     "copy_count": 317,
     "loadout_code": "MP5 Submachine Gun-Operations-6HRGERG0FSH6GRF76DG60"
-  },
-  {
-    "server": "Infinity",
-    "mode": "Operations",
-    "weapon_type": "Assault Rifle",
-    "weapon": "K437",
-    "classification": "DFTools, Cấu hình đề xuất",
-    "tags": [
-      "DFTools",
-      "Cấu hình đề xuất"
-    ],
-    "copy_count": 316,
-    "loadout_code": "K437 Assault Rifle-Operations-6JGS4IK073PLKDGT2OU3K"
   },
   {
     "server": "Infinity",
@@ -9448,7 +9256,7 @@
   },
   {
     "server": "Infinity",
-    "mode": "Operations",
+    "mode": "Warfare",
     "weapon_type": "LMG",
     "weapon": "QJB201",
     "classification": "DFTools",
@@ -9526,7 +9334,7 @@
   },
   {
     "server": "Infinity",
-    "mode": "Operations",
+    "mode": "Warfare",
     "weapon_type": "SMG",
     "weapon": "SMG-45",
     "classification": "DFTools",
@@ -10112,18 +9920,6 @@
   {
     "server": "Infinity",
     "mode": "Operations",
-    "weapon_type": "LMG",
-    "weapon": "QJB201",
-    "classification": "DFTools",
-    "tags": [
-      "DFTools"
-    ],
-    "copy_count": 122,
-    "loadout_code": "QJB201 Light Machine Gun-Operations-6I01I3G0FSH6GRF76DG60"
-  },
-  {
-    "server": "Infinity",
-    "mode": "Operations",
     "weapon_type": "Assault Rifle",
     "weapon": "AKM",
     "classification": "DFTools, Dễ dùng cho người mới, Tầm xa",
@@ -10132,8 +9928,20 @@
       "Dễ dùng cho người mới",
       "Tầm xa"
     ],
-    "copy_count": 121,
+    "copy_count": 122,
     "loadout_code": "AKM Assault Rifle-Operations-6L0SP9O0ENUNVOLEDCL1A"
+  },
+  {
+    "server": "Infinity",
+    "mode": "Operations",
+    "weapon_type": "LMG",
+    "weapon": "QJB201",
+    "classification": "DFTools",
+    "tags": [
+      "DFTools"
+    ],
+    "copy_count": 122,
+    "loadout_code": "QJB201 Light Machine Gun-Operations-6I01I3G0FSH6GRF76DG60"
   },
   {
     "server": "Infinity",
@@ -10339,20 +10147,6 @@
     ],
     "copy_count": 90,
     "loadout_code": "Снайперская винтовка M700-«Операции» (режим эвакуации)-6LJKJSG0AT1IHBJ4A83U9"
-  },
-  {
-    "server": "Infinity",
-    "mode": "Operations",
-    "weapon_type": "Assault Rifle",
-    "weapon": "MCX LT",
-    "classification": "DFTools, Thao tác linh hoạt, Dễ dùng cho người mới",
-    "tags": [
-      "DFTools",
-      "Thao tác linh hoạt",
-      "Dễ dùng cho người mới"
-    ],
-    "copy_count": 89,
-    "loadout_code": "6K588OO073PK2EQRTKOGH"
   },
   {
     "server": "Infinity",
@@ -10621,19 +10415,6 @@
     ],
     "copy_count": 55,
     "loadout_code": "M7 Battle Rifle-Operations-6HIIPSO0FSH6GRF76DG60"
-  },
-  {
-    "server": "Infinity",
-    "mode": "Operations",
-    "weapon_type": "Marksman Rifle",
-    "weapon": "M14",
-    "classification": "DFTools, Cấu hình meta",
-    "tags": [
-      "DFTools",
-      "Cấu hình meta"
-    ],
-    "copy_count": 49,
-    "loadout_code": "6JSI1VG0F3DJNP2V8H82K"
   },
   {
     "server": "Infinity",
@@ -11544,20 +11325,6 @@
     ],
     "copy_count": 0,
     "loadout_code": "AK-12 Assault Rifle-Warfare-6L6VMD004237QD6JVLE6Q"
-  },
-  {
-    "server": "Infinity",
-    "mode": "Operations",
-    "weapon_type": "Assault Rifle",
-    "weapon": "AK-12",
-    "classification": "Juru ukur is it",
-    "tags": [
-      "DFBuilds",
-      "Operations",
-      "Global"
-    ],
-    "copy_count": 0,
-    "loadout_code": "Hy you can see the"
   },
   {
     "server": "Garena",
@@ -12987,34 +12754,6 @@
     "loadout_code": "AKM Assault Rifle-Operations-6KGABNK0FV996DITL6AIU"
   },
   {
-    "server": "Infinity",
-    "mode": "Warfare",
-    "weapon_type": "Assault Rifle",
-    "weapon": "AKM",
-    "classification": "Cộng đồng AKM",
-    "tags": [
-      "DFBuilds",
-      "Warfare",
-      "Global"
-    ],
-    "copy_count": 0,
-    "loadout_code": "Fast"
-  },
-  {
-    "server": "Infinity",
-    "mode": "Operations",
-    "weapon_type": "Assault Rifle",
-    "weapon": "AKM",
-    "classification": "Cộng đồng AKM",
-    "tags": [
-      "DFBuilds",
-      "Operations",
-      "Global"
-    ],
-    "copy_count": 0,
-    "loadout_code": "6KOJDOC0637L6FN3DT06F"
-  },
-  {
     "server": "Garena",
     "mode": "Operations",
     "weapon_type": "Assault Rifle",
@@ -13043,20 +12782,6 @@
     "loadout_code": "AKM Assault Rifle-Warfare-6KT4OOG01H9FKMG6H9D4Q"
   },
   {
-    "server": "Infinity",
-    "mode": "Operations",
-    "weapon_type": "Assault Rifle",
-    "weapon": "AKM",
-    "classification": "Cộng đồng AKM",
-    "tags": [
-      "DFBuilds",
-      "Operations",
-      "Global"
-    ],
-    "copy_count": 0,
-    "loadout_code": "Mickaelsantosdesouza"
-  },
-  {
     "server": "Garena",
     "mode": "Warfare",
     "weapon_type": "Assault Rifle",
@@ -13069,20 +12794,6 @@
     ],
     "copy_count": 0,
     "loadout_code": "AKM Assault Rifle-Warfare-6K60P6G0AQ63ACRU6KVMC"
-  },
-  {
-    "server": "Infinity",
-    "mode": "Warfare",
-    "weapon_type": "Assault Rifle",
-    "weapon": "AKM",
-    "classification": "AKM MEYT NEW",
-    "tags": [
-      "DFBuilds",
-      "Warfare",
-      "Global"
-    ],
-    "copy_count": 0,
-    "loadout_code": "Wow"
   },
   {
     "server": "Infinity",
@@ -13673,20 +13384,6 @@
     ],
     "copy_count": 0,
     "loadout_code": "AR-57 Assault Rifle-Warfare-6KD0U5001NFLCIOJPMIHI"
-  },
-  {
-    "server": "Infinity",
-    "mode": "Warfare",
-    "weapon_type": "SMG",
-    "weapon": "AR-57",
-    "classification": "Universal breath hold (mobile version)",
-    "tags": [
-      "DFBuilds",
-      "Warfare",
-      "Global"
-    ],
-    "copy_count": 0,
-    "loadout_code": "6L0EAA009Q67N9K2PPDI8"
   },
   {
     "server": "Infinity",
@@ -14354,20 +14051,6 @@
       "Global"
     ],
     "copy_count": 0,
-    "loadout_code": "NEW AS Val Build"
-  },
-  {
-    "server": "Infinity",
-    "mode": "Warfare",
-    "weapon_type": "Assault Rifle",
-    "weapon": "AS VAL",
-    "classification": "Cộng đồng AS VAL",
-    "tags": [
-      "DFBuilds",
-      "Warfare",
-      "Global"
-    ],
-    "copy_count": 0,
     "loadout_code": "Автомат АС «Вал»-Сражения-6KIJ2H8073PNO31ALDRI2"
   },
   {
@@ -14481,20 +14164,6 @@
     ],
     "copy_count": 0,
     "loadout_code": "AS Val Assault Rifle-Warfare-6KN7PCG0E8GH8MCM0LI0L"
-  },
-  {
-    "server": "Infinity",
-    "mode": "Warfare",
-    "weapon_type": "Assault Rifle",
-    "weapon": "AS VAL",
-    "classification": "Top build with low recoil",
-    "tags": [
-      "DFBuilds",
-      "Warfare",
-      "Global"
-    ],
-    "copy_count": 0,
-    "loadout_code": "6LK7GJC02L17HPL8VO1ME"
   },
   {
     "server": "Infinity",
@@ -16144,21 +15813,6 @@
     "mode": "Operations",
     "weapon_type": "Assault Rifle",
     "weapon": "CI-19",
-    "classification": "Scar abouslulyt sheds",
-    "tags": [
-      "DFBuilds",
-      "Operations",
-      "Global",
-      "Semi Pro"
-    ],
-    "copy_count": 0,
-    "loadout_code": "72736272"
-  },
-  {
-    "server": "Infinity",
-    "mode": "Operations",
-    "weapon_type": "Assault Rifle",
-    "weapon": "CI-19",
     "classification": "If you're looking for ultra stable build barely any recoil, and no ads speed sacrificed totally broken and balanced. No moving soul would escape the claws of this build.",
     "tags": [
       "DFBuilds",
@@ -16384,20 +16038,6 @@
     "loadout_code": "CI-19 Assault Rifle-Warfare-6LTGCB805VS836I7GOOM4"
   },
   {
-    "server": "Garena",
-    "mode": "Operations",
-    "weapon_type": "Assault Rifle",
-    "weapon": "CI-19",
-    "classification": "Cộng đồng CI-19",
-    "tags": [
-      "DFBuilds",
-      "Operations",
-      "Garena"
-    ],
-    "copy_count": 0,
-    "loadout_code": "6LJECM401QV7OBQDGKFR4"
-  },
-  {
     "server": "Infinity",
     "mode": "Warfare",
     "weapon_type": "Assault Rifle",
@@ -16410,21 +16050,6 @@
     ],
     "copy_count": 0,
     "loadout_code": "Assault Rifle-Warfare-6JU5DCK04STA3R5PGB90S"
-  },
-  {
-    "server": "Infinity",
-    "mode": "Operations",
-    "weapon_type": "Assault Rifle",
-    "weapon": "CI-19",
-    "classification": "Cộng đồng CI-19",
-    "tags": [
-      "DFBuilds",
-      "Operations",
-      "Global",
-      "Semi Pro"
-    ],
-    "copy_count": 0,
-    "loadout_code": "6KU2PUC0FV996DITL6AIU"
   },
   {
     "server": "Infinity",
@@ -17293,20 +16918,6 @@
     ],
     "copy_count": 0,
     "loadout_code": "K416 Assault Rifle-Warfare-6KLQVPO073F3V22GQM3RK"
-  },
-  {
-    "server": "Infinity",
-    "mode": "Warfare",
-    "weapon_type": "Assault Rifle",
-    "weapon": "K416",
-    "classification": "Cộng đồng K416",
-    "tags": [
-      "DFBuilds",
-      "Warfare",
-      "Global"
-    ],
-    "copy_count": 0,
-    "loadout_code": "6KHG0PO0637L6FN3DT06F"
   },
   {
     "server": "Infinity",
@@ -18741,20 +18352,6 @@
     "server": "Infinity",
     "mode": "Warfare",
     "weapon_type": "Assault Rifle",
-    "weapon": "M16A4",
-    "classification": "Faster reload",
-    "tags": [
-      "DFBuilds",
-      "Warfare",
-      "Global"
-    ],
-    "copy_count": 0,
-    "loadout_code": "AS-M4"
-  },
-  {
-    "server": "Infinity",
-    "mode": "Warfare",
-    "weapon_type": "Assault Rifle",
     "weapon": "M4A1",
     "classification": "If u love this gun, then this is ur aggressive m4a1. Show the enemies the m4a1 they don't know🔥🔥🫡",
     "tags": [
@@ -18810,7 +18407,7 @@
   },
   {
     "server": "Infinity",
-    "mode": "Warfare",
+    "mode": "Operations",
     "weapon_type": "Assault Rifle",
     "weapon": "M4A1",
     "classification": "اقوى كلاس موجود في العبة حاليا بحيث: يتمتع بثبات اسطوري وسرعة خيالية في قتل الأعداء",
@@ -19437,20 +19034,6 @@
     "mode": "Warfare",
     "weapon_type": "Assault Rifle",
     "weapon": "M4A1",
-    "classification": "Versatile at medium and short range with good recoil control",
-    "tags": [
-      "DFBuilds",
-      "Warfare",
-      "Global"
-    ],
-    "copy_count": 0,
-    "loadout_code": "Coming soon"
-  },
-  {
-    "server": "Infinity",
-    "mode": "Warfare",
-    "weapon_type": "Assault Rifle",
-    "weapon": "M4A1",
     "classification": "My best M4A1 meta build in delta force Mobile \nHighlights:- Fast ADS, Good stability and esey to control build \nI hope you like my build. If you like it, then definitely support me. 😊❤️",
     "tags": [
       "DFBuilds",
@@ -19619,20 +19202,6 @@
     ],
     "copy_count": 0,
     "loadout_code": "M4A1 Assault Rifle-Operations-6L0PO7C073PM1VVEGP5QR"
-  },
-  {
-    "server": "Infinity",
-    "mode": "Warfare",
-    "weapon_type": "Assault Rifle",
-    "weapon": "M4A1",
-    "classification": "Universal breath hold (mobile)",
-    "tags": [
-      "DFBuilds",
-      "Warfare",
-      "Global"
-    ],
-    "copy_count": 0,
-    "loadout_code": "6L0EBFO09Q67N9K2PPDI8"
   },
   {
     "server": "Infinity",
@@ -21420,21 +20989,6 @@
     "loadout_code": "MK47 Assault Rifle-Warfare-6KEJHJC073PGTEHAOKSV3"
   },
   {
-    "server": "Garena",
-    "mode": "Warfare",
-    "weapon_type": "Assault Rifle",
-    "weapon": "MK47",
-    "classification": "Cộng đồng MK47",
-    "tags": [
-      "DFBuilds",
-      "Warfare",
-      "Garena",
-      "Semi Pro"
-    ],
-    "copy_count": 0,
-    "loadout_code": "-6KUEASO0DBSC8VHFRNMP9"
-  },
-  {
     "server": "Infinity",
     "mode": "Operations",
     "weapon_type": "Assault Rifle",
@@ -22805,7 +22359,7 @@
   },
   {
     "server": "Infinity",
-    "mode": "Warfare",
+    "mode": "Operations",
     "weapon_type": "Assault Rifle",
     "weapon": "SCAR-H",
     "classification": "Scar-H heavy build, service rifle. Mounted with thermal scope for better advantages.",
@@ -23331,7 +22885,7 @@
   },
   {
     "server": "Infinity",
-    "mode": "Warfare",
+    "mode": "Operations",
     "weapon_type": "Assault Rifle",
     "weapon": "SG552",
     "classification": "Cộng đồng SG552",
@@ -23754,20 +23308,6 @@
     ],
     "copy_count": 0,
     "loadout_code": "MK4 Submachine Gun-Detonation-6LIGBBK05GFADOKABCVEI"
-  },
-  {
-    "server": "Infinity",
-    "mode": "Warfare",
-    "weapon_type": "SMG",
-    "weapon": "MP5",
-    "classification": "Best for close combat,almost no recoil",
-    "tags": [
-      "DFBuilds",
-      "Warfare",
-      "Global"
-    ],
-    "copy_count": 0,
-    "loadout_code": "6KDUA7K02D4F0QAL9AP40"
   },
   {
     "server": "Infinity",
@@ -24622,7 +24162,7 @@
   },
   {
     "server": "Infinity",
-    "mode": "Warfare",
+    "mode": "Operations",
     "weapon_type": "SMG",
     "weapon": "P90",
     "classification": "M14 Marksman Rifle-Operations-6KCK57801NFLCIOJPMIHI",
@@ -25368,21 +24908,6 @@
   },
   {
     "server": "Garena",
-    "mode": "Operations",
-    "weapon_type": "Assault Rifle",
-    "weapon": "SR-3M",
-    "classification": "it have a 90&lt; hip fire,65 handling easy to control and it can use for cqb,mid range and very budget(around 360k)",
-    "tags": [
-      "DFBuilds",
-      "Operations",
-      "Garena",
-      "Budget"
-    ],
-    "copy_count": 0,
-    "loadout_code": "6LS42V002HKN4CGRFK8NJ"
-  },
-  {
-    "server": "Garena",
     "mode": "Warfare",
     "weapon_type": "Assault Rifle",
     "weapon": "SR-3M",
@@ -25762,20 +25287,6 @@
     ],
     "copy_count": 0,
     "loadout_code": "Thompson SMG-Warfare-6LIPKLG0FI8TK7NHK0E53"
-  },
-  {
-    "server": "Infinity",
-    "mode": "Warfare",
-    "weapon_type": "Special",
-    "weapon": "THOMPSON",
-    "classification": "Eliko super",
-    "tags": [
-      "DFBuilds",
-      "Warfare",
-      "Global"
-    ],
-    "copy_count": 0,
-    "loadout_code": "6LBCBHS0D619NA5KCH3PT"
   },
   {
     "server": "Infinity",
@@ -26759,21 +26270,6 @@
   },
   {
     "server": "Infinity",
-    "mode": "Operations",
-    "weapon_type": "Marksman Rifle",
-    "weapon": "MINI-14",
-    "classification": "Cộng đồng MINI-14",
-    "tags": [
-      "DFBuilds",
-      "Operations",
-      "Global",
-      "Budget"
-    ],
-    "copy_count": 0,
-    "loadout_code": "6KCK57801NFLCIOJPMIHI"
-  },
-  {
-    "server": "Infinity",
     "mode": "Warfare",
     "weapon_type": "Marksman Rifle",
     "weapon": "PSG-1",
@@ -27382,7 +26878,7 @@
   },
   {
     "server": "Infinity",
-    "mode": "Warfare",
+    "mode": "Operations",
     "weapon_type": "Marksman Rifle",
     "weapon": "SVCH",
     "classification": "500k~ svch, good for close fights aswell as long range snipes",
@@ -28581,21 +28077,6 @@
     ],
     "copy_count": 0,
     "loadout_code": "M249 Light Machine Gun-Warfare-6KAIMMK01NFLCIOJPMIHI"
-  },
-  {
-    "server": "Infinity",
-    "mode": "Operations",
-    "weapon_type": "LMG",
-    "weapon": "M249",
-    "classification": "Cộng đồng M249",
-    "tags": [
-      "DFBuilds",
-      "Operations",
-      "Global",
-      "Semi Pro"
-    ],
-    "copy_count": 0,
-    "loadout_code": "6IHUJQK036M001SSSCPSV"
   },
   {
     "server": "Garena",
