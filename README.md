@@ -22,7 +22,7 @@ Người dùng thông thường chỉ cần tải bản đóng gói sẵn trên 
 ## Tác giả / Developed By
 
 - **Anh Bảy Chọ / Tài Giáp**
-- **Phiên bản / Version:** v1.2.1 - Transparent Community Attribution Edition (Garena & Level Infinite / Steam)
+- **Phiên bản / Version:** v1.3.0 - Web Source Filter & Popularity Ranking Edition (Garena & Level Infinite / Steam)
 
 ---
 
@@ -30,39 +30,45 @@ Người dùng thông thường chỉ cần tải bản đóng gói sẵn trên 
 
 ### Tiếng Việt
 
-1. **Quét vũ khí thời gian thực (Phím tắt `F9`):**
+1. **Quét vũ khí thời gian thực (Phím tắt `F9`) & Tự động chọn build hot nhất:**
    - Tự động chụp vùng tên súng từ màn hình chính bằng thư viện `xcap`.
    - Nhận diện ký tự qua Windows Native Media OCR (`Windows.Media.Ocr.OcrEngine`).
    - Tự động sửa lỗi đọc ký tự bằng thuật toán so khớp mờ Jaro-Winkler (> 0.72).
+   - **Tự động chọn bản build tối ưu nhất:** Lọc theo Server, Mode và Nguồn web đang chọn, tự động nạp cấu hình có số lượt copy cao nhất vào Clipboard hiện thời (`Ctrl + V`).
 
 2. **Tự động đẩy vào Windows Clipboard History (`Win + V`):**
-   - Ưu tiên cấu hình Meta vào khay nhớ tạm hiện thời (`Ctrl + V`).
-   - Lần lượt đẩy các cấu hình đề xuất còn lại vào lịch sử Clipboard (`Win + V`) cách nhau 150ms.
+   - Đưa cấu hình có lượt copy cao nhất / Meta lên đầu khay nhớ tạm (`Ctrl + V`).
+   - Lần lượt đẩy các cấu hình còn lại vào lịch sử Clipboard (`Win + V`) cách nhau 150ms để tiện tra cứu.
 
-3. **Thanh Bộ Lọc 4 Cấp (Filter Bar):**
+3. **Thanh Bộ Lọc 5 Cấp (5-Level Dynamic Filter Bar):**
+   - **Nguồn web (Source):** `Tất cả nguồn (ALL)`, `DFTools` (DeltaForceTools), `DFBuilds` (DeltaForceBuilds), và `FPSMeta`. Ghi nhớ nguồn đã chọn qua file `config.json`.
    - **Khu vực máy chủ (Server):** `Garena` và `Infinity (Global / Level Infinite / Steam)`.
    - **Chế độ chơi (Mode):** `Chiến Trường Toàn Diện (Warfare)`, `Chiến Dịch Sinh Tồn (Operations)`, hoặc `Tất cả chế độ`.
    - **Phân loại vũ khí (Weapon Type):** `Assault Rifle`, `SMG`, `LMG`, `Marksman Rifle`, `Sniper Rifle`, `Shotgun`, `Pistol`, `Special`.
-   - **Vũ khí (Weapon):** Danh sách 70+ khẩu súng được lọc thông minh theo điều kiện đang chọn, tự động chuyển sang súng đầu tiên có dữ liệu khi đổi bộ lọc.
+   - **Vũ khí (Weapon):** Danh sách 75+ khẩu súng được lọc thông minh theo điều kiện đang chọn, tự động chuyển sang súng đầu tiên có dữ liệu khi đổi bộ lọc.
 
-4. **Cơ sở dữ liệu lớn (2.200+ Cấu hình từ 3 nguồn cộng đồng):**
+4. **Hiển thị số lượt copy & Sắp xếp ưu tiên độ phổ biến:**
+   - Hiển thị huy hiệu số lượt sao chép thực tế (ví dụ: `📋 3,612 lượt copy`) trên từng thẻ build.
+   - Thuật toán sắp xếp ưu tiên hiển thị các bản build có số lượt copy cao nhất lên đầu, kết hợp cùng mức độ ưu tiên Meta/đề xuất.
+
+5. **Cơ sở dữ liệu lớn (2.200+ Cấu hình từ 3 nguồn cộng đồng):**
    - Thu thập và chuẩn hóa từ các cổng dữ liệu cộng đồng `DeltaForceTools`, `DeltaForceBuilds` và `FPSMeta` với cơ chế lọc trùng lặp tuyệt đối theo `loadout_code`.
    - Ghi nhận nguồn minh bạch trên giao diện từng bản build giúp người chơi dễ dàng theo dõi.
    - **Khóa kênh cập nhật an toàn:** Đường dẫn cập nhật mùa mới được khóa cứng vào máy chủ GitHub chính thức của tác giả (`TaiGiap/df-loadout-scanner`), ngăn chặn hoàn toàn nguy cơ giả mạo nguồn dữ liệu (Data Spoofing).
 
-5. **Bảo mật & Chống can thiệp (Anti-Tamper & Security):**
+6. **Bảo mật & Chống can thiệp (Anti-Tamper & Security):**
    - **Kiểm tra tính toàn vẹn (Integrity Check):** Tính mã băm FNV-1a 64-bit định danh tác giả và ứng dụng ngay lúc khởi động và liên tục trong vòng lặp kết xuất (render loop). Mọi hành vi dùng Hex Editor sửa đổi chuỗi trong file nhị phân sẽ kích hoạt cơ chế tự dừng ứng dụng ngay lập tức.
    - **Phát hiện trình gỡ lỗi (Anti-Debugger):** Tích hợp kiểm tra API `IsDebuggerPresent()` của Windows nhằm ngăn chặn hành vi đính kèm trình gỡ lỗi trái phép.
    - **Tối ưu chống dịch ngược:** Thiết lập `[profile.release]` với `opt-level = 3`, `lto = "fat"`, `codegen-units = 1`, `panic = "abort"` và `strip = "symbols"`, xóa sạch bảng ký hiệu và dấu vết đường dẫn cá nhân.
 
-6. **Giao diện Tactical Dark UI:**
+7. **Giao diện Tactical Dark UI:**
    - Phong cách quân sự Delta Force với bảng màu `#0B1015`, `#131B24`, `#00E5A0`.
    - Hỗ trợ song ngữ qua nút `[LANG: VI]` / `[LANG: EN]`.
    - Bảng hướng dẫn sử dụng song ngữ tự động mở khi khởi động.
    - Chế độ luôn hiển thị trên cùng (Always on Top).
-   - Kích thước chuẩn cố định 1140x680 tối ưu không gian hiển thị.
+   - Kích thước chuẩn cố định 1140x680 tối ưu không gian hiển thị, căn chỉnh hoàn hảo các dropdown lọc.
 
-7. **An toàn 100% (Anti-Cheat Safe):**
+8. **An toàn 100% (Anti-Cheat Safe):**
    - Chỉ chụp ảnh màn hình qua Windows API và ghi vào Clipboard hệ thống.
    - Hoàn toàn không can thiệp bộ nhớ (RAM), không chèn DLL, không chỉnh sửa tệp hay tiến trình game.
 
@@ -70,30 +76,36 @@ Người dùng thông thường chỉ cần tải bản đóng gói sẵn trên 
 
 ### English
 
-1. **Real-time Weapon Scanner (Global Hotkey `F9`):**
+1. **Real-time Weapon Scanner (Global Hotkey `F9`) & Smart Best Build Auto-Pick:**
    - Captures the weapon title region using native Windows OCR and matches it via Jaro-Winkler fuzzy string distance (> 0.72).
+   - Automatically selects the build with the highest copy count matching current Server, Mode, and Web Source, feeding it into active clipboard (`Ctrl + V`).
 
 2. **Auto-Clipboard History Sync (`Win + V`):**
-   - Places the top Meta build on active clipboard (`Ctrl + V`), then feeds recommended builds into Windows Clipboard History (`Win + V`) spaced 150ms apart.
+   - Places the top/most popular build on active clipboard (`Ctrl + V`), then feeds recommended builds into Windows Clipboard History (`Win + V`) spaced 150ms apart.
 
-3. **4-Level Dynamic Filter Bar:**
-   - Filter by Server (`Garena` / `Infinity`), Game Mode (`Warfare` / `Operations` / `All`), Weapon Type (8 categories), and Weapon (70+ weapons).
+3. **5-Level Dynamic Filter Bar:**
+   - Filter by Web Source (`ALL`, `DFTools`, `DFBuilds`, `FPSMeta`), Server (`Garena` / `Infinity`), Game Mode (`Warfare` / `Operations` / `All`), Weapon Type (8 categories), and Weapon (75+ weapons).
    - Automatically resets to the first available weapon when filters change, preventing empty result states.
+   - Persists selected source across sessions in `config.json`.
 
-4. **Large Multi-Source Database (2,200+ Builds):**
+4. **Copy Count Badge & Popularity Ranking:**
+   - Displays real-world copy count badges (e.g. `📋 3,612 copies`) on each card.
+   - Prioritizes most copied loadouts at the top alongside Meta/Recommended status.
+
+5. **Large Multi-Source Database (2,200+ Builds):**
    - Aggregated from online community repositories (`DeltaForceTools`, `DeltaForceBuilds`, `FPSMeta`) with strict deduplication by `loadout_code`.
    - Transparent attribution displayed for each loadout card.
    - **Locked Official Update Pipeline:** Hardcoded to the author's verified GitHub repository, preventing malicious data spoofing attacks.
 
-5. **Security & Anti-Tamper Hardening:**
+6. **Security & Anti-Tamper Hardening:**
    - **Continuous Integrity Verification:** 64-bit FNV-1a hash verification runs at startup and during every frame render loop. Any hex modification to author identity or app name terminates the process immediately.
    - **Anti-Debugger Guard:** Checks Windows `IsDebuggerPresent()` at launch to block live reverse engineering attempts.
    - **Aggressive Release Stripping:** Release profile compiled with `opt-level = 3`, `lto = "fat"`, `codegen-units = 1`, `panic = "abort"`, and `strip = "symbols"`.
 
-6. **Tactical Military Dark UI:**
-   - Delta Force emerald accent palette, bilingual `[LANG: VI / EN]` switcher, User Guide modal, Always on Top toggle, and fixed 1140x680 resolution.
+7. **Tactical Military Dark UI:**
+   - Delta Force emerald accent palette, bilingual `[LANG: VI / EN]` switcher, User Guide modal, Always on Top toggle, and fixed 1140x680 resolution with compactly tuned dropdowns.
 
-7. **100% Anti-Cheat Compliant:**
+8. **100% Anti-Cheat Compliant:**
    - Operates strictly through Windows display capture and clipboard APIs. Zero memory injection, zero game hook.
 
 ---
