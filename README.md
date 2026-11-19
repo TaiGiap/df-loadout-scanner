@@ -11,10 +11,10 @@ Công cụ tự động nhận diện vũ khí thời gian thực qua Windows OC
 Người dùng thông thường chỉ cần tải bản đóng gói sẵn tại mục GitHub Releases:
 
 - **Phiên bản mới nhất (Latest Release):** [DF-Loadout-Scanner Releases](https://github.com/TaiGiap/df-loadout-scanner/releases/latest)
-- **Tệp cài đặt:** `DF-Loadout-Scanner-v1.4.2-Windows-x64.zip` (Đã đóng gói trọn gói file thực thi `.exe`, tài liệu hướng dẫn và giấy phép).
+- **Tệp cài đặt:** `DF-Loadout-Scanner-v1.4.3-Windows-x64.zip` (Đã đóng gói trọn gói file thực thi `.exe`, tài liệu hướng dẫn và giấy phép).
 
 > **Tác giả / Developed By:** Anh Bảy Chọ / Tài Giáp  
-> **Phiên bản / Version:** `v1.4.2` (Header Layout Fix, Enhanced Search & Vietnamese Aliases)
+> **Phiên bản / Version:** `v1.4.3` (2-Row Filter Layout & Smart Startup Weapon Selection)
 
 ---
 
@@ -103,12 +103,13 @@ Người dùng thông thường chỉ cần tải bản đóng gói sẵn tại 
 **DF Loadout Scanner** is a lightweight, real-time weapon recognition and loadout synchronizer for Delta Force (Garena & Level Infinite / Steam).
 
 ### Quick Start (3 Steps)
-1. **Download:** Grab `DF-Loadout-Scanner-v1.4.2-Windows-x64.zip` from [GitHub Releases](https://github.com/TaiGiap/df-loadout-scanner/releases/latest) and extract it.
+1. **Download:** Grab `DF-Loadout-Scanner-v1.4.3-Windows-x64.zip` from [GitHub Releases](https://github.com/TaiGiap/df-loadout-scanner/releases/latest) and extract it.
 2. **Launch:** Run `DF-Loadout-Scanner-Windows-x64.exe`. If the Windows SmartScreen prompt appears, click **More info** $\rightarrow$ **Run anyway** (requires admin rights for global hotkey capture and stable fullscreen screenshot).
 3. **Use in Game:** Set game display to **Borderless Windowed** and enable Windows **Clipboard History (`Win + V`)**. In gunsmith menu, press hotkey (default `F9` or customizable to `Mouse 4/5` / `F1-F12`). Hit `Ctrl + V` to paste the top build, or `Win + V` to browse alternate builds.
 
 ### Key Highlights
-- **Zero-Overlap Header & Enhanced Filter Search:** Relocated search bar to the filter row directly preceding the Weapon dropdown with quick-clear `[×]` button, completely resolving Header button overlap. Real-time auto-selection and dropdown filtering support case-insensitive, dash-less (`"ar57"`, `"mini14"`), and Vietnamese aliases (`"hai nong"` -> `725 DOUBLE-BARREL`, `"cung"` -> `COMPOUND BOW`).
+- **2-Row Clean Filter Layout & Smart Startup Weapon:** Reorganized the filter panel into two spacious rows (Row 1: Source, Server, Mode, Type; Row 2: 220px Search box with `[×]` clear button and 240px Weapon dropdown), preventing right-edge truncation across all DPI scales. Automatically prioritizes `M4A1` (or first weapon with available builds under default Garena server) on startup instead of `.357` (0 builds), instantly displaying rich loadouts upon launch.
+- **Enhanced Filter Search & Vietnamese Aliases:** Real-time auto-selection and dropdown filtering support case-insensitive, dash-less (`"ar57"`, `"mini14"`), and Vietnamese aliases (`"hai nong"` -> `725 DOUBLE-BARREL`, `"cung"` -> `COMPOUND BOW`).
 - **Dedicated Favorites Tab & ESC Quick Exit (`favorites.json`):** Dedicated `[★ FAVORITES (N)]` tab displaying all pinned builds and custom loadouts for all weapons with quick jump button (`[🔍 View Gun]`) to weapon page, fast exit via `ESC` key or `[← BACK (ESC)]` banner button, independent storage (`favorites.json`), and instant custom code modal (`[+ ADD CUSTOM]`).
 - **OCR Confidence Thresholding (Anti-Miscopy Protection):** Tiered recognition prevents unwanted clipboard overwrites: high confidence (`>= 90%`) auto-syncs, suspicious matches (`75%-89%`) require explicit confirmation via `[✔ CONFIRM & COPY]`, and low confidence (`< 75%`) triggers rejection.
 - **Semantic Data Validator & Clean Code Guarantee:** Deep cross-validation ensures every weapon code belongs 100% to the matching weapon, removing corrupted/mismatched codes and rogue newlines.
@@ -149,7 +150,8 @@ Tác giả tôn trọng quyền sở hữu trí tuệ và mong muốn của các
 
 | Phiên bản | Điểm mới & Cải tiến chính |
 | :--- | :--- |
-| **v1.4.2 (Mới nhất)** | Sửa triệt để lỗi giao diện chồng lấn trên Header: Chuyển ô `Tìm: [Tên súng...]` xuống thanh `BỘ LỌC:` (ngay trước ComboBox `Vũ khí:`) kèm nút nhỏ `[×]` xóa nhanh; Tối ưu hóa thuật toán tìm kiếm vũ khí không phân biệt hoa/thường, tự động bỏ qua dấu gạch ngang (`ar57`, `mini14`), hỗ trợ toàn diện bảng bí danh tiếng Việt (`hai nong` $\rightarrow$ `725 DOUBLE-BARREL`, `cung` $\rightarrow$ `COMPOUND BOW`...); Tự động chọn khẩu súng khớp nhất đầu tiên ngay khi gõ để tải cấu hình tức thì và lọc gọn danh sách trong dropdown `Vũ khí:`. |
+| **v1.4.3 (Mới nhất)** | Tách thanh `BỘ LỌC:` thành 2 hàng ngang rõ ràng (Dòng 1: Nguồn, Server, Chế độ, Loại; Dòng 2: Ô tìm kiếm súng ~220px kèm nút `[×]` và ComboBox Chọn vũ khí ~240px) chống cắt lẹm mép phải ở mọi tỉ lệ DPI; Tự động ưu tiên chọn `M4A1` (hoặc súng đầu tiên có sẵn build khớp với Server Garena mặc định) khi khởi động thay vì chọn `.357` (0 cấu hình) giúp người dùng thấy ngay danh sách build khi vừa mở app. |
+| **v1.4.2** | Sửa triệt để lỗi giao diện chồng lấn trên Header: Chuyển ô `Tìm: [Tên súng...]` xuống thanh `BỘ LỌC:` (ngay trước ComboBox `Vũ khí:`) kèm nút nhỏ `[×]` xóa nhanh; Tối ưu hóa thuật toán tìm kiếm vũ khí không phân biệt hoa/thường, tự động bỏ qua dấu gạch ngang (`ar57`, `mini14`), hỗ trợ toàn diện bảng bí danh tiếng Việt (`hai nong` $\rightarrow$ `725 DOUBLE-BARREL`, `cung` $\rightarrow$ `COMPOUND BOW`...); Tự động chọn khẩu súng khớp nhất đầu tiên ngay khi gõ để tải cấu hình tức thì và lọc gọn danh sách trong dropdown `Vũ khí:`. |
 | **v1.4.1** | Nâng cấp toàn diện trải nghiệm quản lý Yêu thích: Thay thế nút lọc toggle bằng hệ thống Tab chuyên biệt `[🔍 QUÉT & TRA CỨU]` và `[★ YÊU THÍCH (N)]` ngay trên Header; Quản lý tập trung toàn bộ cấu hình đã ghim và mã cá nhân của tất cả các súng; Bổ sung phím tắt `ESC` và nút `[← QUAY LẠI (ESC)]` thoát nhanh về màn hình quét; Thêm nút `[🔍 Xem súng]` nhảy thẳng đến trang tra cứu của súng; Tích hợp nút `[+ THÊM MÃ RIÊNG]` và `[COPY TẤT CẢ VÀO WIN+V]` trực tiếp trong Tab Yêu thích. |
 | **v1.4.0** | Tích hợp hệ thống Build Yêu Thích và Mã Cá Nhân độc lập (`favorites.json`) không lo mất dữ liệu khi cập nhật DB; Thêm nút ghim `[☆ Lưu]` / `[★ Đã ghim]` đẩy cấu hình lên ưu tiên số 1 (Tier -1, badge `★ YÊU THÍCH`); Thêm modal `[+ THÊM MÃ RIÊNG]`; Bổ sung cơ chế phân tầng ngưỡng tin cậy OCR (Confidence Threshold) chống tự động ghi đè Clipboard khi kết quả ở vùng nghi ngờ 75%–89% và yêu cầu xác nhận thủ công `[✔ XÁC NHẬN & COPY]`. |
 | **v1.3.7** | Nâng cấp bộ kiểm duyệt ngữ nghĩa (Semantic Data Validator) loại bỏ 100% bản ghi sai tên súng bên trong loadout code và mã rác; áp dụng thuật toán xếp hạng cân bằng đa nguồn (Source-Normalized Ranking) hiển thị đan xen công bằng các bản build giữa DFTools, DFBuilds và FPSMeta; chuẩn hóa tuyên bố tương thích Anti-Cheat chính xác và khách quan. |
