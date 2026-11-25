@@ -34,7 +34,7 @@ extern "system" {
 // Application & Author identity constants
 const AUTHOR_NAME: &str = "Anh Bảy Chọ / Tài Giáp";
 const APP_NAME: &str = "DF Loadout Scanner";
-const APP_VERSION: &str = "v1.4.5";
+const APP_VERSION: &str = "v1.4.6";
 
 // VietQR donation constants
 const DONATE_BANK_ID: &str = "TCB";
@@ -165,6 +165,7 @@ const COLOR_TEXT_MAIN: Color32 = Color32::from_rgb(230, 237, 243);// #E6EDF3
 const COLOR_TEXT_MUTED: Color32 = Color32::from_rgb(139, 148, 158);// #8B949E
 const COLOR_BORDER: Color32 = Color32::from_rgb(35, 48, 62);      // #23303E
 const COLOR_AMBER: Color32 = Color32::from_rgb(255, 190, 40);      // #FFBE28
+const COLOR_RED: Color32 = Color32::from_rgb(255, 92, 92);         // #FF5C5C
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum AppLang {
@@ -305,7 +306,7 @@ struct ActiveFilters {
     server: ServerFilter,
     mode: ModeFilter,
     source: SourceFilter,
-    selected_monitor_index: Option<usize>,
+    selected_monitor_id: Option<String>,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
@@ -369,7 +370,7 @@ struct UserConfig {
     #[serde(default = "default_hotkey_name")]
     hotkey_name: String,
     #[serde(default)]
-    selected_monitor_index: Option<usize>,
+    selected_monitor_id: Option<String>,
 }
 
 fn default_server() -> String { "Garena".to_string() }
@@ -388,7 +389,7 @@ impl Default for UserConfig {
             lang: default_lang(),
             hotkey_vk: default_hotkey_vk(),
             hotkey_name: default_hotkey_name(),
-            selected_monitor_index: None,
+            selected_monitor_id: None,
         }
     }
 }
@@ -502,6 +503,56 @@ fn app_data_dir() -> PathBuf {
     data_dir
 }
 
+/// Atomically writes `content` to `target_path` via a `.tmp` sibling file,
+/// falling back to `fs::copy` if `fs::rename` fails, verifying the target file exists
+/// with size > 0 bytes before deleting `.tmp`, and cleaning `.tmp` on failure.
+fn atomic_write_verified(target_path: &std::path::Path, content: &str) -> Result<(), String> {
+    if let Some(parent) = target_path.parent() {
+        if let Err(e) = fs::create_dir_all(parent) {
+            return Err(format!("Không thể tạo thư mục lưu dữ liệu: {}", e));
+        }
+    }
+
+    let tmp_path = PathBuf::from(format!("{}.tmp", target_path.display()));
+    if let Err(e) = fs::write(&tmp_path, content) {
+        let _ = fs::remove_file(&tmp_path);
+        return Err(format!("Lỗi ghi file tạm: {}", e));
+    }
+
+    if fs::rename(&tmp_path, target_path).is_ok() {
+        match fs::metadata(target_path) {
+            Ok(meta) if meta.len() > 0 => return Ok(()),
+            Ok(_) => return Err("File đích rỗng (0 bytes) sau khi rename".to_string()),
+            Err(e) => return Err(format!("Không thể xác minh file đích sau rename: {}", e)),
+        }
+    }
+
+    match fs::copy(&tmp_path, target_path) {
+        Ok(bytes_copied) if bytes_copied > 0 => match fs::metadata(target_path) {
+            Ok(meta) if meta.len() > 0 => {
+                let _ = fs::remove_file(&tmp_path);
+                Ok(())
+            }
+            Ok(_) => {
+                let _ = fs::remove_file(&tmp_path);
+                Err("File đích rỗng (0 bytes) sau khi sao chép".to_string())
+            }
+            Err(e) => {
+                let _ = fs::remove_file(&tmp_path);
+                Err(format!("Không thể xác minh file đích sau sao chép: {}", e))
+            }
+        },
+        Ok(_) => {
+            let _ = fs::remove_file(&tmp_path);
+            Err("Sao chép từ file tạm tạo ra file 0 bytes".to_string())
+        }
+        Err(copy_err) => {
+            let _ = fs::remove_file(&tmp_path);
+            Err(format!("Không thể ghi đè file đích (có thể bị khóa): {}", copy_err))
+        }
+    }
+}
+
 fn favorites_file_path() -> PathBuf {
     app_data_dir().join("favorites.json")
 }
@@ -515,17 +566,11 @@ fn load_favorites() -> Vec<BuildItem> {
     }
 }
 
-fn save_favorites(favorites: &[BuildItem]) {
+fn save_favorites(favorites: &[BuildItem]) -> Result<(), String> {
     let path = favorites_file_path();
-    let tmp_path = path.with_extension("json.tmp");
-    if let Ok(content) = serde_json::to_string_pretty(favorites) {
-        if fs::write(&tmp_path, &content).is_ok() {
-            if fs::rename(&tmp_path, &path).is_err() {
-                let _ = fs::copy(&tmp_path, &path);
-                let _ = fs::remove_file(&tmp_path);
-            }
-        }
-    }
+    let content = serde_json::to_string_pretty(favorites)
+        .map_err(|e| format!("Lỗi tuần tự hóa favorites: {}", e))?;
+    atomic_write_verified(&path, &content)
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -558,17 +603,11 @@ fn load_user_config() -> UserConfig {
     }
 }
 
-fn save_user_config(config: &UserConfig) {
+fn save_user_config(config: &UserConfig) -> Result<(), String> {
     let path = config_file_path();
-    let tmp_path = path.with_extension("json.tmp");
-    if let Ok(content) = serde_json::to_string_pretty(config) {
-        if fs::write(&tmp_path, &content).is_ok() {
-            if fs::rename(&tmp_path, &path).is_err() {
-                let _ = fs::copy(&tmp_path, &path);
-                let _ = fs::remove_file(&tmp_path);
-            }
-        }
-    }
+    let content = serde_json::to_string_pretty(config)
+        .map_err(|e| format!("Lỗi tuần tự hóa config: {}", e))?;
+    atomic_write_verified(&path, &content)
 }
 
 enum WorkerEvent {
@@ -579,6 +618,7 @@ enum WorkerEvent {
         builds: Vec<BuildItem>,
         is_uncertain: bool,
         clipboard_error: Option<String>,
+        clipboard_report: Option<(usize, usize)>,
     },
     ScanFailed {
         raw_ocr: String,
@@ -600,14 +640,194 @@ enum DbUpdateResult {
 
 const BUILDS_JSON: &str = include_str!("../builds.json");
 
-/// Validates downloaded database records before persisting to `builds_local.json`.
-/// Ensures payload is non-empty and each retained record has non-empty `weapon`
-/// and a valid `loadout_code` (`>= 18` chars, at least 2 `-` separators, no newlines).
+/// Extracts the weapon name segment preceding mode keywords or the last 2 `-` segments.
+fn extract_weapon_prefix_from_loadout_code(code: &str) -> String {
+    let trimmed = code.trim();
+    let lower = trimmed.to_lowercase();
+    for marker in [
+        "-warfare-",
+        "-operations",
+        "-detonation",
+        "-extraction",
+        "-krieg-",
+        "-conflicto",
+        "-operaci",
+        "-chiến trường",
+        "-chiến dịch",
+        "-sinh tồn",
+        "-全面",
+        "-烽火",
+        "-전면전",
+        "-сражени",
+        "-операци",
+        "-«операци",
+        "-savaş",
+        "-الحرب",
+        "-العمليات",
+    ] {
+        if let Some(pos) = lower.find(marker) {
+            return trimmed[..pos].trim().to_string();
+        }
+    }
+
+    // Fallback: strip trailing alphanumeric share-code token, then trailing mode token
+    if let Some((before_id, last_id)) = trimmed.rsplit_once('-') {
+        if last_id.len() >= 12 && last_id.chars().all(|c| c.is_ascii_alphanumeric()) {
+            if let Some((weapon_part, _mode_part)) = before_id.rsplit_once('-') {
+                return weapon_part.trim().to_string();
+            }
+            return before_id.trim().to_string();
+        }
+    }
+
+    let parts: Vec<&str> = trimmed.rsplitn(3, '-').collect();
+    if parts.len() == 3 {
+        parts[2].trim().to_string()
+    } else {
+        trimmed.to_string()
+    }
+}
+
+/// Semantically checks that the weapon inside `loadout_code` matches the declared `weapon` field.
+fn code_matches_declared_weapon(
+    code: &str,
+    declared_weapon: &str,
+    candidates: &[String],
+) -> bool {
+    let raw_prefix = extract_weapon_prefix_from_loadout_code(code).replace('\u{00A0}', " ");
+    if raw_prefix.trim().is_empty() {
+        return false;
+    }
+
+    let declared_upper = declared_weapon.trim().to_uppercase();
+    let declared_canon = resolve_alias(&declared_upper)
+        .map(|s| s.to_string())
+        .unwrap_or(declared_upper);
+    let declared_stripped = ocr_strip_separators(&declared_canon);
+
+    const LOCALIZED_PREFIX_MAP: &[(&str, &str)] = &[
+        ("騰龍", "CI-19"),
+        ("데저트 이글", "DESERT EAGLE"),
+        ("АШ-12", "ASH-12"),
+        ("АК-12", "AK-12"),
+        ("АКМ", "AKM"),
+        ("СР-3М", "SR-3M"),
+        ("СР-3M", "SR-3M"),
+        ("ВСС", "VSS"),
+        ("ВИТЯЗЬ", "VITYAZ"),
+        ("АС «ВАЛ»", "AS VAL"),
+        ("АС ВАЛ", "AS VAL"),
+    ];
+    let prefix_upper_raw = raw_prefix.to_uppercase();
+    for &(loc, canon) in LOCALIZED_PREFIX_MAP {
+        if prefix_upper_raw.contains(loc) {
+            return ocr_strip_separators(canon) == declared_stripped;
+        }
+    }
+
+    let ascii_only: String = raw_prefix
+        .chars()
+        .map(|c| {
+            if c.is_ascii_alphanumeric() || c == '-' || c == '_' || c == '.' || c == ' ' {
+                c
+            } else {
+                ' '
+            }
+        })
+        .collect();
+    let mut ascii_clean = ascii_only.split_whitespace().collect::<Vec<_>>().join(" ");
+    // Separate glued English/German category suffixes (e.g., "M4A1AssaultRifle", "CAR-15-Sturmgewehr")
+    for suffix in [
+        "CompactAssaultRifle",
+        "GeneralMachineGun",
+        "LightMachineGun",
+        "AssaultRifle",
+        "BattleRifle",
+        "MarksmanRifle",
+        "SniperRifle",
+        "SubmachineGun",
+        "-Maschinenpistole",
+        "-Sturmgewehr",
+        "-Kampfgewehr",
+        "-Präzisionsgewehr",
+        "-Prazisionsgewehr",
+        "-Scharfschützengewehr",
+        "-Scharfschutzengewehr",
+        "-Leichtes Maschinengewehr",
+        "-Schrotflinte",
+    ] {
+        ascii_clean = ascii_clean.replace(suffix, " ");
+    }
+
+    // Exact separator-stripped token / 2-word phrase match (handles Spanish/Turkish/Arabic prefixes like "Fusil de asalto KC17" or "SG 552 Taarruz")
+    let ascii_tokens: Vec<&str> = ascii_clean.split_whitespace().collect();
+    for i in 0..ascii_tokens.len() {
+        let tok_upper = ascii_tokens[i].to_uppercase();
+        let tok_canon = resolve_alias(&tok_upper).unwrap_or(tok_upper.as_str());
+        if ocr_strip_separators(tok_canon) == declared_stripped {
+            return true;
+        }
+        if i + 1 < ascii_tokens.len() {
+            let pair = format!("{} {}", ascii_tokens[i], ascii_tokens[i + 1]).to_uppercase();
+            let pair_canon = resolve_alias(&pair).unwrap_or(pair.as_str());
+            if ocr_strip_separators(pair_canon) == declared_stripped {
+                return true;
+            }
+        }
+    }
+
+    let cleaned = clean_ocr_text(if ascii_clean.is_empty() {
+        &raw_prefix
+    } else {
+        &ascii_clean
+    });
+
+    if cleaned.is_empty() {
+        return false;
+    }
+
+    if let Some((matched, _)) = match_weapon(&cleaned, candidates) {
+        let matched_canon = resolve_alias(&matched.to_uppercase())
+            .map(|s| s.to_string())
+            .unwrap_or_else(|| matched.to_uppercase());
+        return ocr_strip_separators(&matched_canon) == declared_stripped;
+    }
+
+    false
+}
+
+/// Validates downloaded database records semantically & structurally before persisting:
+/// - Non-empty payload
+/// - Valid `weapon` and `loadout_code` (`>= 18` chars, `>= 2` dashes, single-line)
+/// - Cross-checks weapon name inside `loadout_code` against `weapon` field
+/// - Deduplicates strictly by trimmed `loadout_code`
 fn validate_downloaded_builds(raw_items: Vec<BuildItem>) -> Result<Vec<BuildItem>, String> {
     if raw_items.is_empty() {
         return Err("Dữ liệu rỗng / Empty database".to_string());
     }
 
+    // Build candidate pool from known aliases + embedded weapons + incoming weapon names
+    let mut cand_set: HashSet<String> = HashSet::new();
+    for &(_, canon) in WEAPON_ALIASES {
+        cand_set.insert(canon.to_string());
+    }
+    if let Ok(embedded) = serde_json::from_str::<Vec<BuildItem>>(BUILDS_JSON) {
+        for b in embedded {
+            let w = b.weapon.trim().to_string();
+            if !w.is_empty() {
+                cand_set.insert(w);
+            }
+        }
+    }
+    for b in &raw_items {
+        let w = b.weapon.trim().to_string();
+        if !w.is_empty() {
+            cand_set.insert(w);
+        }
+    }
+    let candidates: Vec<String> = cand_set.into_iter().collect();
+
+    let mut seen_codes: HashSet<String> = HashSet::new();
     let valid: Vec<BuildItem> = raw_items
         .into_iter()
         .filter_map(|mut item| {
@@ -621,6 +841,12 @@ fn validate_downloaded_builds(raw_items: Vec<BuildItem>) -> Result<Vec<BuildItem
             {
                 return None;
             }
+            if !code_matches_declared_weapon(&code_trimmed, &weapon_trimmed, &candidates) {
+                return None;
+            }
+            if !seen_codes.insert(code_trimmed.clone()) {
+                return None;
+            }
             item.weapon = weapon_trimmed;
             item.loadout_code = code_trimmed;
             Some(item)
@@ -628,7 +854,7 @@ fn validate_downloaded_builds(raw_items: Vec<BuildItem>) -> Result<Vec<BuildItem
         .collect();
 
     if valid.is_empty() {
-        return Err("Không có bản ghi hợp lệ trong dữ liệu tải về / No valid builds found in downloaded payload".to_string());
+        return Err("Không có bản ghi hợp lệ sau kiểm duyệt ngữ nghĩa / No valid builds after semantic validation".to_string());
     }
 
     Ok(valid)
@@ -640,10 +866,6 @@ fn history_file_path() -> PathBuf {
 
 fn local_builds_file_path() -> PathBuf {
     app_data_dir().join("builds_local.json")
-}
-
-fn local_builds_tmp_file_path() -> PathBuf {
-    app_data_dir().join("builds_local.json.tmp")
 }
 
 fn load_builds_data() -> (Vec<BuildItem>, bool, bool) {
@@ -692,11 +914,11 @@ fn load_history() -> Vec<HistoryItem> {
     }
 }
 
-fn save_history(history: &[HistoryItem]) {
+fn save_history(history: &[HistoryItem]) -> Result<(), String> {
     let path = history_file_path();
-    if let Ok(content) = serde_json::to_string_pretty(history) {
-        let _ = fs::write(path, content);
-    }
+    let content = serde_json::to_string_pretty(history)
+        .map_err(|e| format!("Lỗi tuần tự hóa history: {}", e))?;
+    atomic_write_verified(&path, &content)
 }
 
 /// Strips Vietnamese accents and diacritics, returning ASCII uppercase string.
@@ -854,8 +1076,10 @@ const WEAPON_ALIASES: &[(&str, &str)] = &[
     ("GLOCK", "G-17"),
     ("SUNG CAN LEVER", "MARLIN LEVER-ACTION"),
     ("CAN LEVER", "MARLIN LEVER-ACTION"),
+    ("LEVER-ACTION", "MARLIN LEVER-ACTION"),
     ("LEVER ACTION", "MARLIN LEVER-ACTION"),
     ("MARLIN", "MARLIN LEVER-ACTION"),
+    ("UZL", "UZI"),
     ("357 REVOLVER", ".357"),
     ("357", ".357"),
     ("MINI 14", "MINI-14"),
@@ -1782,8 +2006,23 @@ fn scan_center_header_fallback<'a>(
     Ok((matched, raw, cleaned))
 }
 
-/// Enumerates connected monitors for the manual UI selector dropdown.
-fn enumerate_monitors(lang: AppLang) -> Vec<(usize, String)> {
+#[derive(Debug, Clone, PartialEq, Eq)]
+struct MonitorDescriptor {
+    stable_id: String,
+    label: String,
+    x: i32,
+    y: i32,
+    width: u32,
+    height: u32,
+    is_primary: bool,
+}
+
+fn format_monitor_stable_id(name: &str, width: u32, height: u32) -> String {
+    format!("{} ({}x{})", name.trim(), width, height)
+}
+
+/// Enumerates connected monitors returning `(stable_id, display_label)` pairs.
+fn enumerate_monitors(lang: AppLang) -> Vec<(String, String)> {
     let Ok(monitors) = xcap::Monitor::all() else {
         return Vec::new();
     };
@@ -1791,20 +2030,20 @@ fn enumerate_monitors(lang: AppLang) -> Vec<(usize, String)> {
         .into_iter()
         .enumerate()
         .map(|(idx, m)| {
+            let stable_id = format_monitor_stable_id(m.name(), m.width(), m.height());
             let primary_tag = if m.is_primary() {
                 lang.t(" [Chính]", " [Primary]")
             } else {
                 ""
             };
             let label = format!(
-                "{} {} ({}x{}){}",
+                "{} {}: {}{}",
                 lang.t("Màn", "Display"),
                 idx + 1,
-                m.width(),
-                m.height(),
+                stable_id,
                 primary_tag
             );
-            (idx, label)
+            (stable_id, label)
         })
         .collect()
 }
@@ -1833,65 +2072,111 @@ fn get_foreground_monitor_rect() -> Option<(i32, i32, i32, i32)> {
     }
 }
 
-/// Selects the target monitor: uses manual index if provided and valid, otherwise matches
-/// the monitor hosting the foreground window (`GetForegroundWindow` -> `MonitorFromWindow`),
-/// falling back to the primary monitor.
+/// Pure monitor resolution logic:
+/// 1. Matches `selected_monitor_id` by stable device+resolution ID if still connected.
+/// 2. If `None` OR saved monitor disconnected, falls back automatically to the foreground window's monitor.
+/// 3. Final fallback: primary monitor or index 0.
+fn resolve_monitor_index(
+    monitors: &[MonitorDescriptor],
+    selected_monitor_id: Option<&str>,
+    foreground_rect: Option<(i32, i32, i32, i32)>,
+) -> Option<usize> {
+    if monitors.is_empty() {
+        return None;
+    }
+
+    if let Some(target_id) = selected_monitor_id {
+        if let Some(pos) = monitors.iter().position(|m| m.stable_id == target_id) {
+            return Some(pos);
+        }
+        // Saved monitor was unplugged -> fall back cleanly to foreground auto-detection
+    }
+
+    if let Some((fx, fy, fw, fh)) = foreground_rect {
+        if let Some(pos) = monitors.iter().position(|m| {
+            m.x == fx && m.y == fy && m.width as i32 == fw && m.height as i32 == fh
+        }) {
+            return Some(pos);
+        }
+        if let Some(pos) = monitors.iter().position(|m| m.x == fx && m.y == fy) {
+            return Some(pos);
+        }
+        let f_right = fx as i64 + fw as i64;
+        let f_bottom = fy as i64 + fh as i64;
+        let mut best_pos: Option<usize> = None;
+        let mut max_overlap: i64 = 0;
+        for (i, m) in monitors.iter().enumerate() {
+            let mx1 = m.x as i64;
+            let my1 = m.y as i64;
+            let mx2 = mx1 + m.width as i64;
+            let my2 = my1 + m.height as i64;
+            let ox = (f_right.min(mx2) - (fx as i64).max(mx1)).max(0);
+            let oy = (f_bottom.min(my2) - (fy as i64).max(my1)).max(0);
+            let area = ox * oy;
+            if area > max_overlap {
+                max_overlap = area;
+                best_pos = Some(i);
+            }
+        }
+        if let Some(pos) = best_pos {
+            return Some(pos);
+        }
+    }
+
+    monitors.iter().position(|m| m.is_primary).or(Some(0))
+}
+
+/// Selects the target monitor using stable device ID, falling back to foreground window monitor.
 fn select_target_monitor(
-    selected_monitor_index: Option<usize>,
+    selected_monitor_id: Option<&str>,
 ) -> Result<xcap::Monitor, Box<dyn std::error::Error + Send + Sync>> {
-    let monitors = xcap::Monitor::all()?;
+    let mut monitors = xcap::Monitor::all()?;
     if monitors.is_empty() {
         return Err("Không tìm thấy màn hình nào".into());
     }
 
-    if let Some(idx) = selected_monitor_index {
-        if let Some(m) = monitors.get(idx) {
-            return Ok(m.clone());
-        }
-    }
+    let descriptors: Vec<MonitorDescriptor> = monitors
+        .iter()
+        .map(|m| {
+            let stable_id = format_monitor_stable_id(m.name(), m.width(), m.height());
+            MonitorDescriptor {
+                label: stable_id.clone(),
+                stable_id,
+                x: m.x(),
+                y: m.y(),
+                width: m.width(),
+                height: m.height(),
+                is_primary: m.is_primary(),
+            }
+        })
+        .collect();
 
-    if let Some((fx, fy, fw, fh)) = get_foreground_monitor_rect() {
-        if let Some(m) = monitors.iter().find(|m| {
-            m.x() == fx && m.y() == fy && m.width() as i32 == fw && m.height() as i32 == fh
-        }) {
-            return Ok(m.clone());
-        }
-        if let Some(m) = monitors.iter().find(|m| m.x() == fx && m.y() == fy) {
-            return Ok(m.clone());
-        }
-        let f_right = fx as i64 + fw as i64;
-        let f_bottom = fy as i64 + fh as i64;
-        if let Some(best) = monitors.iter().max_by_key(|m| {
-            let mx1 = m.x() as i64;
-            let my1 = m.y() as i64;
-            let mx2 = mx1 + m.width() as i64;
-            let my2 = my1 + m.height() as i64;
-            let ox = (f_right.min(mx2) - (fx as i64).max(mx1)).max(0);
-            let oy = (f_bottom.min(my2) - (fy as i64).max(my1)).max(0);
-            ox * oy
-        }) {
-            let mx1 = best.x() as i64;
-            let my1 = best.y() as i64;
-            let mx2 = mx1 + best.width() as i64;
-            let my2 = my1 + best.height() as i64;
-            let overlap = (f_right.min(mx2) - (fx as i64).max(mx1)).max(0)
-                * (f_bottom.min(my2) - (fy as i64).max(my1)).max(0);
-            if overlap > 0 {
-                return Ok(best.clone());
+    let idx = resolve_monitor_index(&descriptors, selected_monitor_id, get_foreground_monitor_rect())
+        .ok_or("Không tìm thấy màn hình phù hợp")?;
+    Ok(monitors.swap_remove(idx))
+}
+
+/// Initializes `arboard::Clipboard` retrying up to `max_retries` times (35ms apart)
+/// to overcome transient Windows clipboard locks from other processes.
+fn init_clipboard_with_retry(max_retries: usize) -> Result<arboard::Clipboard, String> {
+    let attempts = max_retries.max(1);
+    let mut last_err = String::new();
+    for attempt in 0..attempts {
+        match Clipboard::new() {
+            Ok(cb) => return Ok(cb),
+            Err(e) => {
+                last_err = e.to_string();
+                if attempt + 1 < attempts {
+                    sleep(Duration::from_millis(35));
+                }
             }
         }
     }
-
-    monitors
-        .iter()
-        .find(|m| m.is_primary())
-        .cloned()
-        .or_else(|| monitors.into_iter().next())
-        .ok_or_else(|| "Không tìm thấy màn hình chính".into())
+    Err(last_err)
 }
 
 /// Writes text to the Windows Clipboard retrying up to `max_retries` times (35ms apart),
-/// re-initializing `arboard::Clipboard` for one final attempt if all retries fail.
+/// re-initializing `arboard::Clipboard` via `init_clipboard_with_retry` if all attempts fail.
 fn copy_to_clipboard_with_retry(
     clipboard: &mut arboard::Clipboard,
     text: &str,
@@ -1912,7 +2197,7 @@ fn copy_to_clipboard_with_retry(
         }
     }
 
-    match Clipboard::new() {
+    match init_clipboard_with_retry(2) {
         Ok(mut fresh_cb) => match fresh_cb.set_text(text.to_string()) {
             Ok(()) => {
                 *clipboard = fresh_cb;
@@ -1924,45 +2209,63 @@ fn copy_to_clipboard_with_retry(
     }
 }
 
+#[derive(Debug, Clone)]
+struct ClipboardBatchReport {
+    success_count: usize,
+    total_count: usize,
+}
+
 /// Writes a priority-ordered slice of codes (top build at index 0) into Clipboard/Win+V
 /// in reverse order so index 0 ends up on `Ctrl + V`.
-/// Returns `Ok(())` only if index 0 succeeds.
+/// Succeeds iff index 0 is confirmed written, reporting exact `(success_count, total_count)`.
 fn copy_codes_sequence_to_clipboard(
     cb_opt: &mut Option<Clipboard>,
     codes: &[String],
     delay_ms: u64,
-) -> Result<(), String> {
-    if codes.is_empty() {
-        return Ok(());
+) -> Result<ClipboardBatchReport, String> {
+    let total_count = codes.len();
+    if total_count == 0 {
+        return Ok(ClipboardBatchReport {
+            success_count: 0,
+            total_count: 0,
+        });
     }
 
     if cb_opt.is_none() {
-        *cb_opt = Clipboard::new().ok();
+        *cb_opt = Some(init_clipboard_with_retry(3)?);
     }
     let cb = cb_opt
         .as_mut()
         .ok_or_else(|| "Không thể truy cập Windows Clipboard".to_string())?;
 
+    let mut success_count = 0usize;
     let mut top_result: Result<(), String> = Err("Không có dữ liệu sao chép".to_string());
-    let total = codes.len();
     for (rev_idx, code) in codes.iter().rev().enumerate() {
         let res = copy_to_clipboard_with_retry(cb, code, 3);
-        let is_top_priority = rev_idx + 1 == total;
+        let is_top_priority = rev_idx + 1 == total_count;
+        if res.is_ok() {
+            success_count += 1;
+        }
         if is_top_priority {
             top_result = res;
-        } else if total > 1 {
+        } else {
             sleep(Duration::from_millis(delay_ms));
         }
     }
-    top_result
+
+    top_result?;
+    Ok(ClipboardBatchReport {
+        success_count,
+        total_count,
+    })
 }
 
 fn capture_and_recognize_weapon<'a>(
     ocr_engine: &OcrEngine,
     candidates: &'a [String],
-    selected_monitor_index: Option<usize>,
+    selected_monitor_id: Option<&str>,
 ) -> Result<(Option<(&'a str, f64)>, String, String), Box<dyn std::error::Error + Send + Sync>> {
-    let target_monitor = select_target_monitor(selected_monitor_index)?;
+    let target_monitor = select_target_monitor(selected_monitor_id)?;
     let full_image = target_monitor.capture_image()?;
 
     let mut best_match: Option<(&'a str, f64, String, String)> = None;
@@ -2128,7 +2431,7 @@ fn start_hotkey_worker(
             }
         };
 
-        let mut clipboard = Clipboard::new().ok();
+        let mut clipboard = init_clipboard_with_retry(3).ok();
         let mut last_scan: Option<Instant> = None;
         let mut was_pressed = false;
 
@@ -2155,12 +2458,12 @@ fn start_hotkey_worker(
                     last_scan = Some(now);
 
                     let candidates = shared_unique_weapons.read().unwrap().clone();
-                    let (cur_server, cur_mode, cur_source, cur_monitor_idx) = {
+                    let (cur_server, cur_mode, cur_source, cur_monitor_id) = {
                         let f = active_filters.read().unwrap();
-                        (f.server, f.mode, f.source, f.selected_monitor_index)
+                        (f.server, f.mode, f.source, f.selected_monitor_id.clone())
                     };
 
-                    match capture_and_recognize_weapon(&ocr_engine, &candidates, cur_monitor_idx) {
+                    match capture_and_recognize_weapon(&ocr_engine, &candidates, cur_monitor_id.as_deref()) {
                         Ok((Some((matched_weapon, score)), raw_ocr, cleaned)) => {
                             let conf_tier = classify_confidence(score);
                             if conf_tier == ConfidenceTier::Rejected {
@@ -2240,13 +2543,20 @@ fn start_hotkey_worker(
                             if conf_tier == ConfidenceTier::High {
                                 // Độ tin cậy cao (>= 90%): Tự động nạp vào Clipboard kèm Retry
                                 let mut clipboard_error: Option<String> = None;
+                                let mut clipboard_report: Option<(usize, usize)> = None;
                                 if !selected.is_empty() {
                                     let codes: Vec<String> =
                                         selected.iter().map(|b| b.loadout_code.clone()).collect();
                                     match copy_codes_sequence_to_clipboard(&mut clipboard, &codes, 150) {
-                                        Ok(()) => {
+                                        Ok(report) => {
+                                            clipboard_report =
+                                                Some((report.success_count, report.total_count));
                                             unsafe {
-                                                let _ = MessageBeep(MB_OK);
+                                                let _ = if report.success_count == report.total_count {
+                                                    MessageBeep(MB_OK)
+                                                } else {
+                                                    MessageBeep(MB_ICONWARNING)
+                                                };
                                             }
                                         }
                                         Err(err) => {
@@ -2269,6 +2579,7 @@ fn start_hotkey_worker(
                                     builds: selected,
                                     is_uncertain: false,
                                     clipboard_error,
+                                    clipboard_report,
                                 });
                             } else {
                                 // Vùng nghi ngờ (75% - 89%): KHÔNG tự động ghi đè Clipboard, yêu cầu xác nhận
@@ -2283,6 +2594,7 @@ fn start_hotkey_worker(
                                     builds: selected,
                                     is_uncertain: true,
                                     clipboard_error: None,
+                                    clipboard_report: None,
                                 });
                             }
                             ctx.request_repaint();
@@ -2353,8 +2665,8 @@ struct LoadoutTerminalApp {
     selected_type: String, // "" for All
     selected_weapon: Option<String>,
     search_query: String,
-    selected_monitor_index: Option<usize>,
-    available_monitors: Vec<(usize, String)>,
+    selected_monitor_id: Option<String>,
+    available_monitors: Vec<(String, String)>,
 
     active_filters: Arc<RwLock<ActiveFilters>>,
 
@@ -2481,15 +2793,13 @@ impl LoadoutTerminalApp {
 
         let ocr_available = check_ocr_available();
         let available_monitors = enumerate_monitors(lang);
-        let selected_monitor_index = config
-            .selected_monitor_index
-            .filter(|&idx| idx < available_monitors.len());
+        let selected_monitor_id = config.selected_monitor_id.clone();
 
         let active_filters = Arc::new(RwLock::new(ActiveFilters {
             server: selected_server,
             mode: selected_mode,
             source: selected_source,
-            selected_monitor_index,
+            selected_monitor_id: selected_monitor_id.clone(),
         }));
 
         let shared_builds = Arc::new(RwLock::new(builds.clone()));
@@ -2597,7 +2907,7 @@ impl LoadoutTerminalApp {
             selected_type: String::new(),
             selected_weapon: default_weapon,
             search_query: String::new(),
-            selected_monitor_index,
+            selected_monitor_id,
             available_monitors,
             active_filters,
             always_on_top: false,
@@ -2638,24 +2948,33 @@ impl LoadoutTerminalApp {
     }
 
     fn toggle_favorite(&mut self, build: &BuildItem) {
-        if let Some(pos) = self.favorites.iter().position(|f| f.loadout_code == build.loadout_code) {
+        let success_msg = if let Some(pos) = self.favorites.iter().position(|f| f.loadout_code == build.loadout_code) {
             self.favorites.remove(pos);
-            let msg = match self.lang {
+            match self.lang {
                 AppLang::Vi => format!("Đã bỏ ghim cấu hình [{}]", build.weapon),
                 AppLang::En => format!("Unpinned loadout for [{}]", build.weapon),
-            };
-            self.status_message = Some((msg, Instant::now(), false));
+            }
         } else {
             let mut fav = build.clone();
             fav.is_favorite = true;
             self.favorites.insert(0, fav);
-            let msg = match self.lang {
+            match self.lang {
                 AppLang::Vi => format!("Đã ghim cấu hình [{}] vào Yêu thích!", build.weapon),
                 AppLang::En => format!("Pinned [{}] loadout to Favorites!", build.weapon),
-            };
-            self.status_message = Some((msg, Instant::now(), false));
+            }
+        };
+        match save_favorites(&self.favorites) {
+            Ok(()) => {
+                self.status_message = Some((success_msg, Instant::now(), false));
+            }
+            Err(err) => {
+                let msg = match self.lang {
+                    AppLang::Vi => format!("Lỗi lưu Yêu thích (favorites.json): {}", err),
+                    AppLang::En => format!("Failed to save Favorites (favorites.json): {}", err),
+                };
+                self.status_message = Some((msg, Instant::now(), true));
+            }
         }
-        save_favorites(&self.favorites);
         self.sync_shared_favorites();
     }
 
@@ -2665,16 +2984,26 @@ impl LoadoutTerminalApp {
             removed_weapon = self.favorites[pos].weapon.clone();
             self.favorites.remove(pos);
         }
-        save_favorites(&self.favorites);
+        match save_favorites(&self.favorites) {
+            Ok(()) => {
+                let msg = match self.lang {
+                    AppLang::Vi => format!("Đã xóa mã cá nhân cho [{}]", removed_weapon),
+                    AppLang::En => format!("Deleted custom loadout for [{}]", removed_weapon),
+                };
+                self.status_message = Some((msg, Instant::now(), false));
+            }
+            Err(err) => {
+                let msg = match self.lang {
+                    AppLang::Vi => format!("Lỗi cập nhật favorites.json: {}", err),
+                    AppLang::En => format!("Failed to update favorites.json: {}", err),
+                };
+                self.status_message = Some((msg, Instant::now(), true));
+            }
+        }
         self.sync_shared_favorites();
-        let msg = match self.lang {
-            AppLang::Vi => format!("Đã xóa mã cá nhân cho [{}]", removed_weapon),
-            AppLang::En => format!("Deleted custom loadout for [{}]", removed_weapon),
-        };
-        self.status_message = Some((msg, Instant::now(), false));
     }
 
-    fn save_current_config(&self) {
+    fn save_current_config(&mut self) {
         let cfg = UserConfig {
             server: self.selected_server.as_str().to_string(),
             mode: self.selected_mode.as_str().to_string(),
@@ -2685,9 +3014,15 @@ impl LoadoutTerminalApp {
             },
             hotkey_vk: self.hotkey_vk,
             hotkey_name: self.hotkey_name.clone(),
-            selected_monitor_index: self.selected_monitor_index,
+            selected_monitor_id: self.selected_monitor_id.clone(),
         };
-        save_user_config(&cfg);
+        if let Err(err) = save_user_config(&cfg) {
+            let msg = match self.lang {
+                AppLang::Vi => format!("Lỗi lưu cấu hình (config.json): {}", err),
+                AppLang::En => format!("Failed to save config (config.json): {}", err),
+            };
+            self.status_message = Some((msg, Instant::now(), true));
+        }
     }
 
     fn sync_active_filters(&self) {
@@ -2695,7 +3030,7 @@ impl LoadoutTerminalApp {
             f.server = self.selected_server;
             f.mode = self.selected_mode;
             f.source = self.selected_source;
-            f.selected_monitor_index = self.selected_monitor_index;
+            f.selected_monitor_id = self.selected_monitor_id.clone();
         }
     }
 
@@ -2712,7 +3047,13 @@ impl LoadoutTerminalApp {
         if self.history.len() > 50 {
             self.history.truncate(50);
         }
-        save_history(&self.history);
+        if let Err(err) = save_history(&self.history) {
+            let msg = match self.lang {
+                AppLang::Vi => format!("Lỗi lưu lịch sử (df_history.json): {}", err),
+                AppLang::En => format!("Failed to save history (df_history.json): {}", err),
+            };
+            self.status_message = Some((msg, Instant::now(), true));
+        }
     }
 
     fn get_available_weapons(&self) -> Vec<String> {
@@ -2821,9 +3162,9 @@ impl LoadoutTerminalApp {
     }
 
     fn copy_build_code(&mut self, weapon: &str, classification: &str, copy_count: u64, code: &str) {
-        let copy_res = match Clipboard::new() {
+        let copy_res = match init_clipboard_with_retry(3) {
             Ok(mut cb) => copy_to_clipboard_with_retry(&mut cb, code, 3),
-            Err(e) => Err(e.to_string()),
+            Err(e) => Err(e),
         };
 
         match copy_res {
@@ -2855,24 +3196,53 @@ impl LoadoutTerminalApp {
     fn spawn_win_v_copy_worker(
         &mut self,
         selected: Vec<BuildItem>,
-        success_msg: String,
+        subject_label: String,
         err_prefix: String,
     ) {
         let tx = self.tx_events.clone();
         let ctx = self.egui_ctx.clone();
+        let lang = self.lang;
 
         thread::spawn(move || {
             let codes: Vec<String> = selected.iter().map(|b| b.loadout_code.clone()).collect();
-            let mut cb_opt = Clipboard::new().ok();
+            let mut cb_opt = init_clipboard_with_retry(3).ok();
             match copy_codes_sequence_to_clipboard(&mut cb_opt, &codes, 150) {
-                Ok(()) => {
+                Ok(report) => {
+                    let all_ok = report.success_count == report.total_count;
                     unsafe {
-                        let _ = MessageBeep(MB_OK);
+                        let _ = if all_ok {
+                            MessageBeep(MB_OK)
+                        } else {
+                            MessageBeep(MB_ICONWARNING)
+                        };
                     }
+                    let msg = if all_ok {
+                        match lang {
+                            AppLang::Vi => format!(
+                                "Đã đẩy {}/{} cấu hình {} vào Win + V (Meta ở đầu)!",
+                                report.success_count, report.total_count, subject_label
+                            ),
+                            AppLang::En => format!(
+                                "Pushed {}/{} {} builds to Win + V (Meta at top)!",
+                                report.success_count, report.total_count, subject_label
+                            ),
+                        }
+                    } else {
+                        match lang {
+                            AppLang::Vi => format!(
+                                "Cảnh báo: Chỉ nạp được {}/{} cấu hình {} vào Win + V (mã đầu đã sẵn sàng Ctrl + V)!",
+                                report.success_count, report.total_count, subject_label
+                            ),
+                            AppLang::En => format!(
+                                "Warning: Only pushed {}/{} {} builds to Win + V (top build ready on Ctrl + V)!",
+                                report.success_count, report.total_count, subject_label
+                            ),
+                        }
+                    };
                     let _ = tx.send(WorkerEvent::WinVCopyCompleted {
                         top_build: selected.into_iter().next(),
-                        msg: success_msg,
-                        is_error: false,
+                        msg,
+                        is_error: !all_ok,
                     });
                 }
                 Err(err) => {
@@ -2896,16 +3266,15 @@ impl LoadoutTerminalApp {
             return;
         }
         let weapon_name = weapon.to_string();
-        let count = selected.len();
-        let success_msg = match self.lang {
-            AppLang::Vi => format!("Đã đẩy {} cấu hình của {} vào Win + V (Meta ở đầu)!", count, weapon_name),
-            AppLang::En => format!("Pushed {} builds for {} to Win + V (Meta at top)!", count, weapon_name),
+        let subject_label = match self.lang {
+            AppLang::Vi => format!("của {}", weapon_name),
+            AppLang::En => format!("for {}", weapon_name),
         };
         let err_prefix = match self.lang {
             AppLang::Vi => format!("Lỗi ghi Clipboard cho {}", weapon_name),
             AppLang::En => format!("Clipboard write error for {}", weapon_name),
         };
-        self.spawn_win_v_copy_worker(selected, success_msg, err_prefix);
+        self.spawn_win_v_copy_worker(selected, subject_label, err_prefix);
     }
 
     fn copy_all_favorites_to_win_v(&mut self) {
@@ -2913,13 +3282,12 @@ impl LoadoutTerminalApp {
         if selected.is_empty() {
             return;
         }
-        let count = selected.len();
-        let success_msg = match self.lang {
-            AppLang::Vi => format!("Đã đẩy {} cấu hình yêu thích vào Win + V!", count),
-            AppLang::En => format!("Pushed {} favorite builds to Win + V!", count),
-        };
-        let err_prefix = self.lang.t("Lỗi ghi Clipboard cho Yêu thích", "Clipboard write error for Favorites").to_string();
-        self.spawn_win_v_copy_worker(selected, success_msg, err_prefix);
+        let subject_label = self.lang.t("yêu thích", "favorite").to_string();
+        let err_prefix = self
+            .lang
+            .t("Lỗi ghi Clipboard cho Yêu thích", "Clipboard write error for Favorites")
+            .to_string();
+        self.spawn_win_v_copy_worker(selected, subject_label, err_prefix);
     }
 
     fn trigger_db_update(&mut self, ctx: egui::Context) {
@@ -2946,21 +3314,22 @@ impl LoadoutTerminalApp {
                                     Ok(valid_items) => {
                                         let count = valid_items.len();
                                         let local_path = local_builds_file_path();
-                                        let tmp_path = local_builds_tmp_file_path();
-                                        let serialized = serde_json::to_string(&valid_items).unwrap_or(body);
-                                        match fs::write(&tmp_path, serialized) {
-                                            Ok(_) => {
-                                                if fs::rename(&tmp_path, &local_path).is_err() {
-                                                    let _ = fs::copy(&tmp_path, &local_path);
-                                                    let _ = fs::remove_file(&tmp_path);
-                                                }
+                                        let serialized = match serde_json::to_string(&valid_items) {
+                                            Ok(s) => s,
+                                            Err(_) => body,
+                                        };
+                                        match atomic_write_verified(&local_path, &serialized) {
+                                            Ok(()) => {
                                                 let _ = tx.send(DbUpdateResult::Success {
                                                     builds: valid_items,
                                                     count,
                                                 });
                                             }
-                                            Err(e) => {
-                                                let _ = tx.send(DbUpdateResult::Error(format!("Lỗi ghi file tạm: {}", e)));
+                                            Err(err) => {
+                                                let _ = tx.send(DbUpdateResult::Error(format!(
+                                                    "Lỗi lưu database xuống ổ đĩa (giữ nguyên dữ liệu cũ): {}",
+                                                    err
+                                                )));
                                             }
                                         }
                                     }
@@ -3014,6 +3383,7 @@ impl eframe::App for LoadoutTerminalApp {
                     builds,
                     is_uncertain,
                     clipboard_error,
+                    clipboard_report,
                 } => {
                     self.selected_weapon = Some(weapon.clone());
                     self.current_tab = AppTab::Scanner;
@@ -3051,24 +3421,6 @@ impl eframe::App for LoadoutTerminalApp {
                     } else {
                         self.pending_confirm_builds = None;
                         self.pending_confirm_score = None;
-                        let msg = match self.lang {
-                            AppLang::Vi => {
-                                if is_empty {
-                                    format!("Đã nhận diện súng [{}] ({:.1}%) nhưng chưa có cấu hình cho bộ lọc hiện tại [{}/{}/{}]", weapon, score * 100.0, src, s, m)
-                                } else {
-                                    format!("Nhận diện: {} ({:.1}%) [{}/{}/{}] - OCR: '{}'", weapon, score * 100.0, src, s, m, raw_ocr.trim())
-                                }
-                            }
-                            AppLang::En => {
-                                if is_empty {
-                                    format!("Recognized gun [{}] ({:.1}%) but no builds found for current filter [{}/{}/{}]", weapon, score * 100.0, src, s, m)
-                                } else {
-                                    format!("Recognized: {} ({:.1}%) [{}/{}/{}] - OCR: '{}'", weapon, score * 100.0, src, s, m, raw_ocr.trim())
-                                }
-                            }
-                        };
-                        self.status_message = Some((msg, Instant::now(), is_empty));
-
                         if let Some(top_build) = builds.first() {
                             self.record_history_entry(
                                 &weapon,
@@ -3077,6 +3429,32 @@ impl eframe::App for LoadoutTerminalApp {
                                 &top_build.loadout_code,
                             );
                         }
+                        let partial_clip = matches!(clipboard_report, Some((ok, tot)) if ok < tot);
+                        let ratio_suffix = match clipboard_report {
+                            Some((ok, tot)) if tot > 0 => format!(" [Win+V: {}/{}]", ok, tot),
+                            _ => String::new(),
+                        };
+                        let msg = match self.lang {
+                            AppLang::Vi => {
+                                if is_empty {
+                                    format!("Đã nhận diện súng [{}] ({:.1}%) nhưng chưa có cấu hình cho bộ lọc hiện tại [{}/{}/{}]", weapon, score * 100.0, src, s, m)
+                                } else if partial_clip {
+                                    format!("Nhận diện: {} ({:.1}%) — Cảnh báo chỉ nạp được{} - OCR: '{}'", weapon, score * 100.0, ratio_suffix, raw_ocr.trim())
+                                } else {
+                                    format!("Nhận diện: {} ({:.1}%) [{}/{}/{}]{} - OCR: '{}'", weapon, score * 100.0, src, s, m, ratio_suffix, raw_ocr.trim())
+                                }
+                            }
+                            AppLang::En => {
+                                if is_empty {
+                                    format!("Recognized gun [{}] ({:.1}%) but no builds found for current filter [{}/{}/{}]", weapon, score * 100.0, src, s, m)
+                                } else if partial_clip {
+                                    format!("Recognized: {} ({:.1}%) — Warning partial clipboard{} - OCR: '{}'", weapon, score * 100.0, ratio_suffix, raw_ocr.trim())
+                                } else {
+                                    format!("Recognized: {} ({:.1}%) [{}/{}/{}]{} - OCR: '{}'", weapon, score * 100.0, src, s, m, ratio_suffix, raw_ocr.trim())
+                                }
+                            }
+                        };
+                        self.status_message = Some((msg, Instant::now(), is_empty || partial_clip));
                     }
                 }
                 WorkerEvent::ScanFailed { raw_ocr, cleaned } => {
@@ -3093,15 +3471,13 @@ impl eframe::App for LoadoutTerminalApp {
                     msg,
                     is_error,
                 } => {
-                    if !is_error {
-                        if let Some(top) = top_build {
-                            self.record_history_entry(
-                                &top.weapon,
-                                &top.classification,
-                                top.copy_count,
-                                &top.loadout_code,
-                            );
-                        }
+                    if let Some(top) = top_build {
+                        self.record_history_entry(
+                            &top.weapon,
+                            &top.classification,
+                            top.copy_count,
+                            &top.loadout_code,
+                        );
                     }
                     self.status_message = Some((msg, Instant::now(), is_error));
                 }
@@ -3824,33 +4200,33 @@ impl eframe::App for LoadoutTerminalApp {
 
                     // 6. Monitor Selector ComboBox (None = Auto Foreground Game Window)
                     ui.add(egui::Label::new(RichText::new(self.lang.t("Màn hình:", "Monitor:")).color(COLOR_TEXT_MUTED).size(12.0)).selectable(false));
-                    let monitor_label = match self.selected_monitor_index {
+                    let monitor_label = match &self.selected_monitor_id {
                         None => self.lang.t("Tự động (Game)", "Auto (Game)").to_string(),
-                        Some(idx) => self
+                        Some(id) => self
                             .available_monitors
                             .iter()
-                            .find(|(i, _)| *i == idx)
+                            .find(|(m_id, _)| m_id == id)
                             .map(|(_, name)| name.clone())
-                            .unwrap_or_else(|| format!("{} {}", self.lang.t("Màn", "Display"), idx + 1)),
+                            .unwrap_or_else(|| format!("{} ({})", self.lang.t("Đã ngắt", "Offline"), id)),
                     };
-                    let prev_mon = self.selected_monitor_index;
+                    let prev_mon = self.selected_monitor_id.clone();
                     let cb_resp = egui::ComboBox::from_id_salt("filter_monitor_cb")
                         .selected_text(RichText::new(monitor_label).size(12.0))
                         .width(155.0)
                         .show_ui(ui, |ui| {
                             ui.selectable_value(
-                                &mut self.selected_monitor_index,
+                                &mut self.selected_monitor_id,
                                 None,
                                 self.lang.t("Tự động (Theo cửa sổ game)", "Auto (Active Window)"),
                             );
-                            for (idx, name) in &self.available_monitors {
-                                ui.selectable_value(&mut self.selected_monitor_index, Some(*idx), name);
+                            for (mon_id, name) in &self.available_monitors {
+                                ui.selectable_value(&mut self.selected_monitor_id, Some(mon_id.clone()), name);
                             }
                         });
                     if cb_resp.response.clicked() {
                         self.available_monitors = enumerate_monitors(self.lang);
                     }
-                    if prev_mon != self.selected_monitor_index {
+                    if prev_mon != self.selected_monitor_id {
                         self.sync_active_filters();
                         self.save_current_config();
                     }
@@ -3872,7 +4248,13 @@ impl eframe::App for LoadoutTerminalApp {
                 ui.horizontal(|ui| {
                     if let Some((msg, _time, is_error)) = &self.status_message {
                         let icon = if *is_error { "[!] " } else { "[i] " };
-                        let color = if *is_error { COLOR_AMBER } else { COLOR_ACCENT };
+                        let color = if self.pending_confirm_builds.is_some() {
+                            COLOR_AMBER
+                        } else if *is_error {
+                            COLOR_RED
+                        } else {
+                            COLOR_ACCENT
+                        };
                         ui.add(egui::Label::new(RichText::new(format!("{}{}", icon, msg)).color(color).size(12.0)).selectable(false));
                     }
 
@@ -3935,11 +4317,16 @@ impl eframe::App for LoadoutTerminalApp {
             if let Some((weapon, builds)) = self.pending_confirm_builds.take() {
                 if !builds.is_empty() {
                     let codes: Vec<String> = builds.iter().map(|b| b.loadout_code.clone()).collect();
-                    let mut cb_opt = Clipboard::new().ok();
+                    let mut cb_opt = init_clipboard_with_retry(3).ok();
                     match copy_codes_sequence_to_clipboard(&mut cb_opt, &codes, 150) {
-                        Ok(()) => {
+                        Ok(report) => {
+                            let all_ok = report.success_count == report.total_count;
                             unsafe {
-                                let _ = MessageBeep(MB_OK);
+                                let _ = if all_ok {
+                                    MessageBeep(MB_OK)
+                                } else {
+                                    MessageBeep(MB_ICONWARNING)
+                                };
                             }
                             if let Some(top_build) = builds.first() {
                                 self.record_history_entry(
@@ -3949,11 +4336,30 @@ impl eframe::App for LoadoutTerminalApp {
                                     &top_build.loadout_code,
                                 );
                             }
-                            let msg = match self.lang {
-                                AppLang::Vi => format!("Đã xác nhận súng [{}] và sao chép cấu hình vào Clipboard!", weapon),
-                                AppLang::En => format!("Confirmed weapon [{}] and copied loadout to Clipboard!", weapon),
+                            let msg = if all_ok {
+                                match self.lang {
+                                    AppLang::Vi => format!(
+                                        "Đã xác nhận súng [{}] và sao chép {}/{} cấu hình vào Clipboard!",
+                                        weapon, report.success_count, report.total_count
+                                    ),
+                                    AppLang::En => format!(
+                                        "Confirmed weapon [{}] and copied {}/{} loadouts to Clipboard!",
+                                        weapon, report.success_count, report.total_count
+                                    ),
+                                }
+                            } else {
+                                match self.lang {
+                                    AppLang::Vi => format!(
+                                        "Đã xác nhận [{}] nhưng chỉ nạp được {}/{} cấu hình vào Win + V!",
+                                        weapon, report.success_count, report.total_count
+                                    ),
+                                    AppLang::En => format!(
+                                        "Confirmed [{}] but only pushed {}/{} loadouts to Win + V!",
+                                        weapon, report.success_count, report.total_count
+                                    ),
+                                }
                             };
-                            self.status_message = Some((msg, Instant::now(), false));
+                            self.status_message = Some((msg, Instant::now(), !all_ok));
                         }
                         Err(err) => {
                             unsafe {
@@ -4008,7 +4414,13 @@ impl eframe::App for LoadoutTerminalApp {
                             .clicked()
                         {
                             self.history.clear();
-                            save_history(&self.history);
+                            if let Err(err) = save_history(&self.history) {
+                                let msg = match self.lang {
+                                    AppLang::Vi => format!("Lỗi lưu lịch sử (df_history.json): {}", err),
+                                    AppLang::En => format!("Failed to save history (df_history.json): {}", err),
+                                };
+                                self.status_message = Some((msg, Instant::now(), true));
+                            }
                         }
                     });
                 });
@@ -5610,9 +6022,9 @@ impl eframe::App for LoadoutTerminalApp {
                 });
 
             if copied_stk {
-                let copy_res = match arboard::Clipboard::new() {
+                let copy_res = match init_clipboard_with_retry(3) {
                     Ok(mut cb) => copy_to_clipboard_with_retry(&mut cb, DONATE_ACCOUNT_NO, 3),
-                    Err(e) => Err(e.to_string()),
+                    Err(e) => Err(e),
                 };
                 match copy_res {
                     Ok(()) => {
@@ -5772,20 +6184,32 @@ impl eframe::App for LoadoutTerminalApp {
 
                     self.favorites.retain(|f| f.loadout_code != item.loadout_code);
                     self.favorites.insert(0, item);
-                    save_favorites(&self.favorites);
+                    let save_res = save_favorites(&self.favorites);
                     self.sync_shared_favorites();
 
-                    self.selected_weapon = Some(weapon_trimmed.clone());
-                    self.show_add_custom_modal = false;
-                    self.custom_error = None;
-                    self.custom_code.clear();
-                    self.custom_desc.clear();
+                    match save_res {
+                        Ok(()) => {
+                            self.selected_weapon = Some(weapon_trimmed.clone());
+                            self.show_add_custom_modal = false;
+                            self.custom_error = None;
+                            self.custom_code.clear();
+                            self.custom_desc.clear();
 
-                    let msg = match self.lang {
-                        AppLang::Vi => format!("Đã lưu mã cá nhân cho [{}] vào favorites.json!", weapon_trimmed),
-                        AppLang::En => format!("Saved custom loadout for [{}] to favorites.json!", weapon_trimmed),
-                    };
-                    self.status_message = Some((msg, Instant::now(), false));
+                            let msg = match self.lang {
+                                AppLang::Vi => format!("Đã lưu mã cá nhân cho [{}] vào favorites.json!", weapon_trimmed),
+                                AppLang::En => format!("Saved custom loadout for [{}] to favorites.json!", weapon_trimmed),
+                            };
+                            self.status_message = Some((msg, Instant::now(), false));
+                        }
+                        Err(err) => {
+                            let err_msg = match self.lang {
+                                AppLang::Vi => format!("Lỗi lưu favorites.json: {}", err),
+                                AppLang::En => format!("Failed to save favorites.json: {}", err),
+                            };
+                            self.custom_error = Some(err_msg.clone());
+                            self.status_message = Some((err_msg, Instant::now(), true));
+                        }
+                    }
                 }
             }
         }
@@ -6628,8 +7052,144 @@ mod tests {
         // 4. Embedded BUILDS_JSON passes validation 100%
         let embedded: Vec<BuildItem> = serde_json::from_str(BUILDS_JSON).expect("valid embedded json");
         let total = embedded.len();
-        let validated_embedded = validate_downloaded_builds(embedded).expect("embedded should pass");
-        assert_eq!(validated_embedded.len(), total);
+        let validated_embedded = validate_downloaded_builds(embedded.clone()).expect("embedded should pass");
+        if validated_embedded.len() != total {
+            let kept: HashSet<String> = validated_embedded.iter().map(|b| b.loadout_code.clone()).collect();
+            let dropped: Vec<String> = embedded
+                .iter()
+                .filter(|b| !kept.contains(b.loadout_code.trim()))
+                .map(|b| format!("{} => {}", b.weapon, b.loadout_code))
+                .collect();
+            panic!(
+                "Embedded BUILDS_JSON dropped {}/{} builds:\n{}",
+                dropped.len(),
+                total,
+                dropped.join("\n")
+            );
+        }
+    }
+
+    #[test]
+    fn test_semantic_validator_mismatch_and_dedup() {
+        let make_item = |weapon: &str, code: &str| BuildItem {
+            server: "Garena".to_string(),
+            mode: "Warfare".to_string(),
+            weapon_type: "Rifle".to_string(),
+            weapon: weapon.to_string(),
+            classification: "DFTools".to_string(),
+            tags: vec!["DFTools".to_string()],
+            copy_count: 100,
+            loadout_code: code.to_string(),
+            is_custom: false,
+            is_favorite: false,
+        };
+
+        let items = vec![
+            // Semantic mismatches -> must be dropped
+            make_item("P90", "M14 Marksman Rifle-Warfare-6HABCDEF123456"),
+            make_item("M7", "M4A1 Assault Rifle-Warfare-6HABCDEF123456"),
+            // Valid localized / alias codes -> must be retained
+            make_item("CI-19", "騰龍突擊步槍-Warfare-6HABCDEF111111"),
+            make_item("Marlin Lever-Action", "Lever-action Rifle-Operations-6HABCDEF222222"),
+            make_item("UZI", "UZl Submachine Gun-Warfare-6HABCDEF333333"),
+            // Duplicate loadout_code (with extra whitespace) -> only 1 kept
+            make_item("M4A1", "  M4A1 Assault Rifle-Warfare-6HABCDEF444444  "),
+            make_item("M4A1", "M4A1 Assault Rifle-Warfare-6HABCDEF444444"),
+        ];
+
+        let validated = validate_downloaded_builds(items).expect("should keep 4 valid unique builds");
+        let codes: Vec<&str> = validated.iter().map(|b| b.loadout_code.as_str()).collect();
+        assert_eq!(validated.len(), 4);
+        assert!(!codes.contains(&"M14 Marksman Rifle-Warfare-6HABCDEF123456"));
+        assert!(!codes.contains(&"M4A1 Assault Rifle-Warfare-6HABCDEF123456"));
+        assert!(codes.contains(&"騰龍突擊步槍-Warfare-6HABCDEF111111"));
+        assert!(codes.contains(&"Lever-action Rifle-Operations-6HABCDEF222222"));
+        assert!(codes.contains(&"UZl Submachine Gun-Warfare-6HABCDEF333333"));
+        assert!(codes.contains(&"M4A1 Assault Rifle-Warfare-6HABCDEF444444"));
+    }
+
+    #[test]
+    fn test_monitor_stable_identity_and_disconnect_fallback() {
+        let mon1_id = format_monitor_stable_id("\\\\.\\DISPLAY1", 2560, 1440);
+        let mon2_id = format_monitor_stable_id("\\\\.\\DISPLAY2", 1920, 1080);
+
+        // Order swapped compared to original enumeration (DISP2 now at index 0)
+        let monitors = vec![
+            MonitorDescriptor {
+                stable_id: mon2_id.clone(),
+                label: "Display 1".to_string(),
+                x: 2560,
+                y: 0,
+                width: 1920,
+                height: 1080,
+                is_primary: false,
+            },
+            MonitorDescriptor {
+                stable_id: mon1_id.clone(),
+                label: "Display 2 [Primary]".to_string(),
+                x: 0,
+                y: 0,
+                width: 2560,
+                height: 1440,
+                is_primary: true,
+            },
+        ];
+
+        // 1. Saved stable ID tracks physical monitor even when index shifts
+        assert_eq!(
+            resolve_monitor_index(&monitors, Some(&mon2_id), Some((0, 0, 2560, 1440))),
+            Some(0)
+        );
+        assert_eq!(
+            resolve_monitor_index(&monitors, Some(&mon1_id), Some((2560, 0, 1920, 1080))),
+            Some(1)
+        );
+
+        // 2. Disconnected saved monitor falls back to active foreground game window monitor
+        assert_eq!(
+            resolve_monitor_index(
+                &monitors,
+                Some("\\\\.\\DISPLAY3 (3840x2160)"),
+                Some((2560, 0, 1920, 1080)),
+            ),
+            Some(0)
+        );
+
+        // 3. Disconnected monitor with no foreground rect falls back to primary monitor
+        assert_eq!(
+            resolve_monitor_index(&monitors, Some("\\\\.\\DISPLAY3 (3840x2160)"), None),
+            Some(1)
+        );
+    }
+
+    #[test]
+    fn test_atomic_write_verified() {
+        let test_dir = std::env::temp_dir().join(format!(
+            "df_helper_atomic_test_{}_{}",
+            std::process::id(),
+            get_current_time_str().replace(':', "")
+        ));
+        let _ = fs::create_dir_all(&test_dir);
+        let target = test_dir.join("test_db.json");
+        let tmp = target.with_extension("json.tmp");
+
+        atomic_write_verified(&target, r#"[{"weapon":"M4A1"}]"#).expect("atomic write should succeed");
+        assert!(target.exists());
+        assert!(!tmp.exists());
+        assert_eq!(
+            fs::read_to_string(&target).expect("read target"),
+            r#"[{"weapon":"M4A1"}]"#
+        );
+
+        // Overwrite with new payload preserves target and removes .tmp
+        atomic_write_verified(&target, r#"[{"weapon":"AK-12"}]"#).expect("atomic overwrite should succeed");
+        assert!(!tmp.exists());
+        assert_eq!(
+            fs::read_to_string(&target).expect("read target after overwrite"),
+            r#"[{"weapon":"AK-12"}]"#
+        );
+
+        let _ = fs::remove_dir_all(&test_dir);
     }
 }
 

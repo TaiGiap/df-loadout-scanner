@@ -7,9 +7,9 @@ on:
   workflow_dispatch:
     inputs:
       tag:
-        description: 'Release tag (e.g. v1.4.4)'
+        description: 'Release tag (e.g. v1.4.6)'
         required: true
-        default: 'v1.4.4'
+        default: 'v1.4.6'
 
 permissions:
   contents: write
@@ -22,6 +22,40 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+
+      - name: Verify version consistency
+        shell: pwsh
+        run: |
+          $TAG = "${{ github.event.inputs.tag || github.ref_name }}"
+          if (-not $TAG.StartsWith("v")) {
+            Write-Error "Release tag '$TAG' must start with 'v' (e.g. v1.4.6)"
+            exit 1
+          }
+          $VER = $TAG.Substring(1)
+
+          $cargoContent = Get-Content Cargo.toml -Raw
+          if ($cargoContent -notmatch "(?m)^version\s*=\s*""$([regex]::Escape($VER))""") {
+            Write-Error "Cargo.toml version does not match tag $TAG"
+            exit 1
+          }
+
+          $mainContent = Get-Content src/main.rs -Raw
+          if ($mainContent -notmatch "const\s+APP_VERSION:\s*&str\s*=\s*""$([regex]::Escape($TAG))""") {
+            Write-Error "src/main.rs APP_VERSION does not match tag $TAG"
+            exit 1
+          }
+
+          $readmeContent = Get-Content README.md -Raw
+          if ($readmeContent -notmatch [regex]::Escape("DF-Loadout-Scanner-$TAG-Windows-x64.zip")) {
+            Write-Error "README.md download zip link does not match $TAG"
+            exit 1
+          }
+          if ($readmeContent -notmatch [regex]::Escape("**$TAG (Mới nhất)**")) {
+            Write-Error "README.md Changelog is missing '**$TAG (Mới nhất)**'"
+            exit 1
+          }
+
+          Write-Host "Version check passed for $TAG ($VER) across Git tag, Cargo.toml, src/main.rs, and README.md!"
 
       - name: Set up Rust
         uses: dtolnay/rust-toolchain@stable

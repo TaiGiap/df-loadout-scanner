@@ -1,6 +1,6 @@
 [package]
 name = "df_clipboard_helper"
-version = "1.4.5"
+version = "1.4.6"
 edition = "2021"
 license = "MIT"
 repository = "https://github.com/TaiGiap/df-loadout-scanner"
