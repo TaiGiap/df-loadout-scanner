@@ -1,8 +1,8 @@
 # DF Loadout Scanner
 
-Công cụ tự động nhận diện vũ khí thời gian thực qua Windows OCR và đồng bộ mã trang bị (loadout code) cho game Delta Force (Garena & Level Infinite / Steam).
+Công cụ **mã nguồn mở (Open Source — MIT License)** tự động nhận diện vũ khí thời gian thực qua Windows OCR và đồng bộ mã trang bị (loadout code) cho game Delta Force (Garena & Level Infinite / Steam).
 
-*Real-time weapon OCR scanner and loadout clipboard synchronizer for Delta Force.*
+*Open-source (MIT License) real-time weapon OCR scanner and loadout clipboard synchronizer for Delta Force.*
 
 ---
 
@@ -129,6 +129,37 @@ Người dùng thông thường chỉ cần tải bản đóng gói sẵn tại 
 
 ---
 
+## Tự Biên Dịch Từ Mã Nguồn / Build from Source
+
+Dự án được viết bằng **Rust** (tối ưu cho Windows 10/11 64-bit). Cộng đồng và lập trình viên có thể tự do tải mã nguồn về chỉnh sửa, gỡ lỗi hoặc tự biên dịch tệp thực thi:
+
+1. **Cài đặt công cụ:**
+   - Cài đặt Rust & Cargo thông qua [rustup.rs](https://rustup.rs/) (khuyên dùng toolchain `stable-x86_64-pc-windows-msvc` hoặc `gnu`).
+   - Đảm bảo gói ngôn ngữ **English (United States)** đã được cài trong Windows (*Settings → Time & Language → Language & region*) để Windows OCR API hoạt động.
+2. **Clone mã nguồn & Chạy thử:**
+   ```bash
+   git clone https://github.com/TaiGiap/df-loadout-scanner.git
+   cd df-loadout-scanner
+   cargo test
+   cargo run
+   ```
+3. **Biên dịch bản phát hành tối ưu (`Release`):**
+   ```bash
+   cargo build --release
+   ```
+   Tệp thực thi `.exe` sẽ được xuất ra tại `target/release/df_clipboard_helper.exe`.
+
+---
+
+## Đóng Góp / Contributing
+
+Mọi đóng góp từ cộng đồng đều được hoan nghênh!
+- **Báo lỗi & Đề xuất tính năng (Issues):** Mở [GitHub Issues](https://github.com/TaiGiap/df-loadout-scanner/issues) khi bạn phát hiện lỗi giao diện, súng mới chưa có trong danh mục hoặc lỗi nhận diện OCR (kèm ảnh chụp vùng tên súng càng tốt).
+- **Đóng góp mã nguồn (Pull Requests):** Fork kho lưu trữ, tạo nhánh mới (`git checkout -b feat/ten-tinh-nang`), đảm bảo toàn bộ kiểm thử `cargo test` đều đạt PASS 100% trước khi gửi Pull Request.
+- **Cập nhật dữ liệu vũ khí (`fetch_builds.py`):** Dữ liệu `builds.json` được tự động cập nhật định kỳ qua GitHub Actions từ 3 cổng cộng đồng.
+
+---
+
 ## Nguồn Dữ Liệu, Ghi Nhận & Chính Sách Gỡ Bỏ / Data Attribution & Takedown
 
 ### 1. Nguồn Dữ Liệu Tham Khảo Cộng Đồng (Community Attribution)
@@ -137,7 +168,7 @@ Cơ sở dữ liệu cấu hình trang bị được tổng hợp miễn phí ph
 - **DeltaForceBuilds:** [deltaforcebuilds.com](https://deltaforcebuilds.com)
 - **FPSMeta:** [fpsmeta.com](https://fpsmeta.com) ([fpsmeta.gg](https://fpsmeta.gg/delta-force-meta))
 
-Phần mềm được phát hành miễn phí 100% cho cộng đồng (Freeware) — mọi khoản ủng hộ (trà tắc/cà phê) từ người dùng đều hoàn toàn tự nguyện và không khóa bất kỳ tính năng nào. Ứng dụng hoạt động hoàn toàn độc lập, không có mối liên kết hay tài trợ từ các trang web nêu trên cũng như nhà phát hành trò chơi Delta Force (Team Jade / TiMi Studio Group / Garena).
+Phần mềm được phát hành **mã nguồn mở (Open Source — MIT License)** và miễn phí 100% cho cộng đồng — mọi khoản ủng hộ (trà tắc/cà phê) từ người dùng đều hoàn toàn tự nguyện và không khóa bất kỳ tính năng nào. Ứng dụng hoạt động hoàn toàn độc lập, không có mối liên kết hay tài trợ từ các trang web nêu trên cũng như nhà phát hành trò chơi Delta Force (Team Jade / TiMi Studio Group / Garena).
 
 ### 2. Tiếp Nhận Khiếu Nại & Gỡ Bỏ Dữ Liệu (Notice & Takedown Policy)
 Tác giả tôn trọng quyền sở hữu trí tuệ và mong muốn của các đơn vị quản trị nguồn dữ liệu:
@@ -170,10 +201,9 @@ Tác giả tôn trọng quyền sở hữu trí tuệ và mong muốn của các
 
 ## Bản Quyền & Giấy Phép / License & Disclaimer
 
-Phần mềm được phát hành theo giấy phép **Proprietary Freeware License - All Rights Reserved** (Copyright © 2026 Anh Bảy Chọ / Tài Giáp).
+Dự án được phát hành theo giấy phép **MIT License (Open Source)** — xem chi tiết tại tệp [LICENSE](LICENSE) (`Copyright (c) 2026 Giáp Đức Tài`).
 
-- **Quyền sử dụng:** Người dùng được phép tải về và sử dụng miễn phí bản thực thi nguyên trạng cho mục đích cá nhân, phi thương mại.
-- **Nghiêm cấm:** Mọi hành vi sao chép mã nguồn, dịch ngược, giải mã, can thiệp file thực thi, sửa đổi/xóa tên tác giả hoặc thương mại hóa dưới bất kỳ hình thức nào khi chưa có sự đồng ý bằng văn bản từ tác giả.
+- Người dùng và lập trình viên được tự do sử dụng, sao chép, sửa đổi, hợp nhất, xuất bản và phân phối lại mã nguồn cũng như bản biên dịch theo các điều khoản của giấy phép MIT.
 
 ### Tuyên Bố Miễn Trừ Trách Nhiệm (Disclaimer)
 - Công cụ độc lập hoạt động hoàn toàn qua Windows OCR API chuẩn, không chứa bất kỳ tài sản trí tuệ, hình ảnh hay mã nguồn nào của trò chơi Delta Force (Team Jade / TiMi Studio Group / Garena).

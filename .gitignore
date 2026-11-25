@@ -1,0 +1,29 @@
+# Rust target directory
+/target
+/target/
+
+# Local data & persistent cache
+DF-Loadout-Scanner-Data/
+favorites.json
+config.json
+df_history.json
+builds_local.json
+*.tmp
+*.log
+
+# Python cache & virtual environments
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.venv/
+venv/
+env/
+
+# IDE & OS files
+.vscode/
+.idea/
+*.swp
+*.bak
+Thumbs.db
+Desktop.ini
