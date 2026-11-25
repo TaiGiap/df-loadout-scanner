@@ -11,10 +11,10 @@ Công cụ tự động nhận diện vũ khí thời gian thực qua Windows OC
 Người dùng thông thường chỉ cần tải bản đóng gói sẵn tại mục GitHub Releases:
 
 - **Phiên bản mới nhất (Latest Release):** [DF-Loadout-Scanner Releases](https://github.com/TaiGiap/df-loadout-scanner/releases/latest)
-- **Tệp cài đặt:** `DF-Loadout-Scanner-v1.4.3-Windows-x64.zip` (Đã đóng gói trọn gói file thực thi `.exe`, tài liệu hướng dẫn và giấy phép).
+- **Tệp cài đặt:** `DF-Loadout-Scanner-v1.4.4-Windows-x64.zip` (Đã đóng gói trọn gói file thực thi `.exe`, tài liệu hướng dẫn và giấy phép).
 
 > **Tác giả / Developed By:** Anh Bảy Chọ / Tài Giáp  
-> **Phiên bản / Version:** `v1.4.3` (2-Row Filter Layout & Smart Startup Weapon Selection)
+> **Phiên bản / Version:** `v1.4.4` (Clean-First 3-Tier OCR Pipeline — Dodging 18+ Warning Permanently)
 
 ---
 
@@ -43,10 +43,10 @@ Người dùng thông thường chỉ cần tải bản đóng gói sẵn tại 
 
 ## Tính Năng Nổi Bật / Key Features
 
-1. **Quét vũ khí thời gian thực & Bộ xử lý ảnh OCR nâng cao (Anti-18+ Banner & Fallback ROI):**
-   - **Tăng cường độ nét ảnh 2.5x & Lọc tương phản:** Phóng to ảnh 2.5x kết hợp thuật toán phân tách chữ trắng (giữ lại pixel sáng chữ tên súng, triệt tiêu hoàn toàn nền xám mờ của bảng cảnh báo 18+ về màu đen).
-   - **Cơ chế quét dự phòng (Fallback ROI):** Nếu vùng giữa bị che khuất hoặc không nhận diện được, ứng dụng tự động dò tìm vị trí thẻ súng đang được chọn ở cột danh sách bên trái (dựa trên viền trắng nổi bật), cắt lấy dòng tiêu đề và tự động loại bỏ tên skin để nhận diện chính xác 100%.
-   - **Bộ lọc từ rác bảng cảnh báo 18+:** Loại bỏ triệt để các cụm từ như *"Chơi quá 180 phút..."* và các ký tự rác nhỏ lẻ.
+1. **Quét vũ khí thời gian thực & Bộ xử lý OCR 3 tầng ưu tiên vùng sạch (Loại bỏ lệ thuộc vùng bị `18+` che):**
+   - **Tầng 1 (Nguồn chính — Thẻ súng cột trái):** Tự động dò đồng thời 4 cạnh viền trắng sáng (trái/phải/trên/dưới) ở cột danh sách bên trái kể cả khi đang cuộn trang, phóng to 2.5x, lọc chữ trắng và cắt bỏ tên skin sau `" - "` / `" – "` (`M7 Battle Rifle - Đỏ` $\rightarrow$ `M7`). Đạt độ tin cậy `>= 90%` sẽ trả kết quả ngay lập tức.
+   - **Tầng 2 (Dự phòng 1 — Đoạn mô tả vũ khí góc dưới cột giữa):** Nếu Tầng 1 chưa đạt `>= 90%`, tự động quét vùng mô tả dưới bảng phụ kiện (`y: 76.0%`–`86.5%`, sạch 100% khỏi bảng cảnh báo `18+`), phóng to 2.0x, trích xuất 4–5 từ đầu câu và lọc bỏ từ dẫn đầu chung chung (`SÚNG`, `THE`, `KHẨU`, `MỘT`).
+   - **Tầng 3 (Dự phòng cuối — Tiêu đề cột giữa đã né `18+`):** Chỉ chạy khi cả 2 tầng trên chưa khớp, đồng thời dịch lề trái vùng chụp sang `26.8%` chiều rộng màn hình để né hoàn toàn hộp cảnh báo `18+`.
    - **Sửa 14 lỗi nhận diện súng:** Khắc phục triệt để các trường hợp đọc nhầm font game (`G3`, `P90`, `AR-57`, `PSG-1`, `M82`, `M7`, `MK4`, `R93`, `QBZ95-1`, `SG552`, `CI-19`, `SR-3M`, `VECTOR`, `725 Double-Barrel`).
    - Đổi phím tắt quét tức thì ngay trên thanh điều khiển với nút `[⌨]`, hỗ trợ đầy đủ `F1`–`F12`, phím điều hướng, phím số `Numpad`, phím đặc biệt và **hai nút chuột phụ bên hông** (`Mouse 4` / `Mouse 5`).
 
@@ -103,19 +103,21 @@ Người dùng thông thường chỉ cần tải bản đóng gói sẵn tại 
 **DF Loadout Scanner** is a lightweight, real-time weapon recognition and loadout synchronizer for Delta Force (Garena & Level Infinite / Steam).
 
 ### Quick Start (3 Steps)
-1. **Download:** Grab `DF-Loadout-Scanner-v1.4.3-Windows-x64.zip` from [GitHub Releases](https://github.com/TaiGiap/df-loadout-scanner/releases/latest) and extract it.
+1. **Download:** Grab `DF-Loadout-Scanner-v1.4.4-Windows-x64.zip` from [GitHub Releases](https://github.com/TaiGiap/df-loadout-scanner/releases/latest) and extract it.
 2. **Launch:** Run `DF-Loadout-Scanner-Windows-x64.exe`. If the Windows SmartScreen prompt appears, click **More info** $\rightarrow$ **Run anyway** (requires admin rights for global hotkey capture and stable fullscreen screenshot).
 3. **Use in Game:** Set game display to **Borderless Windowed** and enable Windows **Clipboard History (`Win + V`)**. In gunsmith menu, press hotkey (default `F9` or customizable to `Mouse 4/5` / `F1-F12`). Hit `Ctrl + V` to paste the top build, or `Win + V` to browse alternate builds.
 
 ### Key Highlights
+- **Clean-First 3-Tier OCR Pipeline (Immune to 18+ Warning Box):** Reversed scan priority eliminates reliance on the obstructed header region:
+  - **Tier 1 (Primary — Left Weapon Card):** Scans left weapon list (`x: 7.0%–23.5%`, `y: 13.0%–90.0%`) detecting 4 bright white card edges simultaneously (top/bottom/left/right even when scrolled), upscales 2.5x with white-text isolation, strips skin suffixes (`" - "`, `" – "`), and returns immediately at `>= 90%` confidence.
+  - **Tier 2 (Fallback 1 — Bottom-Center Description):** Crops weapon description text below the attachment slots (`x: 24.5%–39.5%`, `y: 76.0%–86.5%` — 100% clear of the 18+ notice), upscales 2.0x, and extracts the first 4–5 words while stripping leading stop words (`SÚNG`, `THE`, `KHẨU`, `MỘT`).
+  - **Tier 3 (Final Fallback — Offset Center Header):** Only runs if Tiers 1 and 2 yield no match, starting crop at `x = 26.8%` to cleanly dodge the 18+ overlay box.
 - **2-Row Clean Filter Layout & Smart Startup Weapon:** Reorganized the filter panel into two spacious rows (Row 1: Source, Server, Mode, Type; Row 2: 220px Search box with `[×]` clear button and 240px Weapon dropdown), preventing right-edge truncation across all DPI scales. Automatically prioritizes `M4A1` (or first weapon with available builds under default Garena server) on startup instead of `.357` (0 builds), instantly displaying rich loadouts upon launch.
 - **Enhanced Filter Search & Vietnamese Aliases:** Real-time auto-selection and dropdown filtering support case-insensitive, dash-less (`"ar57"`, `"mini14"`), and Vietnamese aliases (`"hai nong"` -> `725 DOUBLE-BARREL`, `"cung"` -> `COMPOUND BOW`).
 - **Dedicated Favorites Tab & ESC Quick Exit (`favorites.json`):** Dedicated `[★ FAVORITES (N)]` tab displaying all pinned builds and custom loadouts for all weapons with quick jump button (`[🔍 View Gun]`) to weapon page, fast exit via `ESC` key or `[← BACK (ESC)]` banner button, independent storage (`favorites.json`), and instant custom code modal (`[+ ADD CUSTOM]`).
 - **OCR Confidence Thresholding (Anti-Miscopy Protection):** Tiered recognition prevents unwanted clipboard overwrites: high confidence (`>= 90%`) auto-syncs, suspicious matches (`75%-89%`) require explicit confirmation via `[✔ CONFIRM & COPY]`, and low confidence (`< 75%`) triggers rejection.
 - **Semantic Data Validator & Clean Code Guarantee:** Deep cross-validation ensures every weapon code belongs 100% to the matching weapon, removing corrupted/mismatched codes and rogue newlines.
 - **Source-Normalized Ranking:** Dynamically balances popularity scores across multiple sources, allowing high-quality builds from DFBuilds and FPSMeta to be fairly interleaved with DFTools without getting pushed to the bottom.
-- **2.5x Upscaling & White-Text Contrast Thresholding:** Eliminates blurry text and nullifies the Vietnamese 18+ health warning gray overlay box by isolating pure white text before OCR processing.
-- **Smart Left-Column Fallback ROI:** Automatically detects the highlighted weapon card on the left list when the center screen region is obstructed or unreadable, strips custom skin names, and extracts the clean weapon name.
 - **14 Specific Weapon OCR Fixes & Anti-Junk Filtering:** Resolves misreadings for `G3`, `P90`, `AR-57`, `PSG-1`, `M82`, `M7`, `MK4`, `R93`, `QBZ95-1`, `SG552`, `CI-19`, `SR-3M`, `VECTOR`, and `725 Double-Barrel`, with strict length difference checks protecting short weapon names.
 - **Zero Background Overhead:** Window focus/minimize detection ensures zero CPU/GPU consumption while in game, waking up only upon scan trigger.
 - **Auto Release Check:** Built-in update notifier surfaces a clickable badge in Header when a new release is available.
@@ -150,7 +152,8 @@ Tác giả tôn trọng quyền sở hữu trí tuệ và mong muốn của các
 
 | Phiên bản | Điểm mới & Cải tiến chính |
 | :--- | :--- |
-| **v1.4.3 (Mới nhất)** | Tách thanh `BỘ LỌC:` thành 2 hàng ngang rõ ràng (Dòng 1: Nguồn, Server, Chế độ, Loại; Dòng 2: Ô tìm kiếm súng ~220px kèm nút `[×]` và ComboBox Chọn vũ khí ~240px) chống cắt lẹm mép phải ở mọi tỉ lệ DPI; Tự động ưu tiên chọn `M4A1` (hoặc súng đầu tiên có sẵn build khớp với Server Garena mặc định) khi khởi động thay vì chọn `.357` (0 cấu hình) giúp người dùng thấy ngay danh sách build khi vừa mở app. |
+| **v1.4.4 (Mới nhất)** | Đảo ngược thứ tự ưu tiên quét OCR sang mô hình 3 tầng sạch 100% để loại bỏ lệ thuộc vùng tiêu đề bị bảng `18+` che khuất: **(1) Nguồn chính** quét thẻ súng đang chọn ở cột danh sách bên trái (`x: 7.0%–23.5%`, `y: 13.0%–90.0%`) bằng dò đồng thời 4 cạnh viền trắng sáng, phóng to 2.5x, cắt tên skin sau `" - "` / `" – "`, trả kết quả ngay khi đạt `>= 90%`; **(2) Dự phòng 1** đọc đoạn mô tả vũ khí góc dưới cột giữa (`x: 24.5%–39.5%`, `y: 76.0%–86.5%`) phóng to 2.0x, trích xuất 4–5 từ đầu và lọc từ dẫn đầu (`SÚNG`, `THE`, `KHẨU`, `MỘT`); **(3) Dự phòng cuối** chỉ chạy khi cả 2 tầng trên chưa khớp với lề trái dịch sang `26.8%` né hoàn toàn hộp `18+`. |
+| **v1.4.3** | Tách thanh `BỘ LỌC:` thành 2 hàng ngang rõ ràng (Dòng 1: Nguồn, Server, Chế độ, Loại; Dòng 2: Ô tìm kiếm súng ~220px kèm nút `[×]` và ComboBox Chọn vũ khí ~240px) chống cắt lẹm mép phải ở mọi tỉ lệ DPI; Tự động ưu tiên chọn `M4A1` (hoặc súng đầu tiên có sẵn build khớp với Server Garena mặc định) khi khởi động thay vì chọn `.357` (0 cấu hình) giúp người dùng thấy ngay danh sách build khi vừa mở app. |
 | **v1.4.2** | Sửa triệt để lỗi giao diện chồng lấn trên Header: Chuyển ô `Tìm: [Tên súng...]` xuống thanh `BỘ LỌC:` (ngay trước ComboBox `Vũ khí:`) kèm nút nhỏ `[×]` xóa nhanh; Tối ưu hóa thuật toán tìm kiếm vũ khí không phân biệt hoa/thường, tự động bỏ qua dấu gạch ngang (`ar57`, `mini14`), hỗ trợ toàn diện bảng bí danh tiếng Việt (`hai nong` $\rightarrow$ `725 DOUBLE-BARREL`, `cung` $\rightarrow$ `COMPOUND BOW`...); Tự động chọn khẩu súng khớp nhất đầu tiên ngay khi gõ để tải cấu hình tức thì và lọc gọn danh sách trong dropdown `Vũ khí:`. |
 | **v1.4.1** | Nâng cấp toàn diện trải nghiệm quản lý Yêu thích: Thay thế nút lọc toggle bằng hệ thống Tab chuyên biệt `[🔍 QUÉT & TRA CỨU]` và `[★ YÊU THÍCH (N)]` ngay trên Header; Quản lý tập trung toàn bộ cấu hình đã ghim và mã cá nhân của tất cả các súng; Bổ sung phím tắt `ESC` và nút `[← QUAY LẠI (ESC)]` thoát nhanh về màn hình quét; Thêm nút `[🔍 Xem súng]` nhảy thẳng đến trang tra cứu của súng; Tích hợp nút `[+ THÊM MÃ RIÊNG]` và `[COPY TẤT CẢ VÀO WIN+V]` trực tiếp trong Tab Yêu thích. |
 | **v1.4.0** | Tích hợp hệ thống Build Yêu Thích và Mã Cá Nhân độc lập (`favorites.json`) không lo mất dữ liệu khi cập nhật DB; Thêm nút ghim `[☆ Lưu]` / `[★ Đã ghim]` đẩy cấu hình lên ưu tiên số 1 (Tier -1, badge `★ YÊU THÍCH`); Thêm modal `[+ THÊM MÃ RIÊNG]`; Bổ sung cơ chế phân tầng ngưỡng tin cậy OCR (Confidence Threshold) chống tự động ghi đè Clipboard khi kết quả ở vùng nghi ngờ 75%–89% và yêu cầu xác nhận thủ công `[✔ XÁC NHẬN & COPY]`. |
