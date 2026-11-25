@@ -5,22 +5,21 @@ use std::fs;
 use std::path::PathBuf;
 use std::sync::atomic::{AtomicBool, AtomicI32, Ordering};
 use std::sync::mpsc::{channel, Receiver, Sender};
-use std::sync::{Arc, RwLock};
+use std::sync::{Arc, OnceLock, RwLock};
 use std::thread::{self, sleep};
 use std::time::{Duration, Instant};
 
 use arboard::Clipboard;
 use eframe::egui::{self, Align, Color32, Frame, Layout, Margin, RichText, Rounding, Stroke, Vec2};
+use ort::{
+    environment::Environment,
+    session::{builder::GraphOptimizationLevel, Session},
+    value::Tensor,
+};
 use serde::{Deserialize, Serialize};
 use windows::{
-    core::HSTRING,
-    Globalization::Language as WinLanguage,
-    Graphics::Imaging::{BitmapPixelFormat, SoftwareBitmap},
-    Media::Ocr::OcrEngine,
-    Storage::Streams::DataWriter,
     Win32::Foundation::{BOOL, HWND},
     Win32::Graphics::Gdi::{GetMonitorInfoW, MonitorFromWindow, MONITORINFO, MONITOR_DEFAULTTONEAREST},
-    Win32::System::WinRT::{RoInitialize, RO_INIT_MULTITHREADED},
     Win32::UI::WindowsAndMessaging::GetForegroundWindow,
 };
 
@@ -34,7 +33,7 @@ extern "system" {
 // Application & Author identity constants
 const AUTHOR_NAME: &str = "Anh Bảy Chọ / Tài Giáp";
 const APP_NAME: &str = "DF Loadout Scanner";
-const APP_VERSION: &str = "v1.4.6";
+const APP_VERSION: &str = "v2.0.0-beta";
 
 // VietQR donation constants
 const DONATE_BANK_ID: &str = "TCB";
@@ -629,7 +628,7 @@ enum WorkerEvent {
         msg: String,
         is_error: bool,
     },
-    OcrUnavailable,
+    OcrUnavailable(String),
     NewVersionAvailable(String),
 }
 
@@ -894,15 +893,279 @@ fn load_builds_data() -> (Vec<BuildItem>, bool, bool) {
     (embedded, false, was_corrupted)
 }
 
-fn check_ocr_available() -> bool {
-    let _ = unsafe { RoInitialize(RO_INIT_MULTITHREADED) };
-    let language_tag = HSTRING::from("en-US");
-    let engine = if let Ok(lang) = WinLanguage::CreateLanguage(&language_tag) {
-        OcrEngine::TryCreateFromLanguage(&lang).ok()
+const PADDLE_REC_MODEL_BYTES: &[u8] = include_bytes!("../assets/models/en_PP-OCRv4_rec.onnx");
+const PADDLE_EN_DICT: &str = include_str!("../assets/models/en_dict.txt");
+
+static ORT_ENV: OnceLock<Result<Environment, String>> = OnceLock::new();
+
+/// Resolves `onnxruntime.dll` next to the executable (with test-harness & env fallbacks).
+fn resolve_onnxruntime_dll_path() -> PathBuf {
+    if let Ok(exe_path) = std::env::current_exe() {
+        if let Some(exe_dir) = exe_path.parent() {
+            let direct = exe_dir.join("onnxruntime.dll");
+            if direct.is_file() {
+                return direct;
+            }
+            if cfg!(test) {
+                for ancestor in exe_dir.ancestors().skip(1).take(6) {
+                    let cand = ancestor.join("onnxruntime.dll");
+                    if cand.is_file() {
+                        return cand;
+                    }
+                }
+            }
+        }
+    }
+    if cfg!(test) {
+        if let Some(manifest_dir) = option_env!("CARGO_MANIFEST_DIR") {
+            let dev_dll = PathBuf::from(manifest_dir).join("target").join("debug").join("onnxruntime.dll");
+            if dev_dll.is_file() {
+                return dev_dll;
+            }
+        }
+    }
+    let cwd_dll = PathBuf::from("onnxruntime.dll");
+    if cwd_dll.is_file() {
+        return cwd_dll;
+    }
+    if let Some(env_path) = std::env::var_os("ORT_DYLIB_PATH") {
+        let p = PathBuf::from(env_path);
+        if p.is_file() {
+            return p;
+        }
+    }
+    PathBuf::from("onnxruntime.dll")
+}
+
+fn get_ort_environment() -> Result<&'static Environment, String> {
+    let res = ORT_ENV.get_or_init(|| {
+        let dll_path = resolve_onnxruntime_dll_path();
+        ort::init_from(&dll_path)
+            .map_err(|e| format!("Không nạp được {}: {}", dll_path.display(), e))?
+            .with_name("df_loadout_scanner")
+            .build()
+            .map_err(|e| format!("Lỗi khởi tạo ONNX Runtime environment: {}", e))
+    });
+    match res {
+        Ok(env) => Ok(env),
+        Err(e) => Err(e.clone()),
+    }
+}
+
+struct PaddleOcrEngine {
+    session: Session,
+    dict: Vec<&'static str>,
+}
+
+impl PaddleOcrEngine {
+    fn new() -> Result<Self, String> {
+        let env = get_ort_environment()?;
+        let session = Session::builder(env)
+            .map_err(|e| format!("Lỗi tạo ONNX SessionBuilder: {}", e))?
+            .with_optimization_level(GraphOptimizationLevel::Level3)
+            .map_err(|e| format!("Lỗi tối ưu ONNX graph: {}", e))?
+            .with_intra_threads(2)
+            .map_err(|e| format!("Lỗi thiết lập CPU threads: {}", e))?
+            .commit_from_memory(PADDLE_REC_MODEL_BYTES)
+            .map_err(|e| format!("Lỗi nạp mô hình en_PP-OCRv4_rec.onnx: {}", e))?;
+
+        let dict: Vec<&'static str> = PADDLE_EN_DICT.lines().collect();
+        Ok(Self { session, dict })
+    }
+
+    fn recognize(&mut self, img: &xcap::image::RgbaImage) -> Result<(String, f32), String> {
+        let (target_w, nchw_data) = preprocess_for_paddle_ocr(img);
+        let input_tensor = Tensor::from_array(([1usize, 3usize, 48usize, target_w], nchw_data))
+            .map_err(|e| format!("Lỗi tạo tensor đầu vào: {}", e))?;
+        let outputs = self
+            .session
+            .run(ort::inputs![input_tensor])
+            .map_err(|e| format!("Lỗi suy luận ONNX Runtime: {}", e))?;
+        let (out_shape, out_data) = outputs[0]
+            .try_extract_tensor::<f32>()
+            .map_err(|e| format!("Lỗi trích xuất tensor đầu ra: {}", e))?;
+        ctc_greedy_decode(out_shape, out_data, &self.dict)
+    }
+}
+
+/// Decodes `[1, T, C]` CTC output probabilities/logits into trimmed text and mean confidence.
+fn ctc_greedy_decode(shape: &[i64], data: &[f32], dict: &[&str]) -> Result<(String, f32), String> {
+    if shape.len() != 3 || shape[0] < 1 || shape[1] <= 0 || shape[2] <= 1 {
+        return Err(format!("Kích thước tensor CTC không hợp lệ: {:?}", shape));
+    }
+    let seq_len = shape[1] as usize;
+    let num_classes = shape[2] as usize;
+    if data.len() < seq_len * num_classes {
+        return Err("Dữ liệu tensor CTC bị thiếu".to_string());
+    }
+
+    let mut text = String::with_capacity(seq_len);
+    let mut prev_idx: usize = 0;
+    let mut conf_sum = 0.0_f32;
+    let mut conf_count = 0usize;
+
+    for t in 0..seq_len {
+        let row = &data[t * num_classes..(t + 1) * num_classes];
+        let mut best_idx = 0usize;
+        let mut best_val = f32::NEG_INFINITY;
+        for (c, &val) in row.iter().enumerate() {
+            if val > best_val {
+                best_val = val;
+                best_idx = c;
+            }
+        }
+
+        if best_idx != 0 && best_idx != prev_idx {
+            let dict_idx = best_idx - 1;
+            if let Some(&ch) = dict.get(dict_idx) {
+                text.push_str(ch);
+            } else if dict_idx == dict.len() {
+                text.push(' ');
+            }
+            conf_sum += best_val.clamp(0.0, 1.0);
+            conf_count += 1;
+        }
+        prev_idx = best_idx;
+    }
+
+    let avg_conf = if conf_count > 0 {
+        conf_sum / conf_count as f32
     } else {
-        None
-    }.or_else(|| OcrEngine::TryCreateFromUserProfileLanguages().ok());
-    engine.is_some()
+        0.0
+    };
+    Ok((text.trim().to_string(), avg_conf))
+}
+
+/// Preprocesses a cropped weapon header image for PaddleOCR v4 (`[1, 3, 48, W]` NCHW):
+/// 1. Isolates bright white text glyphs while suppressing colored yellow/orange `18+` graphics and dark HUD background.
+/// 2. Tight-bounds the active white text rows/cols and adds clean uniform padding so glyphs fill ~70% of 48px height.
+/// 3. Resizes preserving aspect ratio to height `48px`, right-pads to at least `320px` (multiple of 8), and normalizes `(v/255 - 0.5)/0.5`.
+fn preprocess_for_paddle_ocr(img: &xcap::image::RgbaImage) -> (usize, Vec<f32>) {
+    let w = img.width().max(1);
+    let h = img.height().max(1);
+    let mut mask = vec![0u8; (w * h) as usize];
+
+    let mut min_x = w;
+    let mut min_y = h;
+    let mut max_x = 0u32;
+    let mut max_y = 0u32;
+    let mut found_bright = false;
+
+    for y in 0..h {
+        let mut row_bright_x_min = w;
+        let mut row_bright_x_max = 0u32;
+        let mut row_hits = 0u32;
+
+        for x in 0..w {
+            let p = img.get_pixel(x, y);
+            let r = p[0];
+            let g = p[1];
+            let b = p[2];
+            let min_c = r.min(g).min(b);
+            let max_c = r.max(g).max(b);
+            let spread = max_c - min_c;
+
+            // Suppress saturated yellow/orange/amber colors (e.g., 18+ warning box where R >> B)
+            let is_yellow_orange = r > b.saturating_add(40) || spread > 55;
+            let intensity = if !is_yellow_orange && min_c >= 145 {
+                let luma = r as f32 * 0.299 + g as f32 * 0.587 + b as f32 * 0.114;
+                ((luma - 135.0) / 115.0 * 255.0).clamp(0.0, 255.0) as u8
+            } else if !is_yellow_orange && min_c >= 110 && spread <= 40 {
+                ((min_c as f32 - 110.0) / 145.0 * 180.0).clamp(0.0, 255.0) as u8
+            } else {
+                0
+            };
+
+            mask[(y * w + x) as usize] = intensity;
+            if intensity >= 95 {
+                row_hits += 1;
+                row_bright_x_min = row_bright_x_min.min(x);
+                row_bright_x_max = row_bright_x_max.max(x);
+            }
+        }
+
+        if row_hits >= 2 {
+            found_bright = true;
+            min_y = min_y.min(y);
+            max_y = max_y.max(y);
+            min_x = min_x.min(row_bright_x_min);
+            max_x = max_x.max(row_bright_x_max);
+        }
+    }
+
+    let (box_x, box_y, box_w, box_h) = if found_bright && max_x > min_x && max_y >= min_y {
+        (min_x, min_y, max_x - min_x + 1, max_y - min_y + 1)
+    } else {
+        (0, 0, w, h)
+    };
+
+    // Add virtual clean background margins around isolated text box before scaling to 48px
+    let pad_y = ((box_h as f64 * 0.25).round().max(4.0)) as u32;
+    let pad_x = ((box_h as f64 * 0.35).round().max(8.0)) as u32;
+    let virt_w = (box_w + pad_x * 2).max(1);
+    let virt_h = (box_h + pad_y * 2).max(1);
+
+    let dst_h: usize = 48;
+    let resized_w = ((virt_w as f64 * dst_h as f64) / virt_h as f64)
+        .round()
+        .clamp(16.0, 640.0) as usize;
+    let target_w = ((resized_w.max(320) + 7) / 8) * 8;
+
+    let sample_virt = |vx: f64, vy: f64| -> f32 {
+        let gx = vx - pad_x as f64;
+        let gy = vy - pad_y as f64;
+        if gx < 0.0 || gy < 0.0 || gx >= (box_w as f64 - 1.0) || gy >= (box_h as f64 - 1.0) {
+            if gx >= -0.5 && gx <= box_w as f64 - 0.5 && gy >= -0.5 && gy <= box_h as f64 - 0.5 {
+                let cx = (gx.round() as i32).clamp(0, box_w as i32 - 1) as u32;
+                let cy = (gy.round() as i32).clamp(0, box_h as i32 - 1) as u32;
+                return mask[((box_y + cy) * w + (box_x + cx)) as usize] as f32;
+            }
+            return 0.0;
+        }
+        let x0 = gx.floor() as u32;
+        let y0 = gy.floor() as u32;
+        let x1 = (x0 + 1).min(box_w - 1);
+        let y1 = (y0 + 1).min(box_h - 1);
+        let dx = (gx - x0 as f64) as f32;
+        let dy = (gy - y0 as f64) as f32;
+        let p00 = mask[((box_y + y0) * w + (box_x + x0)) as usize] as f32;
+        let p10 = mask[((box_y + y0) * w + (box_x + x1)) as usize] as f32;
+        let p01 = mask[((box_y + y1) * w + (box_x + x0)) as usize] as f32;
+        let p11 = mask[((box_y + y1) * w + (box_x + x1)) as usize] as f32;
+        let top = p00 * (1.0 - dx) + p10 * dx;
+        let bot = p01 * (1.0 - dx) + p11 * dx;
+        top * (1.0 - dy) + bot * dy
+    };
+
+    // Invert isolated bright white text into high-contrast black ink on light background, matching PaddleOCR training distribution
+    // Padding value: 0.0 normalized -> +1.0 for pure white pad or 0.0 neutral pad
+    let plane_size = dst_h * target_w;
+    let pad_norm = (255.0_f32 / 255.0 - 0.5) / 0.5; // +1.0 (white background)
+    let mut nchw = vec![pad_norm; 3 * plane_size];
+
+    let scale_x = virt_w as f64 / resized_w as f64;
+    let scale_y = virt_h as f64 / dst_h as f64;
+
+    for dy in 0..dst_h {
+        let sy = (dy as f64 + 0.5) * scale_y - 0.5;
+        let row_off = dy * target_w;
+        for dx in 0..resized_w {
+            let sx = (dx as f64 + 0.5) * scale_x - 0.5;
+            let fg_white = sample_virt(sx, sy).clamp(0.0, 255.0);
+            let ink_val = 255.0_f32 - fg_white;
+            let norm = (ink_val / 255.0_f32 - 0.5_f32) / 0.5_f32;
+            let idx = row_off + dx;
+            nchw[idx] = norm;
+            nchw[plane_size + idx] = norm;
+            nchw[2 * plane_size + idx] = norm;
+        }
+    }
+
+    (target_w, nchw)
+}
+
+fn check_ocr_available() -> Result<(), String> {
+    PaddleOcrEngine::new().map(|_| ())
 }
 
 fn load_history() -> Vec<HistoryItem> {
@@ -971,35 +1234,8 @@ const BANNER_18_STOP_WORDS: &[&str] = &[
     "ANH", "HUONG", "XAU", "DEN", "SUC", "KHOE", "18+", "18",
 ];
 
-/// In-game weapon categories (Vietnamese & English) to strip from OCR text.
-/// Ordered from longest to shortest phrase to prevent partial substring collisions.
+/// In-game weapon category phrases stripped during text cleaning (longest first).
 const CATEGORY_PHRASES: &[&str] = &[
-    // Vietnamese (longest first)
-    "SUNG TRUONG CHIEN DAU",
-    "SUNG TRUONG TAN CONG",
-    "SUNG TRUONG THIEN XA",
-    "SUNG MAY HANG NHE",
-    "SUNG MAY DA DUNG",
-    "SUNG MAY DA NANG",
-    "SUNG TIEU LIEN",
-    "SUNG BAN TIA",
-    "SUNG TRUONG GON NHE",
-    "SUNG TRUONG HANG NANG",
-    "SUNG TRUONG CO DIEN",
-    "SUNG TRUONG CHIEN THUAT",
-    "SUNG TIEU LIEN GON NHE",
-    "SUNG MAY HANG NANG",
-    "SUNG TRUONG",
-    "SUNG NGAN",
-    "SUNG SAN",
-    "SUNG LUC",
-    "SUNG MAY",
-    "TIEU LIEN",
-    "GON NHE",
-    "HANG NANG",
-    "CO DIEN",
-    "CHIEN THUAT",
-    // English (longest first)
     "COMPACT ASSAULT RIFLE",
     "GENERAL MACHINE GUN",
     "LIGHT MACHINE GUN",
@@ -1019,7 +1255,67 @@ const CATEGORY_PHRASES: &[&str] = &[
     "RIFLE",
 ];
 
-/// Weapon alias mapping (Vietnamese, abbreviations, variants -> exact builds.json canonical name).
+/// Technical weapon code normalizations allowed inside OCR recognition (NO Vietnamese nicknames).
+const OCR_CODE_NORMALIZATIONS: &[(&str, &str)] = &[
+    ("725 SHOTGUN", "725 DOUBLE-BARREL"),
+    ("725 DOUBLE BARREL", "725 DOUBLE-BARREL"),
+    ("725 DOUBLE-BARREL", "725 DOUBLE-BARREL"),
+    ("DOUBLE BARREL", "725 DOUBLE-BARREL"),
+    ("DOUBLE-BARREL", "725 DOUBLE-BARREL"),
+    ("725", "725 DOUBLE-BARREL"),
+    ("AR-57", "AR-57"),
+    ("AR57", "AR-57"),
+    ("PSG-1", "PSG-1"),
+    ("PSG1", "PSG-1"),
+    ("PEG-1", "PSG-1"),
+    ("PEG1", "PSG-1"),
+    ("M82A1", "M82"),
+    ("M82", "M82"),
+    ("882", "M82"),
+    ("B82", "M82"),
+    ("CL1G", "CI-19"),
+    ("C1-19", "CI-19"),
+    ("CL-19", "CI-19"),
+    ("CI19", "CI-19"),
+    ("CI-19", "CI-19"),
+    ("TEZG5-1", "QBZ95-1"),
+    ("QBZ951", "QBZ95-1"),
+    ("QBZ-95-1", "QBZ95-1"),
+    ("QBZ95-1", "QBZ95-1"),
+    ("ECS52", "SG552"),
+    ("SG-552", "SG552"),
+    ("SG552", "SG552"),
+    ("CVECTOR", "VECTOR"),
+    ("VECTOR", "VECTOR"),
+    ("SR-3M", "SR-3M"),
+    ("SR3M", "SR-3M"),
+    ("P-90", "P90"),
+    ("P90", "P90"),
+    ("G3", "G3"),
+    ("M7", "M7"),
+    ("MK4", "MK4"),
+    ("R93", "R93"),
+    ("COMPOUND BOW", "COMPOUND BOW"),
+    ("DEAGLE", "DESERT EAGLE"),
+    ("GLOCK 17", "G-17"),
+    ("GLOCK17", "G-17"),
+    ("GLOCK 18", "G18"),
+    ("GLOCK18", "G18"),
+    ("G17", "G-17"),
+    ("KC17", "KC-17"),
+    ("QJB201", "QJB-201"),
+    ("LEVER-ACTION", "MARLIN LEVER-ACTION"),
+    ("LEVER ACTION", "MARLIN LEVER-ACTION"),
+    ("MARLIN", "MARLIN LEVER-ACTION"),
+    ("UZL", "UZI"),
+    ("357 REVOLVER", ".357"),
+    ("357", ".357"),
+    ("MINI 14", "MINI-14"),
+    ("MINI14", "MINI-14"),
+];
+
+/// Full weapon alias mapping used ONLY by manual UI search and DB semantic cross-validation.
+/// Vietnamese nicknames (`hai nong`, `cung`, ...) are intentionally excluded from OCR matching.
 const WEAPON_ALIASES: &[(&str, &str)] = &[
     ("SHOTGUN HAI NONG", "725 DOUBLE-BARREL"),
     ("SUNG SAN HAI NONG", "725 DOUBLE-BARREL"),
@@ -1086,6 +1382,125 @@ const WEAPON_ALIASES: &[(&str, &str)] = &[
     ("MINI14", "MINI-14"),
 ];
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum OcrWeaponCategory {
+    BattleRifle,
+    AssaultRifle,
+    SubmachineGun,
+    MarksmanRifle,
+    SniperRifle,
+    MachineGun,
+    Shotgun,
+    Pistol,
+}
+
+impl OcrWeaponCategory {
+    fn is_narrow(self) -> bool {
+        matches!(
+            self,
+            Self::BattleRifle
+                | Self::SniperRifle
+                | Self::MarksmanRifle
+                | Self::MachineGun
+                | Self::Shotgun
+                | Self::Pistol
+        )
+    }
+
+    fn contains_weapon(self, weapon_upper: &str) -> bool {
+        match self {
+            Self::BattleRifle => matches!(weapon_upper, "M7" | "G3" | "SCAR-H" | "ASH-12"),
+            Self::AssaultRifle => matches!(
+                weapon_upper,
+                "AK-12"
+                    | "AKM"
+                    | "AKS-74"
+                    | "AN-94"
+                    | "AR-57"
+                    | "AS VAL"
+                    | "ASH-12"
+                    | "AUG"
+                    | "CAR-15"
+                    | "CI-19"
+                    | "G3"
+                    | "K416"
+                    | "K437"
+                    | "KC-17"
+                    | "M16A4"
+                    | "M4A1"
+                    | "M7"
+                    | "MCX LT"
+                    | "MDR"
+                    | "MK47"
+                    | "PTR-32"
+                    | "QBZ95-1"
+                    | "RM277"
+                    | "SCAR-H"
+                    | "SG552"
+                    | "SR-3M"
+            ),
+            Self::SubmachineGun => matches!(
+                weapon_upper,
+                "AKS-74U"
+                    | "AR-57"
+                    | "BIZON"
+                    | "MK4"
+                    | "MP5"
+                    | "MP7"
+                    | "P90"
+                    | "QCQ171"
+                    | "SMG-45"
+                    | "SR9"
+                    | "THOMPSON"
+                    | "UZI"
+                    | "VECTOR"
+                    | "VITYAZ"
+            ),
+            Self::MarksmanRifle => matches!(
+                weapon_upper,
+                "M14" | "MINI-14" | "PSG-1" | "SKS" | "SR-25" | "SR9" | "SVCH" | "VSS"
+            ),
+            Self::SniperRifle => {
+                matches!(weapon_upper, "AWM" | "M700" | "M82" | "R93" | "SV-98" | "SVD")
+            }
+            Self::MachineGun => matches!(weapon_upper, "M249" | "M250" | "PKM" | "QJB-201"),
+            Self::Shotgun => matches!(
+                weapon_upper,
+                "725 DOUBLE-BARREL" | "FS-12" | "M1014" | "M870" | "S12K"
+            ),
+            Self::Pistol => matches!(
+                weapon_upper,
+                ".357" | "93R" | "DESERT EAGLE" | "G-17" | "G18" | "M1911" | "QSZ-92G"
+            ),
+        }
+    }
+}
+
+/// Ordered longest-first so multi-word English categories match before short ones.
+const OCR_CATEGORY_RULES: &[(&str, OcrWeaponCategory)] = &[
+    ("COMPACT ASSAULT RIFLE", OcrWeaponCategory::AssaultRifle),
+    ("GENERAL MACHINE GUN", OcrWeaponCategory::MachineGun),
+    ("LIGHT MACHINE GUN", OcrWeaponCategory::MachineGun),
+    ("SUBMACHINE GUN", OcrWeaponCategory::SubmachineGun),
+    ("MARKSMAN RIFLE", OcrWeaponCategory::MarksmanRifle),
+    ("ASSAULT RIFLE", OcrWeaponCategory::AssaultRifle),
+    ("ASSULT RIFLE", OcrWeaponCategory::AssaultRifle),
+    ("BATTLE RIFLE", OcrWeaponCategory::BattleRifle),
+    ("SNIPER RIFLE", OcrWeaponCategory::SniperRifle),
+    ("MACHINE GUN", OcrWeaponCategory::MachineGun),
+    ("HANDGUN", OcrWeaponCategory::Pistol),
+    ("REVOLVER", OcrWeaponCategory::Pistol),
+    ("CARBINE", OcrWeaponCategory::AssaultRifle),
+    ("SHOTGUN", OcrWeaponCategory::Shotgun),
+    ("PISTOL", OcrWeaponCategory::Pistol),
+    ("LMG", OcrWeaponCategory::MachineGun),
+    ("SMG", OcrWeaponCategory::SubmachineGun),
+    ("DMR", OcrWeaponCategory::MarksmanRifle),
+    ("BR", OcrWeaponCategory::BattleRifle),
+    ("SR", OcrWeaponCategory::SniperRifle),
+    ("AR", OcrWeaponCategory::AssaultRifle),
+];
+
 /// Strips skin suffixes separated by hyphens/dashes (e.g. " - ", " – ", " — ").
 fn strip_skin_suffix(s: &str) -> String {
     let mut earliest_pos: Option<usize> = None;
@@ -1119,15 +1534,11 @@ fn strip_skin_suffix(s: &str) -> String {
     s.to_string()
 }
 
-fn resolve_alias_internal(text: &str, strict_common_words: bool) -> Option<&'static str> {
+fn resolve_table_alias(text: &str, table: &[(&'static str, &'static str)]) -> Option<&'static str> {
     let trimmed = text.trim();
-    for &(alias, canonical) in WEAPON_ALIASES {
+    for &(alias, canonical) in table {
         if trimmed == alias {
             return Some(canonical);
-        }
-        // In prose descriptions, avoid matching ambiguous short common words ("CUNG", "NO") as prefixes/suffixes
-        if strict_common_words && matches!(alias, "CUNG" | "NO") {
-            continue;
         }
         let prefix = format!("{} ", alias);
         if trimmed.starts_with(&prefix) {
@@ -1142,7 +1553,11 @@ fn resolve_alias_internal(text: &str, strict_common_words: bool) -> Option<&'sta
 }
 
 fn resolve_alias(text: &str) -> Option<&'static str> {
-    resolve_alias_internal(text, false)
+    resolve_table_alias(text, WEAPON_ALIASES)
+}
+
+fn resolve_ocr_code_normalization(text: &str) -> Option<&'static str> {
+    resolve_table_alias(text, OCR_CODE_NORMALIZATIONS)
 }
 
 /// Scores how well a weapon name matches a user search query.
@@ -1303,7 +1718,7 @@ fn determine_startup_weapon(
 fn strip_category_phrases(mut text: String) -> String {
     for &phrase in CATEGORY_PHRASES {
         if text == phrase {
-            continue;
+            return String::new();
         }
         let prefix = format!("{} ", phrase);
         if text.starts_with(&prefix) {
@@ -1331,13 +1746,50 @@ fn strip_category_phrases(mut text: String) -> String {
         }
     }
 
+    if CATEGORY_PHRASES.contains(&text.as_str()) {
+        return String::new();
+    }
+
     text
 }
 
-fn clean_ocr_text(raw: &str) -> String {
-    let raw_skin_stripped = strip_skin_suffix(raw);
+/// Sanitizes leading/trailing 18+ occlusion artifacts (e.g., `...7` -> `7`, while preserving `.357`).
+fn sanitize_ocr_code_token(raw_code: &str) -> String {
+    let mut s = raw_code.trim();
+    loop {
+        let prev = s;
+        s = s.trim_start_matches(|c: char| matches!(c, ' ' | '+' | '-' | '_' | ':' | ';' | ',' | '/' | '|'));
+        if let Some(after_18) = s.strip_prefix("18+") {
+            s = after_18.trim_start();
+        } else if s.starts_with("18 ") {
+            s = s[3..].trim_start();
+        }
+        if s.starts_with("..") {
+            s = s.trim_start_matches('.');
+        } else if let Some(rest) = s.strip_prefix('.') {
+            // Preserve legitimate `.357` caliber prefix, but drop stray leading dot from occluded text like `.7` or `.K4`
+            if !rest.starts_with("357") {
+                s = rest;
+            }
+        }
+        if s == prev {
+            break;
+        }
+    }
+    s = s.trim_end_matches(|c: char| matches!(c, ' ' | '+' | '-' | '_' | '.'));
+    if !s.chars().any(|c| c.is_ascii_alphanumeric()) {
+        return String::new();
+    }
+    s.to_string()
+}
 
-    // Find the best line: first line with weapon content after stripping banner words / lowercase junk
+/// Normalizes a raw OCR center-header string and extracts `(cleaned_code, detected_category)`.
+/// Does NOT consult Vietnamese aliases; rejects category-only text with no weapon code characters.
+fn parse_weapon_header(raw: &str) -> (String, Option<OcrWeaponCategory>) {
+    let normalized_unicode = raw.replace('…', "...");
+    let raw_skin_stripped = strip_skin_suffix(&normalized_unicode);
+
+    // Find the first non-empty line after trimming banner stop words
     let mut best_line = String::new();
     for line in raw_skin_stripped.lines() {
         let line = line.trim();
@@ -1352,9 +1804,12 @@ fn clean_ocr_text(raw: &str) -> String {
             if BANNER_18_STOP_WORDS.contains(&t_upper.as_str()) {
                 raw_tokens.remove(0);
             } else if t.chars().all(|c| c.is_lowercase())
-                && t.len() <= 3
+                && t.len() <= 2
                 && raw_tokens.len() > 1
-                && (raw_tokens[1].chars().next().map_or(false, |c| c.is_uppercase() || c.is_ascii_digit()))
+                && raw_tokens[1]
+                    .chars()
+                    .next()
+                    .map_or(false, |c| c.is_uppercase() || c.is_ascii_digit())
             {
                 raw_tokens.remove(0);
             } else {
@@ -1373,141 +1828,71 @@ fn clean_ocr_text(raw: &str) -> String {
         best_line = raw_skin_stripped;
     }
 
-    // 1. Convert to unaccented uppercase
-    let normalized = strip_vietnamese_diacritics(&best_line);
-
-    // 2. Filter allowed characters: alphanumeric, hyphen, underscore, dot, and space
-    let filtered: String = normalized
+    let upper = strip_vietnamese_diacritics(&best_line);
+    let filtered: String = upper
         .chars()
-        .map(|c| if c.is_alphanumeric() || c == '-' || c == '_' || c == '.' { c } else { ' ' })
+        .map(|c| {
+            if c.is_alphanumeric() || c == '-' || c == '_' || c == '.' {
+                c
+            } else {
+                ' '
+            }
+        })
         .collect();
 
     let tokens: Vec<&str> = filtered
         .split_whitespace()
         .filter(|t| !BANNER_18_STOP_WORDS.contains(t))
         .collect();
-    let text = tokens.join(" ");
+    let mut text = tokens.join(" ");
 
-    // 3. Check aliases before category stripping (e.g. "SHOTGUN HAI NONG" -> "725 DOUBLE-BARREL")
-    if let Some(canonical) = resolve_alias(&text) {
-        return canonical.to_string();
-    }
-
-    // 4. Strip category phrases and trailing category abbreviations
-    let stripped = strip_category_phrases(text);
-
-    // 5. Check aliases again after stripping
-    if let Some(canonical) = resolve_alias(&stripped) {
-        return canonical.to_string();
-    }
-
-    stripped
-}
-
-/// Generic leading words commonly starting weapon description sentences in VI/EN.
-const DESCRIPTION_LEADING_WORDS: &[&str] = &[
-    "SUNG", "THE", "KHAU", "MOT", "CHIEC", "CAY", "MAU", "A", "AN",
-];
-
-/// Extracts and cleans the weapon name candidate from the bottom-center description
-/// paragraph (first 4–5 meaningful words, removing generic leading words).
-fn extract_description_weapon_text(raw: &str) -> String {
-    if raw.trim().is_empty() {
-        return String::new();
-    }
-
-    let normalized = strip_vietnamese_diacritics(raw);
-    let chars: Vec<char> = normalized.chars().collect();
-    let mut filtered = String::with_capacity(chars.len());
-
-    for (i, &c) in chars.iter().enumerate() {
-        if c.is_alphanumeric() || c == '_' {
-            filtered.push(c);
-        } else if c == '-' {
-            let prev_alnum = i > 0 && chars[i - 1].is_alphanumeric();
-            let next_alnum = i + 1 < chars.len() && chars[i + 1].is_alphanumeric();
-            if prev_alnum && next_alnum {
-                filtered.push('-');
-            } else {
-                filtered.push(' ');
-            }
-        } else if c == '.' {
-            let next_digit = i + 1 < chars.len() && chars[i + 1].is_ascii_digit();
-            if next_digit {
-                filtered.push('.');
-            } else {
-                filtered.push(' ');
-            }
-        } else {
-            filtered.push(' ');
+    // Extract category from trailing/matching English category labels
+    let mut detected_cat: Option<OcrWeaponCategory> = None;
+    for &(phrase, cat) in OCR_CATEGORY_RULES {
+        let is_short_abbr = phrase.len() <= 3;
+        if !is_short_abbr && text == phrase {
+            detected_cat = Some(cat);
+            text.clear();
+            break;
         }
-    }
-
-    // Take initial window so long category/article prefixes don't push out weapon token
-    let mut tokens: Vec<String> = filtered
-        .split_whitespace()
-        .take(10)
-        .map(|s| s.to_string())
-        .collect();
-
-    if tokens.is_empty() {
-        return String::new();
-    }
-
-    // Strip unambiguous leading articles/classifiers first (keep "SUNG" for compound checks below)
-    while !tokens.is_empty()
-        && tokens[0] != "SUNG"
-        && DESCRIPTION_LEADING_WORDS.contains(&tokens[0].as_str())
-    {
-        tokens.remove(0);
-    }
-
-    if !tokens.is_empty() && tokens[0] == "SUNG" {
-        let with_sung = tokens.iter().take(5).cloned().collect::<Vec<_>>().join(" ");
-        if let Some(canonical) = resolve_alias_internal(&with_sung, true) {
-            return canonical.to_string();
+        let suffix = format!(" {}", phrase);
+        if text.ends_with(&suffix) {
+            detected_cat = Some(cat);
+            text = text[..text.len() - suffix.len()].trim().to_string();
+            break;
         }
-
-        let without_sung = tokens.iter().skip(1).take(5).cloned().collect::<Vec<_>>().join(" ");
-        if let Some(canonical) = resolve_alias_internal(&without_sung, true) {
-            return canonical.to_string();
-        }
-
-        let joined_all = tokens.join(" ");
-        let mut stripped_cat = false;
-        for &phrase in CATEGORY_PHRASES {
-            if let Some(rest) = joined_all.strip_prefix(&format!("{} ", phrase)) {
-                tokens = rest.split_whitespace().map(|s| s.to_string()).collect();
-                stripped_cat = true;
+        if !is_short_abbr {
+            let prefix = format!("{} ", phrase);
+            if text.starts_with(&prefix) {
+                detected_cat = Some(cat);
+                text = text[prefix.len()..].trim().to_string();
                 break;
             }
         }
-        if !stripped_cat {
-            tokens.remove(0);
-        }
     }
 
-    while !tokens.is_empty() && DESCRIPTION_LEADING_WORDS.contains(&tokens[0].as_str()) {
-        tokens.remove(0);
+    // Strip any generic non-specific trailing/only words (e.g. "RIFLE", "CROSSBOW")
+    if detected_cat.is_none() {
+        text = strip_category_phrases(text);
     }
 
-    // Extract first 5 meaningful words from the description opening
-    tokens.truncate(5);
-    let snippet = tokens.join(" ");
-    if snippet.is_empty() {
+    let code_part = sanitize_ocr_code_token(&text);
+    if CATEGORY_PHRASES.contains(&code_part.as_str()) {
+        return (String::new(), detected_cat);
+    }
+
+    (code_part, detected_cat)
+}
+
+fn clean_ocr_text(raw: &str) -> String {
+    let (code_part, _) = parse_weapon_header(raw);
+    if code_part.is_empty() {
         return String::new();
     }
-
-    if let Some(canonical) = resolve_alias_internal(&snippet, true) {
+    if let Some(canonical) = resolve_ocr_code_normalization(&code_part) {
         return canonical.to_string();
     }
-
-    let stripped = strip_category_phrases(snippet);
-    if let Some(canonical) = resolve_alias_internal(&stripped, true) {
-        return canonical.to_string();
-    }
-
-    stripped
+    code_part
 }
 
 /// Normalizes character pairs commonly misidentified by Windows OCR on game fonts:
@@ -1626,7 +2011,7 @@ fn score_weapon_candidate(
     }
 }
 
-fn match_weapon<'a>(cleaned: &str, candidates: &'a [String]) -> Option<(&'a str, f64)> {
+fn match_weapon_in_slice<'a>(cleaned: &str, candidates: &[&'a String]) -> Option<(&'a str, f64)> {
     if cleaned.trim().is_empty() {
         return None;
     }
@@ -1691,76 +2076,117 @@ fn match_weapon<'a>(cleaned: &str, candidates: &'a [String]) -> Option<(&'a str,
     Some((best_cand, best_score))
 }
 
-fn upscale_and_threshold_image(
-    img: &xcap::image::RgbaImage,
-    scale: f64,
-    threshold: u8,
-) -> (u32, u32, Vec<u8>) {
-    let old_w = img.width();
-    let old_h = img.height();
-    let new_w = ((old_w as f64) * scale).round() as u32;
-    let new_h = ((old_h as f64) * scale).round() as u32;
-
-    let mut bgra_bytes = Vec::with_capacity((new_w * new_h * 4) as usize);
-
-    for y in 0..new_h {
-        let src_yf = (y as f64) / scale;
-        let y0 = (src_yf.floor() as u32).min(old_h.saturating_sub(1));
-        let y1 = (y0 + 1).min(old_h.saturating_sub(1));
-        let dy = (src_yf - y0 as f64).clamp(0.0, 1.0);
-
-        for x in 0..new_w {
-            let src_xf = (x as f64) / scale;
-            let x0 = (src_xf.floor() as u32).min(old_w.saturating_sub(1));
-            let x1 = (x0 + 1).min(old_w.saturating_sub(1));
-            let dx = (src_xf - x0 as f64).clamp(0.0, 1.0);
-
-            let p00 = img.get_pixel(x0, y0);
-            let p10 = img.get_pixel(x1, y0);
-            let p01 = img.get_pixel(x0, y1);
-            let p11 = img.get_pixel(x1, y1);
-
-            let luma = |p: &xcap::image::Rgba<u8>| -> f64 {
-                p[0] as f64 * 0.299 + p[1] as f64 * 0.587 + p[2] as f64 * 0.114
-            };
-
-            let l0 = luma(p00) * (1.0 - dx) + luma(p10) * dx;
-            let l1 = luma(p01) * (1.0 - dx) + luma(p11) * dx;
-            let interpolated_luma = l0 * (1.0 - dy) + l1 * dy;
-
-            let val = if interpolated_luma >= threshold as f64 { 255u8 } else { 0u8 };
-            bgra_bytes.push(val); // B
-            bgra_bytes.push(val); // G
-            bgra_bytes.push(val); // R
-            bgra_bytes.push(255); // A
-        }
-    }
-
-    (new_w, new_h, bgra_bytes)
+fn match_weapon<'a>(cleaned: &str, candidates: &'a [String]) -> Option<(&'a str, f64)> {
+    let refs: Vec<&'a String> = candidates.iter().collect();
+    match_weapon_in_slice(cleaned, &refs)
 }
 
-fn run_ocr_on_cropped(
-    img: &xcap::image::RgbaImage,
-    ocr_engine: &OcrEngine,
-    scale: f64,
-    threshold: u8,
-) -> Result<String, Box<dyn std::error::Error + Send + Sync>> {
-    let (new_w, new_h, bgra_bytes) = upscale_and_threshold_image(img, scale, threshold);
+/// Pairwise `[WeaponCodeSuffix + WeaponCategory]` weapon matcher for the locked center-header OCR title.
+/// Rejects category-only reads and excludes Vietnamese alias lookups.
+fn recognize_weapon_from_title<'a>(
+    raw_ocr: &str,
+    candidates: &'a [String],
+) -> (Option<(&'a str, f64)>, String) {
+    let (code_part, cat_opt) = parse_weapon_header(raw_ocr);
+    if code_part.is_empty() {
+        return (None, String::new());
+    }
 
-    let writer = DataWriter::new()?;
-    writer.WriteBytes(&bgra_bytes)?;
-    let buffer = writer.DetachBuffer()?;
+    let normalized_code = resolve_ocr_code_normalization(&code_part)
+        .map(|s| s.to_string())
+        .unwrap_or_else(|| code_part.clone());
+    let all_refs: Vec<&'a String> = candidates.iter().collect();
 
-    let bitmap = SoftwareBitmap::CreateCopyFromBuffer(
-        &buffer,
-        BitmapPixelFormat::Bgra8,
-        new_w as i32,
-        new_h as i32,
-    )?;
+    if let Some(cat) = cat_opt {
+        let cat_pool: Vec<&'a String> = candidates
+            .iter()
+            .filter(|c| cat.contains_weapon(&c.to_uppercase()))
+            .collect();
 
-    let ocr_result = ocr_engine.RecognizeAsync(&bitmap)?.get()?;
-    let text = ocr_result.Text()?.to_string();
-    Ok(text)
+        if let Some((cand, score)) = match_weapon_in_slice(&normalized_code, &cat_pool) {
+            if score >= 0.90 {
+                return (Some((cand, score)), normalized_code);
+            }
+        }
+
+        // Cross-category fallback ONLY for absolute exact/stripped weapon names
+        if let Some((cand, score)) = match_weapon_in_slice(&normalized_code, &all_refs) {
+            if score >= 0.98 {
+                return (Some((cand, score)), normalized_code);
+            }
+        }
+
+        // Category-scoped Suffix Matching when 18+ overlay occludes 1-3 leading characters
+        let code_stripped = ocr_strip_separators(&normalized_code.to_uppercase());
+        if !code_stripped.is_empty() && !cat_pool.is_empty() {
+            let mut suffix_hits: Vec<(&'a String, usize)> = cat_pool
+                .iter()
+                .filter_map(|&cand| {
+                    let cand_stripped = ocr_strip_separators(&cand.to_uppercase());
+                    if cand_stripped.len() > code_stripped.len()
+                        && cand_stripped.ends_with(&code_stripped)
+                    {
+                        Some((cand, cand_stripped.len()))
+                    } else {
+                        None
+                    }
+                })
+                .collect();
+
+            if suffix_hits.is_empty() && code_stripped.len() >= 3 {
+                let code_homo = ocr_normalize_homoglyphs(&code_stripped);
+                suffix_hits = cat_pool
+                    .iter()
+                    .filter_map(|&cand| {
+                        let cand_stripped = ocr_strip_separators(&cand.to_uppercase());
+                        let cand_homo = ocr_normalize_homoglyphs(&cand_stripped);
+                        if cand_stripped.len() > code_stripped.len()
+                            && cand_homo.ends_with(&code_homo)
+                        {
+                            Some((cand, cand_stripped.len()))
+                        } else {
+                            None
+                        }
+                    })
+                    .collect();
+            }
+
+            suffix_hits.sort_by(|a, b| a.1.cmp(&b.1).then_with(|| a.0.cmp(b.0)));
+
+            match suffix_hits.len() {
+                1 => {
+                    let hit = suffix_hits[0].0;
+                    let score = if code_stripped.len() >= 2 {
+                        0.94
+                    } else if cat.is_narrow() {
+                        0.92
+                    } else {
+                        0.82
+                    };
+                    return (Some((hit.as_str(), score)), normalized_code);
+                }
+                2 => {
+                    return (Some((suffix_hits[0].0.as_str(), 0.82)), normalized_code);
+                }
+                len if len >= 3 => {
+                    return (None, normalized_code);
+                }
+                _ => {}
+            }
+        }
+
+        let matched = if !cat_pool.is_empty() {
+            match_weapon_in_slice(&normalized_code, &cat_pool)
+        } else {
+            match_weapon_in_slice(&normalized_code, &all_refs)
+        };
+        (matched, normalized_code)
+    } else {
+        (
+            match_weapon_in_slice(&normalized_code, &all_refs),
+            normalized_code,
+        )
+    }
 }
 
 /// Crops a region of the captured screen using normalized [0.0..1.0] coordinates,
@@ -1787,223 +2213,6 @@ fn crop_screen_region(
         .max(1);
 
     xcap::image::imageops::crop_imm(full_image, crop_x, crop_y, crop_w, crop_h).to_image()
-}
-
-/// Scans the left weapon list column (`x: 7.0%..23.5%`, `y: 13.0%..90.0%`) to locate
-/// the active weapon card highlighted by bright white borders (simultaneously detecting
-/// left/right vertical edges and top/bottom horizontal edges across scrolled positions).
-/// Returns `(title_x, title_y, title_w, title_h)` strictly inside the card borders.
-fn find_selected_card_title_rect(full_image: &xcap::image::RgbaImage) -> Option<(u32, u32, u32, u32)> {
-    let img_w = full_image.width();
-    let img_h = full_image.height();
-    let screen_w = img_w as f64;
-    let screen_h = img_h as f64;
-
-    let col_x = ((screen_w * 0.070).round() as u32).min(img_w);
-    let col_x2 = ((screen_w * 0.235).round() as u32).min(img_w);
-    let col_w = col_x2.saturating_sub(col_x);
-    let col_y = ((screen_h * 0.130).round() as u32).min(img_h);
-    let col_y2 = ((screen_h * 0.900).round() as u32).min(img_h);
-    let col_h = col_y2.saturating_sub(col_y);
-
-    if col_w < 50 || col_h < 100 {
-        return None;
-    }
-
-    let cw = col_w as usize;
-    let ch = col_h as usize;
-
-    // Precompute bright achromatic white border mask row counts and column prefix sums
-    let mut row_white = vec![0u32; ch];
-    let stride = ch + 1;
-    let mut col_prefix = vec![0u32; cw * stride];
-
-    for rx in 0..cw {
-        let px = col_x + rx as u32;
-        let col_offset = rx * stride;
-        let mut acc = 0u32;
-        for ry in 0..ch {
-            let py = col_y + ry as u32;
-            let p = full_image.get_pixel(px, py);
-            let is_white = if p[0] >= 185 && p[1] >= 185 && p[2] >= 185 { 1u32 } else { 0u32 };
-            row_white[ry] += is_white;
-            acc += is_white;
-            col_prefix[col_offset + ry + 1] = acc;
-        }
-    }
-
-    let h_min = ((screen_h * 0.095).round() as usize).max(50).min(ch);
-    let h_max = ((screen_h * 0.138).round() as usize).min(ch).max(h_min);
-    let left_limit = (cw * 22 / 100).max(12).min(cw / 2);
-    let right_start = cw.saturating_sub((cw * 22 / 100).max(12)).max(cw / 2);
-
-    let mut best_y: usize = 0;
-    let mut best_left_rx: usize = 0;
-    let mut best_right_rx: usize = cw.saturating_sub(1);
-    let mut max_score: f64 = 0.0;
-
-    let max_ry = ch.saturating_sub(h_min);
-    for ry in (0..=max_ry).step_by(2) {
-        let top_end = (ry + 2).min(ch - 1);
-        let mut best_top_ry = ry;
-        let mut top_max = 0u32;
-        for r in ry..=top_end {
-            if row_white[r] > top_max {
-                top_max = row_white[r];
-                best_top_ry = r;
-            }
-        }
-        let top_ratio = top_max as f64 / cw as f64;
-        if top_ratio < 0.08 {
-            continue;
-        }
-
-        let mut h = h_min;
-        while h <= h_max {
-            let bot_y = (best_top_ry + h).min(ch - 1);
-            let span_u = bot_y.saturating_sub(best_top_ry);
-            if span_u < (h_min * 3) / 4 {
-                break;
-            }
-            let bot_start = bot_y.saturating_sub(2);
-            let mut bot_max = 0u32;
-            for r in bot_start..=bot_y {
-                if row_white[r] > bot_max {
-                    bot_max = row_white[r];
-                }
-            }
-            let bottom_ratio = bot_max as f64 / cw as f64;
-            let span = span_u as f64;
-
-            // Left vertical border column
-            let mut left_max = 0u32;
-            let mut cand_left_rx = 0usize;
-            for rx in 0..left_limit {
-                let off = rx * stride;
-                let cnt = col_prefix[off + bot_y] - col_prefix[off + best_top_ry];
-                if cnt > left_max {
-                    left_max = cnt;
-                    cand_left_rx = rx;
-                }
-            }
-            let left_ratio = left_max as f64 / span;
-
-            // Right vertical border column
-            let mut right_max = 0u32;
-            let mut cand_right_rx = cw - 1;
-            for rx in right_start..cw {
-                let off = rx * stride;
-                let cnt = col_prefix[off + bot_y] - col_prefix[off + best_top_ry];
-                if cnt > right_max {
-                    right_max = cnt;
-                    cand_right_rx = rx;
-                }
-            }
-            let right_ratio = right_max as f64 / span;
-
-            // Reward simultaneous 4-edge frame match (guards against single shared border with adjacent card)
-            let top_lr_min = top_ratio.min(left_ratio).min(right_ratio);
-            let bot_lr_min = bottom_ratio.min(left_ratio).min(right_ratio);
-            let score = top_ratio
-                + bottom_ratio
-                + left_ratio
-                + right_ratio
-                + 1.5 * top_lr_min
-                + 1.0 * bot_lr_min;
-
-            if score > max_score {
-                max_score = score;
-                best_y = best_top_ry;
-                best_left_rx = cand_left_rx;
-                best_right_rx = cand_right_rx;
-            }
-
-            if h == h_max || best_top_ry + h >= ch - 1 {
-                break;
-            }
-            h = (h + 3).min(h_max);
-        }
-    }
-
-    if max_score < 1.20 {
-        return None;
-    }
-
-    let abs_y = col_y + best_y as u32;
-    let card_left = col_x + best_left_rx as u32;
-    let card_right = col_x + best_right_rx as u32;
-    let detected_w = card_right.saturating_sub(card_left);
-    let pad_x = ((detected_w as f64 * 0.018).round().max(3.0)) as u32;
-
-    let (title_x, title_w) = if detected_w > col_w / 2 && detected_w > pad_x * 2 + 10 {
-        (card_left + pad_x, detected_w - pad_x * 2)
-    } else {
-        (
-            col_x + (col_w as f64 * 0.04).round() as u32,
-            (col_w as f64 * 0.92).round() as u32,
-        )
-    };
-
-    let title_y = abs_y + ((screen_h * 0.006).round().max(3.0)) as u32;
-    let title_h = (screen_h * 0.042).round() as u32;
-
-    let title_x = title_x.min(img_w.saturating_sub(1));
-    let title_y = title_y.min(img_h.saturating_sub(1));
-    let title_w = title_w.min(img_w - title_x).max(1);
-    let title_h = title_h.min(img_h - title_y).max(1);
-
-    Some((title_x, title_y, title_w, title_h))
-}
-
-/// Step 1 (Primary): Scans the bright white-bordered weapon card in the left list column,
-/// upscales 2.5x with white-text isolation, strips skin suffixes, and runs match_weapon.
-fn scan_left_column_card<'a>(
-    full_image: &xcap::image::RgbaImage,
-    ocr_engine: &OcrEngine,
-    candidates: &'a [String],
-) -> Option<(Option<(&'a str, f64)>, String, String)> {
-    let (title_x, title_y, title_w, title_h) = find_selected_card_title_rect(full_image)?;
-    let title_cropped =
-        xcap::image::imageops::crop_imm(full_image, title_x, title_y, title_w, title_h).to_image();
-
-    if let Ok(raw) = run_ocr_on_cropped(&title_cropped, ocr_engine, 2.5, 140) {
-        let cleaned = clean_ocr_text(&raw);
-        let matched = match_weapon(&cleaned, candidates);
-        return Some((matched, raw, cleaned));
-    }
-
-    None
-}
-
-/// Step 2 (Fallback 1): Scans the weapon description box at bottom-center (`x: 24.5%..39.5%`,
-/// `y: 76.0%..86.5%`), upscales 2.0x, extracts leading weapon words, and runs match_weapon.
-fn scan_description_roi<'a>(
-    full_image: &xcap::image::RgbaImage,
-    ocr_engine: &OcrEngine,
-    candidates: &'a [String],
-) -> Option<(Option<(&'a str, f64)>, String, String)> {
-    let desc_cropped = crop_screen_region(full_image, 0.245, 0.760, 0.150, 0.105);
-    if let Ok(raw) = run_ocr_on_cropped(&desc_cropped, ocr_engine, 2.0, 120) {
-        let cleaned = extract_description_weapon_text(&raw);
-        let matched = match_weapon(&cleaned, candidates);
-        return Some((matched, raw, cleaned));
-    }
-
-    None
-}
-
-/// Step 3 (Final Fallback): Scans the center column weapon header ROI shifted right (`x: 26.8%`)
-/// to avoid the 18+ warning box completely.
-fn scan_center_header_fallback<'a>(
-    full_image: &xcap::image::RgbaImage,
-    ocr_engine: &OcrEngine,
-    candidates: &'a [String],
-) -> Result<(Option<(&'a str, f64)>, String, String), Box<dyn std::error::Error + Send + Sync>> {
-    let center_cropped = crop_screen_region(full_image, 0.268, 0.140, 0.180, 0.060);
-    let raw = run_ocr_on_cropped(&center_cropped, ocr_engine, 2.5, 140)?;
-    let cleaned = clean_ocr_text(&raw);
-    let matched = match_weapon(&cleaned, candidates);
-    Ok((matched, raw, cleaned))
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -2261,66 +2470,19 @@ fn copy_codes_sequence_to_clipboard(
 }
 
 fn capture_and_recognize_weapon<'a>(
-    ocr_engine: &OcrEngine,
+    ocr_engine: &mut PaddleOcrEngine,
     candidates: &'a [String],
     selected_monitor_id: Option<&str>,
 ) -> Result<(Option<(&'a str, f64)>, String, String), Box<dyn std::error::Error + Send + Sync>> {
     let target_monitor = select_target_monitor(selected_monitor_id)?;
     let full_image = target_monitor.capture_image()?;
 
-    let mut best_match: Option<(&'a str, f64, String, String)> = None;
-    let mut diag_raw = String::new();
-    let mut diag_cleaned = String::new();
-
-    // Step 1 (Primary): Left column white-bordered selected card (100% immune to 18+ overlay)
-    if let Some((matched_opt, raw, cleaned)) = scan_left_column_card(&full_image, ocr_engine, candidates) {
-        if !raw.trim().is_empty() {
-            diag_raw = raw.clone();
-            diag_cleaned = cleaned.clone();
-        }
-        if let Some((matched, score)) = matched_opt {
-            if score >= 0.90 {
-                return Ok((Some((matched, score)), raw, cleaned));
-            }
-            best_match = Some((matched, score, raw, cleaned));
-        }
-    }
-
-    // Step 2 (Fallback 1): Weapon description paragraph below attachments (x: 24.5%..39.5%, y: 76.0%..86.5%)
-    if let Some((matched_opt, raw, cleaned)) = scan_description_roi(&full_image, ocr_engine, candidates) {
-        if diag_raw.is_empty() && !raw.trim().is_empty() {
-            diag_raw = raw.clone();
-            diag_cleaned = cleaned.clone();
-        }
-        if let Some((matched, score)) = matched_opt {
-            if score >= 0.90 {
-                return Ok((Some((matched, score)), raw, cleaned));
-            }
-            let should_replace = best_match.as_ref().map_or(true, |&(_, best_s, _, _)| score > best_s);
-            if should_replace {
-                best_match = Some((matched, score, raw, cleaned));
-            }
-        }
-    }
-
-    // Step 3 (Final Fallback): Only run if neither Step 1 nor Step 2 matched, shifting x to 26.8%
-    if best_match.is_none() {
-        let (matched_opt, raw, cleaned) =
-            scan_center_header_fallback(&full_image, ocr_engine, candidates)?;
-        if let Some((matched, score)) = matched_opt {
-            return Ok((Some((matched, score)), raw, cleaned));
-        }
-        if !raw.trim().is_empty() {
-            diag_raw = raw;
-            diag_cleaned = cleaned;
-        }
-    }
-
-    if let Some((matched, score, raw, cleaned)) = best_match {
-        Ok((Some((matched, score)), raw, cleaned))
-    } else {
-        Ok((None, diag_raw, diag_cleaned))
-    }
+    // Locked single center-header ROI right past the 18+ badge edge (x: 24.8% -> 45.0%, y: 14.5% -> 20.0%)
+    // Isolates large white `<WeaponCode> <Category>` header while excluding skin names in the left list.
+    let center_cropped = crop_screen_region(&full_image, 0.248, 0.145, 0.202, 0.055);
+    let (raw_ocr, _ctc_conf) = ocr_engine.recognize(&center_cropped)?;
+    let (matched_opt, cleaned) = recognize_weapon_from_title(&raw_ocr, candidates);
+    Ok((matched_opt, raw_ocr, cleaned))
 }
 
 fn sort_builds_prioritized(builds: &[&BuildItem], favorite_codes: &HashSet<String>) -> Vec<BuildItem> {
@@ -2413,19 +2575,10 @@ fn start_hotkey_worker(
     shared_favorites: Arc<RwLock<Vec<BuildItem>>>,
 ) {
     thread::spawn(move || {
-        let _ = unsafe { RoInitialize(RO_INIT_MULTITHREADED) };
-
-        let language_tag = HSTRING::from("en-US");
-        let ocr_engine = if let Ok(lang) = WinLanguage::CreateLanguage(&language_tag) {
-            OcrEngine::TryCreateFromLanguage(&lang).ok()
-        } else {
-            None
-        }.or_else(|| OcrEngine::TryCreateFromUserProfileLanguages().ok());
-
-        let ocr_engine = match ocr_engine {
-            Some(e) => e,
-            None => {
-                let _ = tx.send(WorkerEvent::OcrUnavailable);
+        let mut ocr_engine = match PaddleOcrEngine::new() {
+            Ok(e) => e,
+            Err(err) => {
+                let _ = tx.send(WorkerEvent::OcrUnavailable(err));
                 ctx.request_repaint();
                 return;
             }
@@ -2463,7 +2616,7 @@ fn start_hotkey_worker(
                         (f.server, f.mode, f.source, f.selected_monitor_id.clone())
                     };
 
-                    match capture_and_recognize_weapon(&ocr_engine, &candidates, cur_monitor_id.as_deref()) {
+                    match capture_and_recognize_weapon(&mut ocr_engine, &candidates, cur_monitor_id.as_deref()) {
                         Ok((Some((matched_weapon, score)), raw_ocr, cleaned)) => {
                             let conf_tier = classify_confidence(score);
                             if conf_tier == ConfidenceTier::Rejected {
@@ -2791,7 +2944,8 @@ impl LoadoutTerminalApp {
             _ => AppLang::Vi,
         };
 
-        let ocr_available = check_ocr_available();
+        let ocr_init_res = check_ocr_available();
+        let ocr_available = ocr_init_res.is_ok();
         let available_monitors = enumerate_monitors(lang);
         let selected_monitor_id = config.selected_monitor_id.clone();
 
@@ -2851,10 +3005,16 @@ impl LoadoutTerminalApp {
 
         let default_weapon = determine_startup_weapon(&unique_weapons, &builds, selected_server, selected_mode);
 
-        let (initial_status, is_err) = if !ocr_available {
+        let (initial_status, is_err) = if let Err(ref ocr_err) = ocr_init_res {
             let msg = match lang {
-                AppLang::Vi => format!("CẢNH BÁO: Windows thiếu gói OCR English (US)! Phím {} bị tắt. Vui lòng cài đặt 'English (United States)' trong Windows Settings > Time & Language. Bạn vẫn có thể tra cứu thủ công bên dưới.", hotkey_name),
-                AppLang::En => format!("WARNING: Windows OCR language package missing! {} is disabled. Please install 'English (United States)' in Windows Settings > Time & Language. Manual lookup is still available.", hotkey_name),
+                AppLang::Vi => format!(
+                    "CẢNH BÁO: Chưa nạp được lõi PaddleOCR v4 ({})! Phím {} bị tắt. Hãy đảm bảo tệp onnxruntime.dll nằm cạnh .exe. Bạn vẫn có thể tra cứu thủ công.",
+                    ocr_err, hotkey_name
+                ),
+                AppLang::En => format!(
+                    "WARNING: Failed to initialize PaddleOCR v4 ({})! {} is disabled. Ensure onnxruntime.dll sits next to the .exe. Manual lookup is still available.",
+                    ocr_err, hotkey_name
+                ),
             };
             (msg, true)
         } else if was_corrupted {
@@ -3481,11 +3641,17 @@ impl eframe::App for LoadoutTerminalApp {
                     }
                     self.status_message = Some((msg, Instant::now(), is_error));
                 }
-                WorkerEvent::OcrUnavailable => {
+                WorkerEvent::OcrUnavailable(err) => {
                     self.ocr_available = false;
                     let msg = match self.lang {
-                        AppLang::Vi => format!("CẢNH BÁO: Windows thiếu gói OCR English (US)! Phím {} bị tắt. Vui lòng cài đặt 'English (United States)' trong Windows Settings > Time & Language. Bạn vẫn có thể tra cứu thủ công bên dưới.", self.hotkey_name),
-                        AppLang::En => format!("WARNING: Windows OCR language package missing! {} is disabled. Please install 'English (United States)' in Windows Settings > Time & Language. Manual lookup is still available.", self.hotkey_name),
+                        AppLang::Vi => format!(
+                            "CẢNH BÁO: Lỗi khởi tạo PaddleOCR v4 ({})! Phím {} bị tắt. Hãy đặt tệp onnxruntime.dll cạnh tệp .exe. Bạn vẫn có thể tra cứu thủ công.",
+                            err, self.hotkey_name
+                        ),
+                        AppLang::En => format!(
+                            "WARNING: Failed to initialize PaddleOCR v4 ({})! {} is disabled. Place onnxruntime.dll beside the .exe. Manual lookup is still available.",
+                            err, self.hotkey_name
+                        ),
                     };
                     self.status_message = Some((msg, Instant::now(), true));
                 }
@@ -3712,8 +3878,8 @@ impl eframe::App for LoadoutTerminalApp {
                             );
                             if !self.ocr_available {
                                 lbl.on_hover_text(match self.lang {
-                                    AppLang::Vi => format!("Windows thiếu gói OCR en-US. Phím {} bị tắt. Vui lòng cài gói ngôn ngữ English (United States) trong Windows Settings.", self.hotkey_name),
-                                    AppLang::En => format!("Windows OCR package (en-US) missing. {} is disabled. Please install English (United States) in Windows Settings.", self.hotkey_name),
+                                    AppLang::Vi => format!("Không nạp được lõi PaddleOCR v4 (thiếu onnxruntime.dll cạnh .exe). Phím {} bị tắt.", self.hotkey_name),
+                                    AppLang::En => format!("PaddleOCR v4 engine failed to initialize (missing onnxruntime.dll beside .exe). {} is disabled.", self.hotkey_name),
                                 });
                             }
                         });
@@ -5484,7 +5650,7 @@ impl eframe::App for LoadoutTerminalApp {
 
                             ui.add_space(6.0);
                             ui.label(RichText::new("2. Hai cách sử dụng:").color(COLOR_AMBER).size(12.0).strong());
-                            ui.label(RichText::new(format!("• Quét tự động ({}): Vào xem bảng chỉ số súng trong game và nhấn {}. App sẽ đọc tên súng qua OCR và đẩy các cấu hình (Hot nhất ở đầu) vào Win + V.", self.hotkey_name, self.hotkey_name)).color(COLOR_TEXT_MAIN).size(11.0));
+                            ui.label(RichText::new(format!("• Quét tự động ({}): Vào xem bảng chỉ số súng trong game và nhấn {}. Lõi AI PaddleOCR v4 chạy offline (ONNX Runtime CPU) sẽ đọc tiêu đề súng và đẩy cấu hình vào Win + V.", self.hotkey_name, self.hotkey_name)).color(COLOR_TEXT_MAIN).size(11.0));
                             ui.label(RichText::new("• Tra cứu thủ công: Chọn Server, Chế độ và Loại súng trên thanh Bộ Lọc để xem và sao chép bất kỳ súng nào.").color(COLOR_TEXT_MAIN).size(11.0));
 
                             ui.add_space(6.0);
@@ -5510,7 +5676,7 @@ impl eframe::App for LoadoutTerminalApp {
 
                             ui.add_space(6.0);
                             ui.label(RichText::new("2. Two Operating Modes:").color(COLOR_AMBER).size(12.0).strong());
-                            ui.label(RichText::new(format!("• Auto Scan ({}): Inspect weapon stats in-game and press {}. Native OCR reads weapon and feeds builds (Top copies first) into Win + V.", self.hotkey_name, self.hotkey_name)).color(COLOR_TEXT_MAIN).size(11.0));
+                            ui.label(RichText::new(format!("• Auto Scan ({}): Inspect weapon stats in-game and press {}. Offline PaddleOCR v4 (ONNX Runtime CPU) reads weapon title and feeds builds (Top copies first) into Win + V.", self.hotkey_name, self.hotkey_name)).color(COLOR_TEXT_MAIN).size(11.0));
                             ui.label(RichText::new("• Manual Lookup: Select Server, Mode, and Weapon Type on the Filter Bar to browse and copy any build.").color(COLOR_TEXT_MAIN).size(11.0));
 
                             ui.add_space(6.0);
@@ -5709,8 +5875,8 @@ impl eframe::App for LoadoutTerminalApp {
                             ui.add(
                                 egui::Label::new(
                                     RichText::new(self.lang.t(
-                                        "Phần mềm được phát hành mã nguồn mở hoàn toàn (MIT License) và miễn phí 100% cho cộng đồng — mọi khoản ủng hộ (trà tắc/cà phê) từ người dùng đều hoàn toàn tự nguyện và không khóa bất kỳ tính năng nào. Hoạt động hoàn toàn độc lập với Team Jade / TiMi Studio Group / Garena và các trang web nguồn. Tiện ích hoạt động thuần túy qua Windows Native OCR API và Clipboard hệ thống, không chứa mã nguồn hay tài sản game.",
-                                        "The software is 100% free and Open Source (MIT License) for the community — any support/donations (tea/coffee) from users are entirely voluntary and do not lock any features. Completely independent from Team Jade / TiMi Studio Group / Garena and source websites. Operates strictly via native Windows OCR APIs and Clipboard, containing no game code or proprietary assets."
+                                        "Phần mềm được phát hành mã nguồn mở hoàn toàn (MIT License) và miễn phí 100% cho cộng đồng — mọi khoản ủng hộ (trà tắc/cà phê) từ người dùng đều hoàn toàn tự nguyện và không khóa bất kỳ tính năng nào. Hoạt động hoàn toàn độc lập với Team Jade / TiMi Studio Group / Garena và các trang web nguồn. Tiện ích hoạt động thuần túy bằng chụp màn hình, nhận diện chữ offline qua PaddleOCR v4 (ONNX Runtime CPU) và Clipboard hệ thống, không chứa mã nguồn hay tài sản game.",
+                                        "The software is 100% free and Open Source (MIT License) for the community — any support/donations (tea/coffee) from users are entirely voluntary and do not lock any features. Completely independent from Team Jade / TiMi Studio Group / Garena and source websites. Operates strictly via screen capture, offline PaddleOCR v4 (ONNX Runtime CPU) recognition, and system Clipboard, containing no game code or proprietary assets."
                                     ))
                                     .color(COLOR_TEXT_MUTED)
                                     .size(11.0),
@@ -6269,13 +6435,12 @@ mod tests {
             ("PKM General Machine Gun", "PKM"),
             ("M14 Marksman Rifle", "M14"),
             ("R93 Sniper Rifle", "R93"),
-            ("Shotgun Hai Nòng", "725 DOUBLE-BARREL"),
-            ("Cung phức hợp", "COMPOUND BOW"),
+            ("725 Double-Barrel Shotgun", "725 DOUBLE-BARREL"),
+            ("Compound Bow", "COMPOUND BOW"),
         ];
 
         for (raw_ocr, expected) in test_cases {
-            let cleaned = clean_ocr_text(raw_ocr);
-            let matched = match_weapon(&cleaned, &candidates);
+            let (matched, cleaned) = recognize_weapon_from_title(raw_ocr, &candidates);
             assert!(
                 matched.is_some(),
                 "Failed to match '{}' (cleaned: '{}')",
@@ -6296,49 +6461,66 @@ mod tests {
         let candidates = get_test_candidates();
 
         // M249 must NOT be identified as MINI-14
-        let cleaned_m249 = clean_ocr_text("M249 Light Machine Gun");
-        let matched_m249 = match_weapon(&cleaned_m249, &candidates).unwrap();
+        let (matched_m249, _) = recognize_weapon_from_title("M249 Light Machine Gun", &candidates);
+        let matched_m249 = matched_m249.unwrap();
         assert_eq!(matched_m249.0, "M249");
         assert_ne!(matched_m249.0, "MINI-14");
 
         // M14 must NOT be identified as M16A4
-        let cleaned_m14 = clean_ocr_text("M14 Marksman Rifle");
-        let matched_m14 = match_weapon(&cleaned_m14, &candidates).unwrap();
+        let (matched_m14, _) = recognize_weapon_from_title("M14 Marksman Rifle", &candidates);
+        let matched_m14 = matched_m14.unwrap();
         assert_eq!(matched_m14.0, "M14");
         assert_ne!(matched_m14.0, "M16A4");
     }
 
     #[test]
-    fn test_vietnamese_weapon_names() {
+    fn test_ocr_rejects_vietnamese_aliases_and_category_only() {
         let candidates = get_test_candidates();
 
-        let vi_cases = [
-            ("G3 Súng trường chiến đấu", "G3"),
-            ("M249 Súng máy hạng nhẹ", "M249"),
-            ("PKM Súng máy đa năng", "PKM"),
-            ("PKM Súng máy đa dụng", "PKM"),
-            ("M14 Súng trường thiện xạ", "M14"),
-            ("R93 Súng bắn tỉa", "R93"),
-            ("Hai Nòng", "725 DOUBLE-BARREL"),
-            ("Súng săn Hai Nòng", "725 DOUBLE-BARREL"),
-            ("Cung", "COMPOUND BOW"),
-            ("Nỏ phức hợp", "COMPOUND BOW"),
-        ];
-
-        for (raw_ocr, expected) in vi_cases {
-            let cleaned = clean_ocr_text(raw_ocr);
-            let matched = match_weapon(&cleaned, &candidates);
+        // 1. Vietnamese nicknames (`cung`, `hai nong`, etc.) MUST be disabled in OCR flow
+        for vi_nick in [
+            "cung",
+            "Cung",
+            "Cung phức hợp",
+            "Nỏ phức hợp",
+            "hai nong",
+            "Hai Nòng",
+            "Shotgun Hai Nòng",
+            "Súng săn Hai Nòng",
+        ] {
+            let (matched, _) = recognize_weapon_from_title(vi_nick, &candidates);
             assert!(
-                matched.is_some(),
-                "Failed to match Vietnamese OCR '{}' (cleaned: '{}')",
-                raw_ocr,
-                cleaned
+                matched.is_none(),
+                "OCR must ignore Vietnamese aliases, but '{}' matched {:?}",
+                vi_nick,
+                matched
             );
-            let (weapon, _) = matched.unwrap();
-            assert_eq!(
-                weapon, expected,
-                "For Vietnamese OCR '{}', expected '{}' but got '{}'",
-                raw_ocr, expected, weapon
+        }
+
+        // 2. Category-only OCR text with no weapon code characters MUST be rejected
+        for cat_only in [
+            "Assault Rifle",
+            "Battle Rifle",
+            "Compact Assault Rifle",
+            "Submachine Gun",
+            "Marksman Rifle",
+            "Sniper Rifle",
+            "Light Machine Gun",
+            "General Machine Gun",
+            "Shotgun",
+            "Pistol",
+            "Revolver",
+            "... Assault Rifle",
+            "18+ Battle Rifle",
+            ".. Submachine Gun",
+        ] {
+            let (matched, cleaned) = recognize_weapon_from_title(cat_only, &candidates);
+            assert!(
+                matched.is_none(),
+                "Category-only text '{}' (cleaned: '{}') must be rejected, got {:?}",
+                cat_only,
+                cleaned,
+                matched
             );
         }
     }
@@ -6357,8 +6539,7 @@ mod tests {
         ];
 
         for (raw_ocr, expected) in cases {
-            let cleaned = clean_ocr_text(raw_ocr);
-            let matched = match_weapon(&cleaned, &candidates);
+            let (matched, cleaned) = recognize_weapon_from_title(raw_ocr, &candidates);
             assert!(
                 matched.is_some(),
                 "Failed to match '{}' (cleaned: '{}')",
@@ -6383,7 +6564,6 @@ mod tests {
             ("G3 Battle Rifle", "G3"),
             ("Chơi quá 180 phút G3 Battle Rifle", "G3"),
             ("qua G3 Battle Rifle", "G3"),
-            ("G3 Cổ điển", "G3"),
             // 2. P90
             ("P90 Submachine Gun", "P90"),
             ("18+ Chơi quá 180 phút một ngày P90", "P90"),
@@ -6402,19 +6582,16 @@ mod tests {
             ("882 Sniper Rifle", "M82"),
             ("B82 Sniper Rifle", "M82"),
             ("M82A1 Sniper Rifle", "M82"),
-            ("M82 Hạng nặng", "M82"),
             // 6. M7
             ("M7 Battle Rifle - Đỏ", "M7"),
             ("M7 Battle Rifle", "M7"),
             ("180 phút M7 Battle Rifle", "M7"),
-            ("M7 Súng trường gọn nhẹ", "M7"),
             // 7. MK4
             ("MK4 SMG", "MK4"),
-            ("MK4 Chiến thuật", "MK4"),
+            ("MK4 Submachine Gun", "MK4"),
             ("MK4", "MK4"),
             // 8. R93
             ("R93 Sniper Rifle", "R93"),
-            ("R93 Súng bắn tỉa", "R93"),
             ("R93", "R93"),
             // 9. QBZ95-1
             ("TEZG5-1 Assault Rifle", "QBZ95-1"),
@@ -6440,17 +6617,13 @@ mod tests {
             ("VECTOR SMG", "VECTOR"),
             ("VECTOR", "VECTOR"),
             // 14. 725 DOUBLE-BARREL
-            ("Shotgun Hai Nòng", "725 DOUBLE-BARREL"),
-            ("Hai Nòng", "725 DOUBLE-BARREL"),
-            ("Súng săn Hai Nòng", "725 DOUBLE-BARREL"),
             ("725 Double-Barrel - Sa Mạc", "725 DOUBLE-BARREL"),
             ("Double-Barrel", "725 DOUBLE-BARREL"),
             ("725", "725 DOUBLE-BARREL"),
         ];
 
         for (raw_ocr, expected) in cases {
-            let cleaned = clean_ocr_text(raw_ocr);
-            let matched = match_weapon(&cleaned, &candidates);
+            let (matched, cleaned) = recognize_weapon_from_title(raw_ocr, &candidates);
             assert!(
                 matched.is_some(),
                 "Failed to match '{}' (cleaned: '{}')",
@@ -6836,142 +7009,334 @@ mod tests {
     }
 
     #[test]
-    fn test_description_weapon_extraction_vi_en() {
+    fn test_occluded_suffix_plus_category_matching() {
         let candidates = get_test_candidates();
 
-        let desc_cases = [
-            // Prompt core examples
-            ("M7 là súng trường chiến đấu thế hệ mới sử dụng cỡ đạn...", "M7"),
-            ("The AR-57 uses 5.7x28mm rounds with high muzzle velocity...", "AR-57"),
-            ("Súng Shotgun Hai Nòng có uy lực cận chiến vượt trội...", "725 DOUBLE-BARREL"),
-            ("SR-3M là Assault Rifle cơ động cao...", "SR-3M"),
-            // Additional Vietnamese/English variants & leading stop words
-            ("Khẩu M14 là súng trường thiện xạ bán tự động...", "M14"),
-            ("Một khẩu PSG-1 trang bị kính ngắm tầm xa...", "PSG-1"),
-            ("Khẩu súng trường chiến đấu G3 sử dụng đạn 7.62x51mm...", "G3"),
-            ("Súng săn Hai Nòng sử dụng đạn ghém 12 gauge...", "725 DOUBLE-BARREL"),
-            ("Cung phức hợp có thể bắn tên nổ tầm xa...", "COMPOUND BOW"),
-            ("The 725 Double-Barrel is a break-action shotgun...", "725 DOUBLE-BARREL"),
-            ("The .357 Revolver fires heavy magnum rounds...", ".357"),
-            ("The Battle Rifle SCAR-H delivers high stopping power...", "SCAR-H"),
-            ("Desert Eagle là súng lục hạng nặng...", "DESERT EAGLE"),
-            ("MCX LT là súng trường tấn công sử dụng đạn .300 Blackout...", "MCX LT"),
-            ("Marlin Lever-Action là súng trường đòn bẩy cổ điển...", "MARLIN LEVER-ACTION"),
-            ("Súng Shotgun Hai Nòng.", "725 DOUBLE-BARREL"),
+        // 1. Leading characters occluded by 18+ badge: exact `[Suffix + Category]` resolution
+        let occluded_cases = [
+            ("...7 Battle Rifle", "M7"),
+            ("7 Battle Rifle", "M7"),
+            (".7 Battle Rifle", "M7"),
+            ("...K4 Submachine Gun", "MK4"),
+            ("K4 Submachine Gun", "MK4"),
+            ("...93 Sniper Rifle", "R93"),
+            ("93 Sniper Rifle", "R93"),
+            ("...ector Submachine Gun", "VECTOR"),
+            ("ector Submachine Gun", "VECTOR"),
+            ("...R-3M Assault Rifle", "SR-3M"),
+            ("...R-3M Compact Assault Rifle", "SR-3M"),
+            ("R-3M Assault Rifle", "SR-3M"),
+            ("...BZ95-1 Assault Rifle", "QBZ95-1"),
+            ("...Z95-1 Assault Rifle", "QBZ95-1"),
+            ("95-1 Assault Rifle", "QBZ95-1"),
         ];
 
-        for (raw_desc, expected) in desc_cases {
-            let cleaned = extract_description_weapon_text(raw_desc);
-            let matched = match_weapon(&cleaned, &candidates);
+        for (raw_ocr, expected) in occluded_cases {
+            let (matched, cleaned) = recognize_weapon_from_title(raw_ocr, &candidates);
             assert!(
                 matched.is_some(),
-                "Failed to recognize weapon from description '{}' (cleaned: '{}')",
-                raw_desc,
+                "Failed suffix+category match for '{}' (cleaned: '{}')",
+                raw_ocr,
                 cleaned
             );
             let (weapon, score) = matched.unwrap();
             assert_eq!(
                 weapon, expected,
-                "Description '{}' (cleaned: '{}'): expected '{}' but got '{}'",
-                raw_desc, cleaned, expected, weapon
+                "Occluded '{}' (cleaned: '{}'): expected '{}' got '{}'",
+                raw_ocr, cleaned, expected, weapon
             );
             assert!(
                 score >= 0.90,
-                "Description '{}' matched '{}' with low confidence {:.2}",
-                raw_desc, weapon, score
+                "Unique occluded suffix+category '{}' -> '{}' should have high confidence (>= 0.90), got {:.2}",
+                raw_ocr,
+                weapon,
+                score
             );
+            assert_eq!(classify_confidence(score), ConfidenceTier::High);
         }
 
-        // Common prose words like "Cùng", "Nó", "No" must NOT false-trigger COMPOUND BOW
-        for prose in [
-            "Cùng với độ giật thấp giúp kiểm soát ổn định",
-            "Nó sử dụng loại đạn đặc biệt tầm xa",
-            "No recoil when firing short controlled bursts",
+        // 2. Ambiguous 2-match suffix (`...14 Marksman Rifle` matches M14 & MINI-14) stays in Suspicious confirm zone
+        let (amb_matched, _) = recognize_weapon_from_title("...14 Marksman Rifle", &candidates);
+        let amb = amb_matched.expect("ambiguous suffix should surface top candidate for confirm");
+        assert!(amb.0 == "M14" || amb.0 == "MINI-14");
+        assert_eq!(classify_confidence(amb.1), ConfidenceTier::Suspicious);
+
+        // 3. Broad ambiguous 1-char suffix in large pool (`...2 Assault Rifle` matches AK-12, PTR-32, SG552, ASH-12) must be rejected
+        let (too_broad, _) = recognize_weapon_from_title("...2 Assault Rifle", &candidates);
+        assert!(
+            too_broad.is_none(),
+            "3+ way ambiguous suffix should be rejected, got {:?}",
+            too_broad
+        );
+
+        // 4. Category-only text with no weapon code must always return None
+        for cat_only in [
+            "Assault Rifle",
+            "Battle Rifle",
+            "Submachine Gun",
+            "Marksman Rifle",
+            "Sniper Rifle",
+            "Light Machine Gun",
+            "Shotgun",
+            "Pistol",
+            "... Battle Rifle",
+            "--- Submachine Gun",
         ] {
-            let cleaned = extract_description_weapon_text(prose);
-            if let Some((w, _)) = match_weapon(&cleaned, &candidates) {
-                assert_ne!(w, "COMPOUND BOW", "Prose '{}' falsely matched COMPOUND BOW (cleaned: '{}')", prose, cleaned);
-            }
+            let (m, _) = recognize_weapon_from_title(cat_only, &candidates);
+            assert!(
+                m.is_none(),
+                "Category-only string '{}' must be rejected, got {:?}",
+                cat_only,
+                m
+            );
         }
     }
 
     #[test]
-    fn test_left_card_skin_stripping_and_border_detection() {
+    fn test_center_roi_and_yellow_18plus_preprocessing() {
+        // Construct synthetic image with bright orange/yellow 18+ block on the left + bright white bar on the right
+        let mut img = xcap::image::RgbaImage::from_pixel(240, 48, xcap::image::Rgba([18, 22, 28, 255]));
+        // Yellow/orange 18+ area at x = 0..45
+        for y in 4..44 {
+            for x in 4..45 {
+                img.put_pixel(x, y, xcap::image::Rgba([255, 190, 20, 255]));
+            }
+        }
+        // Bright white text glyph simulation at x = 70..180
+        for y in 14..32 {
+            for x in 70..180 {
+                img.put_pixel(x, y, xcap::image::Rgba([248, 248, 250, 255]));
+            }
+        }
+
+        let (target_w, nchw) = preprocess_for_paddle_ocr(&img);
+        assert!(target_w >= 320 && target_w % 8 == 0);
+        assert_eq!(nchw.len(), 3 * 48 * target_w);
+        // Dark ink (< 0.0) must exist where white bar was, while yellow left box must remain white background (+1.0)
+        assert!(nchw[..48 * target_w].iter().any(|&v| v < -0.5));
+        assert!(nchw[..48 * target_w].iter().any(|&v| v > 0.8));
+    }
+
+    #[test]
+    fn test_paddle_ocr_onnx_end_to_end() {
+        #[repr(C)]
+        #[allow(non_snake_case)]
+        struct BITMAPINFOHEADER {
+            biSize: u32,
+            biWidth: i32,
+            biHeight: i32,
+            biPlanes: u16,
+            biBitCount: u16,
+            biCompression: u32,
+            biSizeImage: u32,
+            biXPelsPerMeter: i32,
+            biYPelsPerMeter: i32,
+            biClrUsed: u32,
+            biClrImportant: u32,
+        }
+        #[repr(C)]
+        #[allow(non_snake_case)]
+        struct BITMAPINFO {
+            bmiHeader: BITMAPINFOHEADER,
+            bmiColors: [u32; 1],
+        }
+        #[repr(C)]
+        struct RECT {
+            left: i32,
+            top: i32,
+            right: i32,
+            bottom: i32,
+        }
+        #[link(name = "gdi32")]
+        extern "system" {
+            fn CreateCompatibleDC(hdc: *mut std::ffi::c_void) -> *mut std::ffi::c_void;
+            fn DeleteDC(hdc: *mut std::ffi::c_void) -> i32;
+            fn CreateDIBSection(
+                hdc: *mut std::ffi::c_void,
+                pbmi: *const BITMAPINFO,
+                usage: u32,
+                ppv_bits: *mut *mut std::ffi::c_void,
+                h_section: *mut std::ffi::c_void,
+                offset: u32,
+            ) -> *mut std::ffi::c_void;
+            fn SelectObject(hdc: *mut std::ffi::c_void, h: *mut std::ffi::c_void) -> *mut std::ffi::c_void;
+            fn DeleteObject(ho: *mut std::ffi::c_void) -> i32;
+            fn CreateFontW(
+                c_height: i32,
+                c_width: i32,
+                c_escapement: i32,
+                c_orientation: i32,
+                c_weight: i32,
+                b_italic: u32,
+                b_underline: u32,
+                b_strikeout: u32,
+                i_charset: u32,
+                i_out_precision: u32,
+                i_clip_precision: u32,
+                i_quality: u32,
+                i_pitch_and_family: u32,
+                psz_face_name: *const u16,
+            ) -> *mut std::ffi::c_void;
+            fn SetBkMode(hdc: *mut std::ffi::c_void, mode: i32) -> i32;
+            fn SetTextColor(hdc: *mut std::ffi::c_void, color: u32) -> u32;
+        }
+        #[link(name = "user32")]
+        extern "system" {
+            fn DrawTextW(
+                hdc: *mut std::ffi::c_void,
+                lpch_text: *const u16,
+                cch_text: i32,
+                lprc: *mut RECT,
+                format: u32,
+            ) -> i32;
+        }
+
+        let render_hud_title = |title: &str, draw_yellow_18_box: bool| -> xcap::image::RgbaImage {
+            let w: i32 = 520;
+            let h: i32 = 64;
+            let mut img = xcap::image::RgbaImage::from_pixel(w as u32, h as u32, xcap::image::Rgba([20, 26, 34, 255]));
+            unsafe {
+                let hdc = CreateCompatibleDC(std::ptr::null_mut());
+                let bmi = BITMAPINFO {
+                    bmiHeader: BITMAPINFOHEADER {
+                        biSize: std::mem::size_of::<BITMAPINFOHEADER>() as u32,
+                        biWidth: w,
+                        biHeight: -h,
+                        biPlanes: 1,
+                        biBitCount: 32,
+                        biCompression: 0,
+                        biSizeImage: 0,
+                        biXPelsPerMeter: 0,
+                        biYPelsPerMeter: 0,
+                        biClrUsed: 0,
+                        biClrImportant: 0,
+                    },
+                    bmiColors: [0],
+                };
+                let mut bits: *mut std::ffi::c_void = std::ptr::null_mut();
+                let hbm = CreateDIBSection(hdc, &bmi, 0, &mut bits, std::ptr::null_mut(), 0);
+                let old_bm = SelectObject(hdc, hbm);
+
+                let face: Vec<u16> = "Arial\0".encode_utf16().collect();
+                let hfont = CreateFontW(34, 0, 0, 0, 700, 0, 0, 0, 1, 0, 0, 4, 0, face.as_ptr());
+                let old_font = SelectObject(hdc, hfont);
+                SetBkMode(hdc, 1); // TRANSPARENT
+                SetTextColor(hdc, 0x00F8F8F8); // Bright white
+
+                let wide: Vec<u16> = title.encode_utf16().collect();
+                let mut rc = RECT {
+                    left: 16,
+                    top: 12,
+                    right: w - 8,
+                    bottom: h - 4,
+                };
+                DrawTextW(hdc, wide.as_ptr(), wide.len() as i32, &mut rc, 0x20); // DT_SINGLELINE
+
+                let pixel_slice = std::slice::from_raw_parts(bits as *const u8, (w * h * 4) as usize);
+                for y in 0..h as u32 {
+                    for x in 0..w as u32 {
+                        let off = ((y * w as u32 + x) * 4) as usize;
+                        let b = pixel_slice[off];
+                        let g = pixel_slice[off + 1];
+                        let r = pixel_slice[off + 2];
+                        if r > 20 || g > 20 || b > 20 {
+                            img.put_pixel(x, y, xcap::image::Rgba([r.max(20), g.max(26), b.max(34), 255]));
+                        }
+                    }
+                }
+
+                SelectObject(hdc, old_font);
+                DeleteObject(hfont);
+                SelectObject(hdc, old_bm);
+                DeleteObject(hbm);
+                DeleteDC(hdc);
+            }
+
+            if draw_yellow_18_box {
+                // Draw bright yellow-orange 18+ warning box on the left edge (x = 0..24)
+                for y in 4..(h as u32 - 4) {
+                    for x in 0..24 {
+                        img.put_pixel(x, y, xcap::image::Rgba([255, 195, 25, 255]));
+                    }
+                }
+            }
+            img
+        };
+
+        let mut engine = PaddleOcrEngine::new().expect("onnxruntime.dll and PaddleOCR v4 ONNX should initialize");
         let candidates = get_test_candidates();
 
-        // 1. Skin suffix stripping across ASCII hyphen, en-dash, em-dash, multiline
-        let skin_cases = [
-            ("M7 Battle Rifle - Đỏ", "M7"),
-            ("PSG-1 Marksman Rifle - Nghệ Thuật Đương Đại", "PSG-1"),
-            ("PSG-1 Marksman Rifle – Nghệ Thuật Đương Đại", "PSG-1"),
-            ("M7 Battle Rifle — Huyền Thoại\nLv.45", "M7"),
-            ("M4A1 Assault Rifle- Đỏ Crimson", "M4A1"),
-            ("CAR-15 Carbine -Sa Mạc", "CAR-15"),
-            ("725 Double-Barrel - Bạch Kim", "725 DOUBLE-BARREL"),
-            ("Shotgun Hai Nòng – Hỏa Lực", "725 DOUBLE-BARREL"),
+        let synthetic_cases = [
+            ("M4A1 Assault Rifle", "M4A1", false),
+            ("M7 Battle Rifle", "M7", true),
+            ("R93 Sniper Rifle", "R93", true),
+            ("MK4 Submachine Gun", "MK4", false),
+            ("Vector Submachine Gun", "VECTOR", false),
+            ("SR-3M Assault Rifle", "SR-3M", false),
+            ("QBZ95-1 Assault Rifle", "QBZ95-1", false),
         ];
 
-        for (raw_card, expected) in skin_cases {
-            let cleaned = clean_ocr_text(raw_card);
-            let matched = match_weapon(&cleaned, &candidates);
+        for (title, expected, with_yellow_overlay) in synthetic_cases {
+            let img = render_hud_title(title, with_yellow_overlay);
+            let (raw_ocr, ctc_conf) = engine.recognize(&img).expect("PaddleOCR inference should succeed");
+            let (matched, cleaned) = recognize_weapon_from_title(&raw_ocr, &candidates);
             assert!(
                 matched.is_some(),
-                "Failed to match left-card title '{}' (cleaned: '{}')",
-                raw_card,
-                cleaned
+                "PaddleOCR failed on '{}' -> raw_ocr: '{}', cleaned: '{}', ctc_conf: {:.3}",
+                title,
+                raw_ocr,
+                cleaned,
+                ctc_conf
             );
             let (weapon, score) = matched.unwrap();
             assert_eq!(
                 weapon, expected,
-                "Card title '{}' expected '{}' got '{}'",
-                raw_card, expected, weapon
+                "PaddleOCR on '{}' decoded '{}' -> matched '{}' instead of '{}' (score {:.3})",
+                title, raw_ocr, weapon, expected, score
             );
-            assert!(score >= 0.90, "Expected >= 0.90 for '{}' got {:.2}", raw_card, score);
         }
 
-        // 2. Geometric 4-edge white border detection on synthetic 1920x1080 frame
-        let mut img = xcap::image::RgbaImage::from_pixel(1920, 1080, xcap::image::Rgba([22, 26, 32, 255]));
-
-        // Blank dark frame should return None
-        assert!(find_selected_card_title_rect(&img).is_none());
-
-        // Draw an unselected dim card near top (y=200..320) with a bright gold skin accent bar
-        for x in 150..430 {
-            img.put_pixel(x, 200, xcap::image::Rgba([70, 75, 80, 255]));
-            img.put_pixel(x, 320, xcap::image::Rgba([70, 75, 80, 255]));
-            // Gold rarity bar inside unselected card (bright R/G, low B)
-            for y in 280..286 {
-                img.put_pixel(x, y, xcap::image::Rgba([255, 205, 30, 255]));
+        // Occlude first character directly with the yellow 18+ warning rectangle and verify real ONNX + suffix fallback
+        for (title, occlude_right_x, expected) in [
+            ("M7 Battle Rifle", 42u32, "M7"),
+            ("R93 Sniper Rifle", 40u32, "R93"),
+        ] {
+            let mut img = render_hud_title(title, false);
+            for y in 0..img.height() {
+                for x in 0..occlude_right_x {
+                    img.put_pixel(x, y, xcap::image::Rgba([255, 192, 16, 255]));
+                }
             }
+            let (raw_ocr, _) = engine.recognize(&img).expect("Occluded PaddleOCR inference should succeed");
+            let (matched, cleaned) = recognize_weapon_from_title(&raw_ocr, &candidates);
+            assert!(
+                matched.is_some(),
+                "Occluded PaddleOCR failed on '{}' -> raw_ocr: '{}', cleaned: '{}'",
+                title,
+                raw_ocr,
+                cleaned
+            );
+            assert_eq!(
+                matched.unwrap().0,
+                expected,
+                "Occluded PaddleOCR on '{}' decoded '{}' -> expected '{}'",
+                title,
+                raw_ocr,
+                expected
+            );
         }
 
-        // Draw selected white-bordered card scrolled lower on list (x=150..430, y=580..704)
-        let card_x1 = 150u32;
-        let card_x2 = 430u32;
-        let card_y1 = 580u32;
-        let card_y2 = 704u32;
-        let white = xcap::image::Rgba([245, 245, 245, 255]);
-
-        for x in card_x1..=card_x2 {
-            img.put_pixel(x, card_y1, white);
-            img.put_pixel(x, card_y1 + 1, white);
-            img.put_pixel(x, card_y2 - 1, white);
-            img.put_pixel(x, card_y2, white);
-        }
-        for y in card_y1..=card_y2 {
-            img.put_pixel(card_x1, y, white);
-            img.put_pixel(card_x1 + 1, y, white);
-            img.put_pixel(card_x2 - 1, y, white);
-            img.put_pixel(card_x2, y, white);
-        }
-
-        let rect = find_selected_card_title_rect(&img);
-        assert!(rect.is_some(), "Failed to locate white-bordered selected card");
-        let (tx, ty, tw, th) = rect.unwrap();
-        assert!(tx > card_x1, "Title X ({}) should be inside left border ({})", tx, card_x1);
-        assert!(tx + tw < card_x2, "Title right ({}) should be inside right border ({})", tx + tw, card_x2);
-        assert!(ty > card_y1 && ty < card_y1 + 16, "Title Y ({}) should sit right below top border ({})", ty, card_y1);
-        assert!(th >= 30 && ty + th < card_y2, "Title height ({}) should fit inside card", th);
+        // Category-only header rendered through real ONNX must return None (rejected)
+        let cat_img = render_hud_title("Assault Rifle", false);
+        let (cat_raw, _) = engine.recognize(&cat_img).expect("Category PaddleOCR inference should succeed");
+        let (cat_match, _) = recognize_weapon_from_title(&cat_raw, &candidates);
+        assert!(
+            cat_match.is_none(),
+            "Real PaddleOCR category-only '{}' (decoded '{}') must be rejected, got {:?}",
+            "Assault Rifle",
+            cat_raw,
+            cat_match
+        );
     }
 
     #[test]

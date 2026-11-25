@@ -7,9 +7,9 @@ on:
   workflow_dispatch:
     inputs:
       tag:
-        description: 'Release tag (e.g. v1.4.6)'
+        description: 'Release tag (e.g. v2.0.0-beta)'
         required: true
-        default: 'v1.4.6'
+        default: 'v2.0.0-beta'
 
 permissions:
   contents: write
@@ -62,8 +62,29 @@ jobs:
         with:
           targets: x86_64-pc-windows-msvc
 
+      - name: Download ONNX Runtime DLL
+        shell: pwsh
+        run: |
+          $ortVer = "1.31.1"
+          $nupkg = "$env:RUNNER_TEMP\microsoft.ml.onnxruntime.$ortVer.zip"
+          Invoke-WebRequest -Uri "https://api.nuget.org/v3-flatcontainer/microsoft.ml.onnxruntime/$ortVer/microsoft.ml.onnxruntime.$ortVer.nupkg" -OutFile $nupkg
+          $extractDir = "$env:RUNNER_TEMP\ort_pkg"
+          Expand-Archive -Path $nupkg -DestinationPath $extractDir -Force
+          $dllPath = "$extractDir\runtimes\win-x64\native\onnxruntime.dll"
+          if (-not (Test-Path $dllPath)) {
+            Write-Error "Missing onnxruntime.dll inside NuGet package"
+            exit 1
+          }
+          New-Item -ItemType Directory -Force -Path "target/debug/deps", "target/release" | Out-Null
+          Copy-Item $dllPath "target/debug/onnxruntime.dll" -Force
+          Copy-Item $dllPath "target/debug/deps/onnxruntime.dll" -Force
+          Copy-Item $dllPath "target/release/onnxruntime.dll" -Force
+
+      - name: Run unit tests
+        run: cargo test --locked
+
       - name: Build release binary
-        run: cargo build --release
+        run: cargo build --release --locked
 
       - name: Prepare release artifact
         shell: pwsh
@@ -71,6 +92,11 @@ jobs:
           $TAG = "${{ github.event.inputs.tag || github.ref_name }}"
           New-Item -ItemType Directory -Path DF-Loadout-Scanner
           Copy-Item target/release/df_clipboard_helper.exe DF-Loadout-Scanner/DF-Loadout-Scanner-Windows-x64.exe
+          Copy-Item target/release/onnxruntime.dll DF-Loadout-Scanner/onnxruntime.dll
+          if (-not (Test-Path DF-Loadout-Scanner/onnxruntime.dll)) {
+            Write-Error "onnxruntime.dll missing from release bundle"
+            exit 1
+          }
           Copy-Item README.md DF-Loadout-Scanner/README.md
           Copy-Item LICENSE DF-Loadout-Scanner/LICENSE
           Compress-Archive -Path DF-Loadout-Scanner -DestinationPath "DF-Loadout-Scanner-$TAG-Windows-x64.zip"

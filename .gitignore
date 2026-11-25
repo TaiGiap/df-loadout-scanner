@@ -10,6 +10,8 @@ df_history.json
 builds_local.json
 *.tmp
 *.log
+*.dll
+*.nupkg
 
 # Python cache & virtual environments
 __pycache__/

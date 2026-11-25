@@ -1,6 +1,6 @@
 [package]
 name = "df_clipboard_helper"
-version = "1.4.6"
+version = "2.0.0-beta"
 edition = "2021"
 license = "MIT"
 repository = "https://github.com/TaiGiap/df-loadout-scanner"
@@ -13,16 +13,12 @@ strsim = "0.11"
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 image = { version = "0.25", default-features = false, features = ["png"] }
+ort = { version = "=2.0.0-rc.15", default-features = false, features = ["std", "load-dynamic", "api-31"] }
 windows = { version = "0.58", features = [
     "Win32_Foundation",
     "Win32_Graphics_Gdi",
     "Win32_UI_Input_KeyboardAndMouse",
     "Win32_UI_WindowsAndMessaging",
-    "Win32_System_WinRT",
-    "Media_Ocr",
-    "Graphics_Imaging",
-    "Storage_Streams",
-    "Globalization",
 ] }
 ureq = { version = "2.10", features = ["json"] }
 qrcode = { version = "0.14.1", default-features = false }
