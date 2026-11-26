@@ -33,7 +33,7 @@ extern "system" {
 // Application & Author identity constants
 const AUTHOR_NAME: &str = "Anh Bảy Chọ / Tài Giáp";
 const APP_NAME: &str = "DF Loadout Scanner";
-const APP_VERSION: &str = "v2.0.8-Beta";
+const APP_VERSION: &str = "v2.0.9-Beta";
 
 // VietQR donation constants
 const DONATE_BANK_ID: &str = "TCB";
@@ -2472,8 +2472,8 @@ fn decode_preview_image_bytes(bytes: &[u8]) -> Result<(Vec<u8>, [usize; 2]), Str
             format!("Không giải mã được ảnh xem trước: {}", e)
         }
     })?;
-    if dyn_img.width() > 960 || dyn_img.height() > 640 {
-        dyn_img = dyn_img.resize(960, 640, image::imageops::FilterType::Triangle);
+    if dyn_img.width() > 1280 || dyn_img.height() > 800 {
+        dyn_img = dyn_img.resize(1280, 800, image::imageops::FilterType::Triangle);
     }
     let rgba = dyn_img.to_rgba8();
     let w = rgba.width() as usize;
@@ -4503,6 +4503,31 @@ struct LoadoutTerminalApp {
     status_message: Option<(String, Instant, bool)>,
 }
 
+fn calculate_preview_popup_dimensions(
+    screen_w: f32,
+    screen_h: f32,
+    img_w: f32,
+    img_h: f32,
+) -> (f32, f32, f32, f32) {
+    let safe_margin = 24.0_f32;
+    let max_avail_w = (screen_w - safe_margin * 2.0).max(320.0);
+    let max_avail_h = (screen_h - safe_margin * 2.0).max(240.0);
+
+    // Target preview width: 640px–780px, automatically scaling to fit current window size
+    let target_box_w = (screen_w * 0.72).clamp(640.0, 780.0).min(max_avail_w - 20.0);
+    let target_box_h = (screen_h * 0.75).clamp(380.0, 500.0).min(max_avail_h - 40.0);
+
+    let w = img_w.max(1.0);
+    let h = img_h.max(1.0);
+    let scale = (target_box_w / w).min(target_box_h / h).min(1.0);
+    let dw = (w * scale).max(160.0);
+    let dh = (h * scale).max(90.0);
+
+    let popup_w = dw + 16.0;
+    let popup_h = dh + 38.0;
+    (popup_w, popup_h, dw, dh)
+}
+
 impl LoadoutTerminalApp {
     fn new(cc: &eframe::CreationContext<'_>) -> Self {
         let mut fonts = egui::FontDefinitions::default();
@@ -5236,25 +5261,37 @@ impl LoadoutTerminalApp {
         self.request_or_get_preview_image(&url, ctx);
 
         let screen = ctx.screen_rect();
+        let safe_margin = 24.0_f32;
         let (popup_w, popup_h, disp_size_opt) = match self.image_preview_cache.get(&url) {
             Some(PreviewImageState::Ready { size, .. }) => {
                 let w = size[0].max(1) as f32;
                 let h = size[1].max(1) as f32;
-                let scale = (360.0 / w).min(210.0 / h).min(1.0);
-                let dw = (w * scale).max(120.0);
-                let dh = (h * scale).max(70.0);
-                (dw + 16.0, dh + 36.0, Some((dw, dh)))
+                let (pw, ph, dw, dh) = calculate_preview_popup_dimensions(screen.width(), screen.height(), w, h);
+                (pw, ph, Some((dw, dh)))
             }
-            _ => (240.0, 72.0, None),
+            Some(PreviewImageState::Error(_)) => (300.0, 72.0, None),
+            _ => (240.0, 68.0, None),
         };
 
-        let mut pos_x = anchor_rect.left() - popup_w - 8.0;
-        if pos_x < screen.left() + 8.0 {
-            pos_x = (anchor_rect.right() + 8.0).min(screen.right() - popup_w - 8.0);
+        let min_x = screen.left() + safe_margin;
+        let max_x = (screen.right() - popup_w - safe_margin).max(min_x);
+        let min_y = screen.top() + safe_margin;
+        let max_y = (screen.bottom() - popup_h - safe_margin).max(min_y);
+
+        // Prefer placing to the left of the eye button anchor
+        let mut pos_x = anchor_rect.left() - popup_w - 10.0;
+        if pos_x < min_x {
+            // If it doesn't fit on the left, check if it fits on the right
+            if anchor_rect.right() + 10.0 <= max_x {
+                pos_x = anchor_rect.right() + 10.0;
+            } else {
+                pos_x = pos_x.clamp(min_x, max_x);
+            }
+        } else {
+            pos_x = pos_x.clamp(min_x, max_x);
         }
-        let pos_x = pos_x.clamp(screen.left() + 8.0, (screen.right() - popup_w - 8.0).max(screen.left() + 8.0));
-        let pos_y = (anchor_rect.top() - popup_h * 0.35)
-            .clamp(screen.top() + 8.0, (screen.bottom() - popup_h - 8.0).max(screen.top() + 8.0));
+
+        let pos_y = (anchor_rect.center().y - popup_h * 0.40).clamp(min_y, max_y);
 
         egui::Area::new(egui::Id::new("build_image_preview_popup"))
             .order(egui::Order::Tooltip)
@@ -5264,7 +5301,7 @@ impl LoadoutTerminalApp {
                 Frame::default()
                     .fill(COLOR_CARD)
                     .stroke(Stroke::new(1.5_f32, COLOR_ACCENT))
-                    .rounding(Rounding::same(5.0))
+                    .rounding(Rounding::same(6.0))
                     .inner_margin(Margin::same(8.0))
                     .show(ui, |ui| {
                         ui.set_max_width(popup_w - 16.0);
@@ -5272,13 +5309,14 @@ impl LoadoutTerminalApp {
                             Some(PreviewImageState::Ready { texture, .. }) => {
                                 if let Some((dw, dh)) = disp_size_opt {
                                     ui.image((texture.id(), egui::vec2(dw, dh)));
-                                    ui.add_space(4.0);
+                                    ui.add_space(6.0);
                                 }
                                 ui.add(
                                     egui::Label::new(
-                                        RichText::new(truncate_ocr_preview(&title, 48))
+                                        RichText::new(truncate_ocr_preview(&title, 80))
                                             .color(COLOR_TEXT_MAIN)
-                                            .size(11.0),
+                                            .size(11.5)
+                                            .strong(),
                                     )
                                     .truncate()
                                     .selectable(false),
@@ -5286,7 +5324,7 @@ impl LoadoutTerminalApp {
                             }
                             Some(PreviewImageState::Error(err)) => {
                                 ui.label(
-                                    RichText::new(truncate_ocr_preview(err, 64))
+                                    RichText::new(truncate_ocr_preview(err, 80))
                                         .color(COLOR_AMBER)
                                         .size(11.0),
                                 );
@@ -10405,6 +10443,21 @@ mod tests {
         )
         .unwrap();
         assert_eq!(next_avif_item.valid_image_url(), None);
+
+        // 6. Preview popup dimension scaling and aspect ratio preservation
+        let (pw1, ph1, dw1, dh1) = calculate_preview_popup_dimensions(1140.0, 680.0, 1640.0, 720.0);
+        assert!(dw1 >= 640.0 && dw1 <= 780.0, "dw1 should be in target range: {}", dw1);
+        let orig_ratio = 1640.0 / 720.0;
+        let scaled_ratio = dw1 / dh1;
+        assert!((orig_ratio - scaled_ratio).abs() < 0.01, "Aspect ratio must be preserved");
+        assert!(pw1 <= 1140.0 - 48.0, "Popup width must fit screen margin");
+        assert!(ph1 <= 680.0 - 48.0, "Popup height must fit screen margin");
+
+        let (pw2, ph2, dw2, dh2) = calculate_preview_popup_dimensions(800.0, 600.0, 1920.0, 1080.0);
+        assert!(pw2 <= 800.0 - 48.0);
+        assert!(ph2 <= 600.0 - 48.0);
+        let ratio16_9 = 1920.0 / 1080.0;
+        assert!(((dw2 / dh2) - ratio16_9).abs() < 0.01);
     }
 }
 
