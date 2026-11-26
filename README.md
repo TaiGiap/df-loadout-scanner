@@ -3,7 +3,7 @@
 Công cụ **mã nguồn mở (MIT License)** tự động nhận diện vũ khí thời gian thực bằng AI **PaddleOCR v4 (ONNX Runtime CPU ngoại tuyến)** và đồng bộ mã trang bị (*loadout code*) cho **Delta Force** (*Warfare* & *Operations* — Garena / Level Infinite / Steam).
 
 - **Tác giả:** Anh Bảy Chọ / Tài Giáp
-- **Phiên bản hiện tại:** `v2.0.9-Beta`
+- **Phiên bản hiện tại:** `v2.0.10-Beta`
 - **Kho mã nguồn:** [TaiGiap/df-loadout-scanner](https://github.com/TaiGiap/df-loadout-scanner)
 
 ---
@@ -12,7 +12,7 @@ Công cụ **mã nguồn mở (MIT License)** tự động nhận diện vũ kh�
 
 ### 1. Tải về & Giải nén
 - Tải gói phát hành mới nhất tại [GitHub Releases](https://github.com/TaiGiap/df-loadout-scanner/releases/latest):
-  `DF-Loadout-Scanner-v2.0.9-Beta-Windows-x64.zip` (kèm tệp kiểm tra toàn vẹn `SHA256SUMS.txt`).
+  `DF-Loadout-Scanner-v2.0.10-Beta-Windows-x64.zip` (kèm tệp kiểm tra toàn vẹn `SHA256SUMS.txt`).
 - Giải nén **toàn bộ tệp trong gói** (`DF-Loadout-Scanner-Windows-x64.exe` và `onnxruntime.dll`) vào **cùng một thư mục**. Không cần cài thêm gói ngôn ngữ Windows OCR.
 
 ### 2. Thiết lập hệ thống & game
@@ -74,7 +74,8 @@ cargo build --release
 
 | Phiên bản | Điểm mới & Cải tiến chính |
 | :--- | :--- |
-| **v2.0.9-Beta (Mới nhất)** | Tăng đáng kể kích thước khung xem trước ảnh Gunsmith khi di chuột vào icon con mắt (`render_build_image_preview_popup` đạt chiều rộng `640px–780px` rõ nét, tự co giãn theo kích thước cửa sổ và giữ đúng tỷ lệ gốc của ảnh); nâng độ phân giải texture cache lên `1280x800` và tự động điều chỉnh vị trí popup chống tràn mép phải / mép dưới màn hình. |
+| **v2.0.10-Beta (Mới nhất)** | Sửa lỗi khung xem trước ảnh nằm chồng lên nút con mắt gây mất hover: luôn đặt khung xem trước nằm hẳn bên trái hoặc bên phải nút con mắt (cách tối thiểu `14px`), tự chọn phía rộng hơn và thu gọn vừa không gian khả dụng trên cửa sổ nhỏ mà vẫn giữ đúng tỷ lệ gốc của ảnh. |
+| **v2.0.9-Beta** | Tăng đáng kể kích thước khung xem trước ảnh Gunsmith khi di chuột vào icon con mắt (`render_build_image_preview_popup` đạt chiều rộng `640px–780px` rõ nét, tự co giãn theo kích thước cửa sổ và giữ đúng tỷ lệ gốc của ảnh); nâng độ phân giải texture cache lên `1280x800` và tự động điều chỉnh vị trí popup chống tràn mép phải / mép dưới màn hình. |
 | **v2.0.8-Beta** | Sửa lỗi thẻ `#1` bị nở khung bất thường (cố định chiều cao hàng tiêu đề `26px`, đồng nhất kích thước nút `24px` và cắt gọn vùng nhãn trái); giải mã trực tiếp ảnh súng từ `deltaforcetools.gg` bằng cách tách URL gốc khỏi proxy `/_next/image` (trả về PNG/JPG/WebP gốc thay vì bị Next.js ép sang AVIF) và lọc bỏ tệp `.avif` thuần không hỗ trợ trên Windows CPU. |
 | **v2.0.7-Beta** | Lọc chặt `image_url` loại bỏ ảnh avatar/user/profile/member/icon/logo và ảnh đại diện nhỏ vuông trong `fetch_builds.py` & `BuildItem::valid_image_url`; tinh gọn lề/khoảng cách thẻ build và căn chỉnh gọn cụm nút tiêu đề trên màn hình. |
 | **v2.0.6-Beta** | Sửa triệt để lỗi tràn nút bên phải trên thẻ build có tiêu đề/mô tả dài (cố định cụm nút trước, tự động cắt gọn mô tả kèm tooltip); luôn hiển thị icon con mắt đơn sắc trắng/xám cạnh nút lưu để phân biệt rõ build có/chưa có ảnh (`Build này chưa có hình ảnh đính kèm`). |

@@ -33,7 +33,7 @@ extern "system" {
 // Application & Author identity constants
 const AUTHOR_NAME: &str = "Anh Bảy Chọ / Tài Giáp";
 const APP_NAME: &str = "DF Loadout Scanner";
-const APP_VERSION: &str = "v2.0.9-Beta";
+const APP_VERSION: &str = "v2.0.10-Beta";
 
 // VietQR donation constants
 const DONATE_BANK_ID: &str = "TCB";
@@ -4503,29 +4503,70 @@ struct LoadoutTerminalApp {
     status_message: Option<(String, Instant, bool)>,
 }
 
-fn calculate_preview_popup_dimensions(
-    screen_w: f32,
-    screen_h: f32,
-    img_w: f32,
-    img_h: f32,
-) -> (f32, f32, f32, f32) {
+fn calculate_preview_popup_placement(
+    screen: egui::Rect,
+    anchor_rect: egui::Rect,
+    img_size: Option<(f32, f32)>,
+    fallback_size: (f32, f32),
+) -> (f32, f32, f32, f32, Option<(f32, f32)>) {
     let safe_margin = 24.0_f32;
-    let max_avail_w = (screen_w - safe_margin * 2.0).max(320.0);
-    let max_avail_h = (screen_h - safe_margin * 2.0).max(240.0);
+    let gap = 14.0_f32;
+    let frame_pad_w = 16.0_f32;
+    let frame_pad_h = 38.0_f32;
 
-    // Target preview width: 640px–780px, automatically scaling to fit current window size
-    let target_box_w = (screen_w * 0.72).clamp(640.0, 780.0).min(max_avail_w - 20.0);
-    let target_box_h = (screen_h * 0.75).clamp(380.0, 500.0).min(max_avail_h - 40.0);
+    let left_space = (anchor_rect.left() - gap - (screen.left() + safe_margin)).max(0.0);
+    let right_space = ((screen.right() - safe_margin) - (anchor_rect.right() + gap)).max(0.0);
 
-    let w = img_w.max(1.0);
-    let h = img_h.max(1.0);
-    let scale = (target_box_w / w).min(target_box_h / h).min(1.0);
-    let dw = (w * scale).max(160.0);
-    let dh = (h * scale).max(90.0);
+    let desired_popup_w = if img_size.is_some() {
+        (screen.width() * 0.72).clamp(640.0, 780.0) + frame_pad_w
+    } else {
+        fallback_size.0
+    };
 
-    let popup_w = dw + 16.0;
-    let popup_h = dh + 38.0;
-    (popup_w, popup_h, dw, dh)
+    // Prefer left of the eye button; fall back to right if left doesn't fit;
+    // when both sides are tighter than desired width, pick the wider side.
+    let place_left = if left_space >= desired_popup_w {
+        true
+    } else if right_space >= desired_popup_w {
+        false
+    } else {
+        left_space >= right_space
+    };
+
+    let avail_side_w = if place_left { left_space } else { right_space };
+    let max_avail_h = (screen.height() - safe_margin * 2.0).max(120.0);
+
+    let (popup_w, popup_h, disp_size_opt) = if let Some((img_w, img_h)) = img_size {
+        let max_img_w = (avail_side_w - frame_pad_w).max(80.0);
+        let max_img_h = (max_avail_h - frame_pad_h).max(60.0);
+        let target_w = (screen.width() * 0.72).clamp(640.0, 780.0).min(max_img_w);
+        let target_h = (screen.height() * 0.75).clamp(380.0, 500.0).min(max_img_h);
+
+        let w = img_w.max(1.0);
+        let h = img_h.max(1.0);
+        let scale = (target_w / w).min(target_h / h).min(1.0);
+        let dw = (w * scale).max(1.0);
+        let dh = (h * scale).max(1.0);
+        (dw + frame_pad_w, dh + frame_pad_h, Some((dw, dh)))
+    } else {
+        let pw = fallback_size.0.min(avail_side_w.max(120.0));
+        let ph = fallback_size.1.min(max_avail_h);
+        (pw, ph, None)
+    };
+
+    let min_x = screen.left() + safe_margin;
+    let max_x = (screen.right() - safe_margin - popup_w).max(min_x);
+    let pos_x = if place_left {
+        (anchor_rect.left() - gap - popup_w).clamp(min_x, max_x)
+    } else {
+        (anchor_rect.right() + gap).clamp(min_x, max_x)
+    };
+
+    let min_y = screen.top() + safe_margin;
+    let max_y = (screen.bottom() - safe_margin - popup_h).max(min_y);
+    let pos_y = (anchor_rect.center().y - popup_h * 0.40).clamp(min_y, max_y);
+
+    (pos_x, pos_y, popup_w, popup_h, disp_size_opt)
 }
 
 impl LoadoutTerminalApp {
@@ -5261,37 +5302,16 @@ impl LoadoutTerminalApp {
         self.request_or_get_preview_image(&url, ctx);
 
         let screen = ctx.screen_rect();
-        let safe_margin = 24.0_f32;
-        let (popup_w, popup_h, disp_size_opt) = match self.image_preview_cache.get(&url) {
+        let (img_size, fallback_size) = match self.image_preview_cache.get(&url) {
             Some(PreviewImageState::Ready { size, .. }) => {
-                let w = size[0].max(1) as f32;
-                let h = size[1].max(1) as f32;
-                let (pw, ph, dw, dh) = calculate_preview_popup_dimensions(screen.width(), screen.height(), w, h);
-                (pw, ph, Some((dw, dh)))
+                (Some((size[0].max(1) as f32, size[1].max(1) as f32)), (240.0, 68.0))
             }
-            Some(PreviewImageState::Error(_)) => (300.0, 72.0, None),
-            _ => (240.0, 68.0, None),
+            Some(PreviewImageState::Error(_)) => (None, (300.0, 72.0)),
+            _ => (None, (240.0, 68.0)),
         };
 
-        let min_x = screen.left() + safe_margin;
-        let max_x = (screen.right() - popup_w - safe_margin).max(min_x);
-        let min_y = screen.top() + safe_margin;
-        let max_y = (screen.bottom() - popup_h - safe_margin).max(min_y);
-
-        // Prefer placing to the left of the eye button anchor
-        let mut pos_x = anchor_rect.left() - popup_w - 10.0;
-        if pos_x < min_x {
-            // If it doesn't fit on the left, check if it fits on the right
-            if anchor_rect.right() + 10.0 <= max_x {
-                pos_x = anchor_rect.right() + 10.0;
-            } else {
-                pos_x = pos_x.clamp(min_x, max_x);
-            }
-        } else {
-            pos_x = pos_x.clamp(min_x, max_x);
-        }
-
-        let pos_y = (anchor_rect.center().y - popup_h * 0.40).clamp(min_y, max_y);
+        let (pos_x, pos_y, popup_w, _popup_h, disp_size_opt) =
+            calculate_preview_popup_placement(screen, anchor_rect, img_size, fallback_size);
 
         egui::Area::new(egui::Id::new("build_image_preview_popup"))
             .order(egui::Order::Tooltip)
@@ -10444,20 +10464,36 @@ mod tests {
         .unwrap();
         assert_eq!(next_avif_item.valid_image_url(), None);
 
-        // 6. Preview popup dimension scaling and aspect ratio preservation
-        let (pw1, ph1, dw1, dh1) = calculate_preview_popup_dimensions(1140.0, 680.0, 1640.0, 720.0);
+        // 6. Preview popup placement: strictly left or right of eye button, zero overlap, aspect ratio preserved
+        let screen_std = egui::Rect::from_min_size(egui::pos2(0.0, 0.0), egui::vec2(1140.0, 680.0));
+        // Case A: Eye button near right edge -> popup placed cleanly to the left
+        let eye_right = egui::Rect::from_min_size(egui::pos2(940.0, 240.0), egui::vec2(26.0, 24.0));
+        let (px1, py1, pw1, ph1, disp1) =
+            calculate_preview_popup_placement(screen_std, eye_right, Some((1640.0, 720.0)), (240.0, 68.0));
+        let (dw1, dh1) = disp1.unwrap();
         assert!(dw1 >= 640.0 && dw1 <= 780.0, "dw1 should be in target range: {}", dw1);
-        let orig_ratio = 1640.0 / 720.0;
-        let scaled_ratio = dw1 / dh1;
-        assert!((orig_ratio - scaled_ratio).abs() < 0.01, "Aspect ratio must be preserved");
-        assert!(pw1 <= 1140.0 - 48.0, "Popup width must fit screen margin");
-        assert!(ph1 <= 680.0 - 48.0, "Popup height must fit screen margin");
+        assert!(((1640.0 / 720.0) - (dw1 / dh1)).abs() < 0.01, "Aspect ratio must be preserved");
+        assert!(px1 + pw1 <= eye_right.left() - 12.0, "Popup must stay strictly left of eye button");
+        assert!(px1 >= 24.0 && py1 >= 24.0 && py1 + ph1 <= 680.0 - 24.0);
 
-        let (pw2, ph2, dw2, dh2) = calculate_preview_popup_dimensions(800.0, 600.0, 1920.0, 1080.0);
-        assert!(pw2 <= 800.0 - 48.0);
-        assert!(ph2 <= 600.0 - 48.0);
-        let ratio16_9 = 1920.0 / 1080.0;
-        assert!(((dw2 / dh2) - ratio16_9).abs() < 0.01);
+        // Case B: Eye button near left/middle -> popup placed cleanly to the right
+        let eye_left = egui::Rect::from_min_size(egui::pos2(160.0, 240.0), egui::vec2(26.0, 24.0));
+        let (px2, _py2, pw2, _ph2, disp2) =
+            calculate_preview_popup_placement(screen_std, eye_left, Some((1920.0, 1080.0)), (240.0, 68.0));
+        let (dw2, dh2) = disp2.unwrap();
+        assert!(px2 >= eye_left.right() + 12.0, "Popup must stay strictly right of eye button");
+        assert!(px2 + pw2 <= 1140.0 - 24.0);
+        assert!(((1920.0 / 1080.0) - (dw2 / dh2)).abs() < 0.01);
+
+        // Case C: Narrow window (800x600) with eye button in middle -> picks wider side and shrinks without overlap
+        let screen_small = egui::Rect::from_min_size(egui::pos2(0.0, 0.0), egui::vec2(800.0, 600.0));
+        let eye_mid = egui::Rect::from_min_size(egui::pos2(520.0, 520.0), egui::vec2(26.0, 24.0));
+        let (px3, py3, pw3, ph3, disp3) =
+            calculate_preview_popup_placement(screen_small, eye_mid, Some((1920.0, 1080.0)), (240.0, 68.0));
+        let (dw3, dh3) = disp3.unwrap();
+        assert!(px3 + pw3 <= eye_mid.left() - 12.0, "Must not overlap eye button on narrow window");
+        assert!(px3 >= 24.0 && py3 >= 24.0 && py3 + ph3 <= 600.0 - 24.0);
+        assert!(((1920.0 / 1080.0) - (dw3 / dh3)).abs() < 0.01);
     }
 }
 
