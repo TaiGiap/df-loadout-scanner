@@ -33,7 +33,7 @@ extern "system" {
 // Application & Author identity constants
 const AUTHOR_NAME: &str = "Anh Bảy Chọ / Tài Giáp";
 const APP_NAME: &str = "DF Loadout Scanner";
-const APP_VERSION: &str = "v2.0.1-beta";
+const APP_VERSION: &str = "v2.0.2-beta";
 
 // VietQR donation constants
 const DONATE_BANK_ID: &str = "TCB";
@@ -370,6 +370,8 @@ struct UserConfig {
     hotkey_name: String,
     #[serde(default)]
     selected_monitor_id: Option<String>,
+    #[serde(default = "default_true")]
+    auto_check_update: bool,
 }
 
 fn default_server() -> String { "Garena".to_string() }
@@ -378,6 +380,7 @@ fn default_source() -> String { "ALL".to_string() }
 fn default_lang() -> String { "vi".to_string() }
 fn default_hotkey_vk() -> i32 { 0x78 } // VK_F9
 fn default_hotkey_name() -> String { "F9".to_string() }
+fn default_true() -> bool { true }
 
 impl Default for UserConfig {
     fn default() -> Self {
@@ -389,6 +392,7 @@ impl Default for UserConfig {
             hotkey_vk: default_hotkey_vk(),
             hotkey_name: default_hotkey_name(),
             selected_monitor_id: None,
+            auto_check_update: true,
         }
     }
 }
@@ -589,9 +593,9 @@ pub fn classify_confidence(score: f64) -> ConfidenceTier {
     }
 }
 
-/// Evaluates v2.0.1-beta `>= 0.75` auto-copy gate guarded by 3 mandatory safety barriers:
-/// 1) Weapon category locked (or explicit special override like `Cung Phức Hợp` / `Lever-action`)
-/// 2) Top-1 vs Top-2 score margin `>= 0.12`
+/// Evaluates v2.0.2-beta `>= 0.75` auto-copy gate guarded by 3 mandatory safety barriers:
+/// 1) Weapon category locked (or explicit special override like `Cung Phức Hợp` / `Lever-action` / `Shotgun Hai Nòng`)
+/// 2) Top-1 vs Top-2 score margin (`>= 0.05` when `score >= 0.80`, otherwise `>= 0.12`)
 /// 3) Extracted code has `>= 2` alphanumeric characters AND `ctc_confidence >= 0.55`
 pub fn evaluate_auto_copy_guards(
     score: f64,
@@ -600,10 +604,11 @@ pub fn evaluate_auto_copy_guards(
     code_alnum_len: usize,
     ctc_confidence: f32,
 ) -> ConfidenceTier {
+    let min_margin = if score >= 0.80 { 0.05 } else { 0.12 };
     if score < 0.75 {
         ConfidenceTier::Rejected
     } else if category_locked
-        && margin >= 0.12
+        && margin >= min_margin
         && code_alnum_len >= 2
         && ctc_confidence >= 0.55
     {
@@ -633,6 +638,17 @@ fn save_user_config(config: &UserConfig) -> Result<(), String> {
     atomic_write_verified(&path, &content)
 }
 
+#[derive(Debug, Clone, PartialEq, Eq)]
+struct ReleaseUpdateInfo {
+    tag_name: String,
+    name: String,
+    summary: String,
+    html_url: String,
+    zip_download_url: Option<String>,
+    zip_file_name: Option<String>,
+    is_prerelease: bool,
+}
+
 enum WorkerEvent {
     WeaponScanned {
         weapon: String,
@@ -653,7 +669,13 @@ enum WorkerEvent {
         is_error: bool,
     },
     OcrUnavailable(String),
-    NewVersionAvailable(String),
+    UpdateCheckFinished {
+        manual: bool,
+        result: Result<Option<ReleaseUpdateInfo>, String>,
+    },
+    UpdateDownloadFinished {
+        result: Result<PathBuf, String>,
+    },
 }
 
 enum DbUpdateResult {
@@ -1793,6 +1815,7 @@ struct ParsedWeaponHeader {
 /// Checks unique OCR title exceptions outside generic Vietnamese aliases:
 /// 1. `Cung Phức Hợp` (`Jng Phurc Hop`, `Cung Phuc Hop`, ...) -> `COMPOUND BOW`
 /// 2. Truncated `Lever-action Rifle` (`aver-action Rifle`, ...) -> `MARLIN LEVER-ACTION`
+/// 3. Vietnamese `Shotgun Hai Nòng` (`SHOTGUN HAI NONG`, `HAI NONG U`, ...) -> `725 DOUBLE-BARREL`
 fn detect_special_title_override(text_upper: &str) -> Option<&'static str> {
     let norm = text_upper.replace(['_', '.'], " ");
     for pat in [
@@ -1819,6 +1842,17 @@ fn detect_special_title_override(text_upper: &str) -> Option<&'static str> {
     ] {
         if norm.contains(pat) {
             return Some("MARLIN LEVER-ACTION");
+        }
+    }
+
+    for pat in [
+        "SHOTGUN HAI NONG",
+        "HAI NONG",
+        "HAI N0NG",
+        "HAINONG",
+    ] {
+        if norm.contains(pat) {
+            return Some("725 DOUBLE-BARREL");
         }
     }
 
@@ -1959,7 +1993,7 @@ fn parse_weapon_header(raw: &str) -> ParsedWeaponHeader {
             if !is_short_abbr {
                 if text.starts_with(phrase) {
                     detected_cat = Some(cat);
-                    text.clear();
+                    text = text[phrase.len()..].trim().to_string();
                     break;
                 }
                 let needle = format!(" {}", phrase);
@@ -2039,20 +2073,277 @@ fn ocr_strip_separators(s: &str) -> String {
 }
 
 /// Compares two semver strings (e.g. "v1.3.3" vs "v1.3.2")
-fn is_newer_version(remote: &str, current: &str) -> bool {
-    let parse_parts = |v: &str| -> Vec<u32> {
-        v.trim_start_matches(|c: char| c == 'v' || c == 'V')
-            .split('.')
-            .filter_map(|s| s.parse::<u32>().ok())
-            .collect()
-    };
-    let r = parse_parts(remote);
-    let c = parse_parts(current);
-    if r.len() == 3 && c.len() == 3 {
-        r > c
-    } else {
-        remote.trim() != current.trim()
+#[derive(Debug, Clone, PartialEq, Eq)]
+struct ParsedSemVer {
+    major: u32,
+    minor: u32,
+    patch: u32,
+    prerelease: Option<String>,
+}
+
+/// Parses a SemVer string with optional leading `v`/`V`, pre-release suffix (`-beta`), and `+build` metadata.
+fn parse_semver(raw: &str) -> Option<ParsedSemVer> {
+    let stripped = raw.trim().trim_start_matches(|c: char| c == 'v' || c == 'V');
+    let without_build = stripped.split('+').next().unwrap_or(stripped).trim();
+    if without_build.is_empty() {
+        return None;
     }
+
+    let (core, prerelease) = match without_build.split_once('-') {
+        Some((c, pre)) => {
+            let pre_trimmed = pre.trim();
+            (c.trim(), if pre_trimmed.is_empty() { None } else { Some(pre_trimmed.to_string()) })
+        }
+        None => (without_build, None),
+    };
+
+    let mut nums = core.split('.').map(|s| s.trim().parse::<u32>().ok());
+    let major = nums.next()??;
+    let minor = nums.next()??;
+    let patch = nums.next()??;
+    if nums.next().is_some() {
+        return None;
+    }
+
+    Some(ParsedSemVer {
+        major,
+        minor,
+        patch,
+        prerelease,
+    })
+}
+
+fn compare_prerelease(a: &str, b: &str) -> std::cmp::Ordering {
+    let a_parts: Vec<&str> = a.split('.').collect();
+    let b_parts: Vec<&str> = b.split('.').collect();
+    for (pa, pb) in a_parts.iter().zip(b_parts.iter()) {
+        let ord = match (pa.parse::<u64>(), pb.parse::<u64>()) {
+            (Ok(na), Ok(nb)) => na.cmp(&nb),
+            (Ok(_), Err(_)) => std::cmp::Ordering::Less,
+            (Err(_), Ok(_)) => std::cmp::Ordering::Greater,
+            (Err(_), Err(_)) => pa.to_ascii_lowercase().cmp(&pb.to_ascii_lowercase()),
+        };
+        if ord != std::cmp::Ordering::Equal {
+            return ord;
+        }
+    }
+    a_parts.len().cmp(&b_parts.len())
+}
+
+fn compare_semver(a: &ParsedSemVer, b: &ParsedSemVer) -> std::cmp::Ordering {
+    (a.major, a.minor, a.patch)
+        .cmp(&(b.major, b.minor, b.patch))
+        .then_with(|| match (&a.prerelease, &b.prerelease) {
+            (None, None) => std::cmp::Ordering::Equal,
+            (None, Some(_)) => std::cmp::Ordering::Greater,
+            (Some(_), None) => std::cmp::Ordering::Less,
+            (Some(pa), Some(pb)) => compare_prerelease(pa, pb),
+        })
+}
+
+/// Returns `true` when `remote` is strictly newer than `current` under SemVer + pre-release precedence.
+/// Stable builds ignore remote pre-releases; pre-release builds accept both newer pre-releases and stable releases.
+fn is_newer_version(remote: &str, current: &str) -> bool {
+    let Some(r_ver) = parse_semver(remote) else {
+        return false;
+    };
+    let Some(c_ver) = parse_semver(current) else {
+        return false;
+    };
+    if c_ver.prerelease.is_none() && r_ver.prerelease.is_some() {
+        return false;
+    }
+    compare_semver(&r_ver, &c_ver) == std::cmp::Ordering::Greater
+}
+
+fn extract_release_summary(body: &str) -> String {
+    for raw_line in body.lines() {
+        let line = raw_line.trim();
+        if line.is_empty()
+            || line.starts_with('#')
+            || line.starts_with("---")
+            || line.starts_with('|')
+            || line.starts_with('*') && line.ends_with('*') && line.len() > 20
+        {
+            continue;
+        }
+        let cleaned = line
+            .trim_start_matches(|c: char| c == '-' || c == '*' || c == ' ')
+            .replace("**", "")
+            .replace('`', "");
+        let cleaned = cleaned.trim();
+        if !cleaned.is_empty() {
+            return truncate_ocr_preview(cleaned, 120);
+        }
+    }
+    String::new()
+}
+
+/// Selects the highest eligible update from GitHub `/repos/.../releases` JSON payload.
+fn select_latest_update_from_releases(
+    releases_json: &serde_json::Value,
+    current_version: &str,
+) -> Option<ReleaseUpdateInfo> {
+    let current_ver = parse_semver(current_version)?;
+    let arr = releases_json.as_array()?;
+
+    let mut best: Option<(ParsedSemVer, ReleaseUpdateInfo)> = None;
+    for item in arr {
+        if item["draft"].as_bool().unwrap_or(false) {
+            continue;
+        }
+        let Some(tag_name) = item["tag_name"].as_str().map(|s| s.trim()).filter(|s| !s.is_empty()) else {
+            continue;
+        };
+        let Some(parsed_tag) = parse_semver(tag_name) else {
+            continue;
+        };
+
+        let is_prerelease = item["prerelease"].as_bool().unwrap_or(false) || parsed_tag.prerelease.is_some();
+        if current_ver.prerelease.is_none() && is_prerelease {
+            continue;
+        }
+        if !is_newer_version(tag_name, current_version) {
+            continue;
+        }
+
+        let name = item["name"]
+            .as_str()
+            .map(|s| s.trim().to_string())
+            .filter(|s| !s.is_empty())
+            .unwrap_or_else(|| tag_name.to_string());
+        let summary = item["body"]
+            .as_str()
+            .map(extract_release_summary)
+            .unwrap_or_default();
+        let html_url = item["html_url"]
+            .as_str()
+            .map(|s| s.trim().to_string())
+            .filter(|s| s.starts_with("https://"))
+            .unwrap_or_else(|| "https://github.com/TaiGiap/df-loadout-scanner/releases/latest".to_string());
+
+        let mut zip_download_url: Option<String> = None;
+        let mut zip_file_name: Option<String> = None;
+        if let Some(assets) = item["assets"].as_array() {
+            for asset in assets {
+                let asset_name = asset["name"].as_str().unwrap_or("").trim();
+                let dl_url = asset["browser_download_url"].as_str().unwrap_or("").trim();
+                if asset_name.to_ascii_lowercase().ends_with(".zip") && dl_url.starts_with("https://") {
+                    zip_download_url = Some(dl_url.to_string());
+                    zip_file_name = Some(asset_name.to_string());
+                    break;
+                }
+            }
+        }
+
+        let candidate = ReleaseUpdateInfo {
+            tag_name: tag_name.to_string(),
+            name,
+            summary,
+            html_url,
+            zip_download_url,
+            zip_file_name,
+            is_prerelease,
+        };
+
+        let replace = match &best {
+            None => true,
+            Some((best_ver, _)) => compare_semver(&parsed_tag, best_ver) == std::cmp::Ordering::Greater,
+        };
+        if replace {
+            best = Some((parsed_tag, candidate));
+        }
+    }
+
+    best.map(|(_, info)| info)
+}
+
+fn fetch_latest_release_update(current_version: &str) -> Result<Option<ReleaseUpdateInfo>, String> {
+    let url = "https://api.github.com/repos/TaiGiap/df-loadout-scanner/releases";
+    match ureq::get(url)
+        .set("User-Agent", "DF-Loadout-Scanner")
+        .set("Accept", "application/vnd.github+json")
+        .timeout(Duration::from_secs(9))
+        .call()
+    {
+        Ok(resp) => {
+            let json = resp
+                .into_json::<serde_json::Value>()
+                .map_err(|e| format!("Lỗi phân tích phản hồi GitHub API: {}", e))?;
+            Ok(select_latest_update_from_releases(&json, current_version))
+        }
+        Err(ureq::Error::Status(403 | 429, _)) => {
+            Err("GitHub API đang giới hạn tần suất (Rate Limit). Vui lòng thử lại sau ít phút.".to_string())
+        }
+        Err(ureq::Error::Status(code, _)) => {
+            Err(format!("GitHub API trả về mã lỗi HTTP {}", code))
+        }
+        Err(ureq::Error::Transport(t)) => {
+            Err(format!("Lỗi kết nối / quá thời gian chờ GitHub API: {}", t))
+        }
+    }
+}
+
+fn spawn_update_check(tx: Sender<WorkerEvent>, ctx: egui::Context, manual: bool) {
+    thread::spawn(move || {
+        let result = fetch_latest_release_update(APP_VERSION);
+        let _ = tx.send(WorkerEvent::UpdateCheckFinished { manual, result });
+        ctx.request_repaint();
+    });
+}
+
+fn spawn_update_zip_download(tx: Sender<WorkerEvent>, ctx: egui::Context, url: String, file_name: String) {
+    thread::spawn(move || {
+        let res = (|| -> Result<PathBuf, String> {
+            let downloads_dir = app_data_dir().join("downloads");
+            fs::create_dir_all(&downloads_dir)
+                .map_err(|e| format!("Không tạo được thư mục downloads: {}", e))?;
+
+            let safe_name: String = file_name
+                .chars()
+                .filter(|c| c.is_ascii_alphanumeric() || matches!(c, '.' | '-' | '_'))
+                .collect();
+            let final_name = if safe_name.is_empty() {
+                "DF-Loadout-Scanner-update.zip".to_string()
+            } else {
+                safe_name
+            };
+            let target_path = downloads_dir.join(&final_name);
+            let tmp_path = downloads_dir.join(format!("{}.tmp", final_name));
+
+            let resp = ureq::get(&url)
+                .set("User-Agent", "DF-Loadout-Scanner")
+                .timeout(Duration::from_secs(60))
+                .call()
+                .map_err(|e| format!("Lỗi tải gói cập nhật: {}", e))?;
+
+            let mut reader = resp.into_reader();
+            let mut out_file = fs::File::create(&tmp_path)
+                .map_err(|e| format!("Không tạo được tệp tạm: {}", e))?;
+            let bytes_copied = std::io::copy(&mut reader, &mut out_file)
+                .map_err(|e| {
+                    let _ = fs::remove_file(&tmp_path);
+                    format!("Lỗi ghi dữ liệu tải về: {}", e)
+                })?;
+            if bytes_copied == 0 {
+                let _ = fs::remove_file(&tmp_path);
+                return Err("Tệp tải về rỗng (0 bytes)".to_string());
+            }
+            drop(out_file);
+
+            if let Err(rename_err) = fs::rename(&tmp_path, &target_path) {
+                fs::copy(&tmp_path, &target_path).map_err(|copy_err| {
+                    let _ = fs::remove_file(&tmp_path);
+                    format!("Không thể lưu tệp ({}; {})", rename_err, copy_err)
+                })?;
+                let _ = fs::remove_file(&tmp_path);
+            }
+            Ok(target_path)
+        })();
+
+        let _ = tx.send(WorkerEvent::UpdateDownloadFinished { result: res });
+        ctx.request_repaint();
+    });
 }
 
 /// Scores a single candidate weapon against pre-normalized OCR text.
@@ -2271,6 +2562,11 @@ fn score_occluded_candidate(code_stripped: &str, cand_stripped: &str) -> f64 {
     // 2. Single-char suffix match when candidate ends cleanly with it (always guarded by len >= 2 rule)
     if c_len == 1 && cand_stripped.ends_with(code_stripped) {
         return 0.82;
+    }
+
+    // 2b. Single stray trailing noise character after an intact weapon code (e.g. `S12KU` -> `S12K`)
+    if w_len >= 3 && c_len == w_len + 1 && code_stripped.starts_with(cand_stripped) {
+        return 0.95;
     }
 
     // 3. Strong body/prefix 1-edit match (`S552` -> `SG552`, `QZ951` -> `QBZ951`) vs interior mismatch (`K47` vs `K437`)
@@ -3529,7 +3825,12 @@ struct LoadoutTerminalApp {
     is_rebinding_hotkey: bool,
     rebind_start_time: Option<Instant>,
 
-    new_version_available: Option<String>,
+    auto_check_update: bool,
+    available_update: Option<ReleaseUpdateInfo>,
+    is_checking_update: bool,
+    is_downloading_update: bool,
+    downloaded_update_path: Option<PathBuf>,
+    update_banner_dismissed: bool,
 
     egui_ctx: egui::Context,
     tx_events: Sender<WorkerEvent>,
@@ -3665,27 +3966,10 @@ impl LoadoutTerminalApp {
             shared_favorites.clone(),
         );
 
-        // Background thread to check for newer version on GitHub Releases
-        let tx_version = tx.clone();
-        let ctx_version = cc.egui_ctx.clone();
-        thread::spawn(move || {
-            let url = "https://api.github.com/repos/TaiGiap/df-loadout-scanner/releases/latest";
-            let resp = ureq::get(url)
-                .set("User-Agent", "df-loadout-scanner")
-                .timeout(Duration::from_secs(5))
-                .call();
-
-            if let Ok(res) = resp {
-                if let Ok(json) = res.into_json::<serde_json::Value>() {
-                    if let Some(tag) = json["tag_name"].as_str() {
-                        if is_newer_version(tag, APP_VERSION) {
-                            let _ = tx_version.send(WorkerEvent::NewVersionAvailable(tag.to_string()));
-                            ctx_version.request_repaint();
-                        }
-                    }
-                }
-            }
-        });
+        let auto_check_update = config.auto_check_update;
+        if auto_check_update {
+            spawn_update_check(tx.clone(), cc.egui_ctx.clone(), false);
+        }
 
         let (tx_db_update, rx_db_update) = channel();
 
@@ -3771,7 +4055,12 @@ impl LoadoutTerminalApp {
             shared_is_rebinding,
             is_rebinding_hotkey: false,
             rebind_start_time: None,
-            new_version_available: None,
+            auto_check_update,
+            available_update: None,
+            is_checking_update: auto_check_update,
+            is_downloading_update: false,
+            downloaded_update_path: None,
+            update_banner_dismissed: false,
             egui_ctx: cc.egui_ctx.clone(),
             tx_events: tx,
             rx,
@@ -3861,6 +4150,7 @@ impl LoadoutTerminalApp {
             hotkey_vk: self.hotkey_vk,
             hotkey_name: self.hotkey_name.clone(),
             selected_monitor_id: self.selected_monitor_id.clone(),
+            auto_check_update: self.auto_check_update,
         };
         if let Err(err) = save_user_config(&cfg) {
             let msg = match self.lang {
@@ -4344,8 +4634,69 @@ impl eframe::App for LoadoutTerminalApp {
                     };
                     self.status_message = Some((msg, Instant::now(), true));
                 }
-                WorkerEvent::NewVersionAvailable(tag) => {
-                    self.new_version_available = Some(tag);
+                WorkerEvent::UpdateCheckFinished { manual, result } => {
+                    self.is_checking_update = false;
+                    match result {
+                        Ok(Some(info)) => {
+                            let changed = self
+                                .available_update
+                                .as_ref()
+                                .map_or(true, |prev| prev.tag_name != info.tag_name);
+                            if changed {
+                                self.downloaded_update_path = None;
+                            }
+                            self.update_banner_dismissed = false;
+                            let msg = match self.lang {
+                                AppLang::Vi => format!(
+                                    "Có bản cập nhật mới {} (hiện tại: {}). Xem banner phía trên để mở hoặc tải gói .zip.",
+                                    info.tag_name, APP_VERSION
+                                ),
+                                AppLang::En => format!(
+                                    "New version {} available (current: {}). Use the top banner to open or download .zip.",
+                                    info.tag_name, APP_VERSION
+                                ),
+                            };
+                            self.available_update = Some(info);
+                            self.status_message = Some((msg, Instant::now(), false));
+                        }
+                        Ok(None) => {
+                            self.available_update = None;
+                            if manual {
+                                let msg = match self.lang {
+                                    AppLang::Vi => format!("Bạn đang sử dụng phiên bản mới nhất ({}).", APP_VERSION),
+                                    AppLang::En => format!("You are already on the latest version ({}).", APP_VERSION),
+                                };
+                                self.status_message = Some((msg, Instant::now(), false));
+                            }
+                        }
+                        Err(err) => {
+                            let msg = match self.lang {
+                                AppLang::Vi => format!("Kiểm tra cập nhật thất bại: {}", err),
+                                AppLang::En => format!("Update check failed: {}", err),
+                            };
+                            self.status_message = Some((msg, Instant::now(), true));
+                        }
+                    }
+                }
+                WorkerEvent::UpdateDownloadFinished { result } => {
+                    self.is_downloading_update = false;
+                    match result {
+                        Ok(path) => {
+                            let msg = match self.lang {
+                                AppLang::Vi => format!("Đã tải gói cập nhật về: {}", path.display()),
+                                AppLang::En => format!("Downloaded update package to: {}", path.display()),
+                            };
+                            self.downloaded_update_path = Some(path);
+                            self.status_message = Some((msg, Instant::now(), false));
+                        }
+                        Err(err) => {
+                            let msg = match self.lang {
+                                AppLang::Vi => format!("Tải gói cập nhật thất bại: {}", err),
+                                AppLang::En => format!("Failed to download update: {}", err),
+                            };
+                            self.status_message = Some((msg, Instant::now(), true));
+                        }
+                    }
                 }
             }
         }
@@ -4800,12 +5151,49 @@ impl eframe::App for LoadoutTerminalApp {
                             self.trigger_db_update(ctx.clone());
                         }
 
+                        ui.add_space(2.0);
+
+                        // Manual Check App Update button
+                        let (upd_text, upd_enabled, upd_color) = if self.is_checking_update {
+                            (
+                                self.lang.t("[ĐANG KIỂM TRA...]", "[CHECKING...]"),
+                                false,
+                                COLOR_AMBER,
+                            )
+                        } else {
+                            (
+                                self.lang.t("[KIỂM TRA CẬP NHẬT]", "[CHECK UPDATE]"),
+                                true,
+                                COLOR_TEXT_MUTED,
+                            )
+                        };
+                        let upd_btn = egui::Button::new(
+                            RichText::new(upd_text)
+                                .color(upd_color)
+                                .size(11.0)
+                                .strong(),
+                        )
+                        .stroke(Stroke::new(1.0_f32, if self.is_checking_update { COLOR_AMBER } else { COLOR_BORDER }))
+                        .rounding(Rounding::same(3.0));
+
+                        if ui
+                            .add_enabled(upd_enabled, upd_btn)
+                            .on_hover_text(self.lang.t(
+                                "Kiểm tra phiên bản mới trên GitHub Releases",
+                                "Check for newer releases on GitHub Releases",
+                            ))
+                            .clicked()
+                        {
+                            self.is_checking_update = true;
+                            spawn_update_check(self.tx_events.clone(), ctx.clone(), true);
+                        }
+
                         // Prominent New Version Badge Button if an update is available on GitHub
-                        if let Some(new_ver) = &self.new_version_available {
+                        if let Some(new_ver) = &self.available_update {
                             ui.add_space(2.0);
                             let ver_label = match self.lang {
-                                AppLang::Vi => format!("[BẢN MỚI {}]", new_ver),
-                                AppLang::En => format!("[NEW {}]", new_ver),
+                                AppLang::Vi => format!("[BẢN MỚI {}]", new_ver.tag_name),
+                                AppLang::En => format!("[NEW {}]", new_ver.tag_name),
                             };
                             let ver_btn = egui::Button::new(
                                 RichText::new(&ver_label)
@@ -4818,17 +5206,147 @@ impl eframe::App for LoadoutTerminalApp {
                             .rounding(Rounding::same(3.0));
 
                             let ver_tooltip = match self.lang {
-                                AppLang::Vi => format!("Đã có phiên bản mới {} trên GitHub! Bấm để mở trang tải về.", new_ver),
-                                AppLang::En => format!("New release {} is available on GitHub! Click to open download page.", new_ver),
+                                AppLang::Vi => format!("Đã có phiên bản mới {} trên GitHub! Bấm để hiện banner tải về.", new_ver.tag_name),
+                                AppLang::En => format!("New release {} is available on GitHub! Click to show update banner.", new_ver.tag_name),
                             };
 
                             if ui.add(ver_btn).on_hover_text(ver_tooltip).clicked() {
-                                ctx.open_url(egui::OpenUrl::same_tab("https://github.com/TaiGiap/df-loadout-scanner/releases/latest"));
+                                self.update_banner_dismissed = false;
                             }
                         }
                     });
                 });
             });
+
+        // Prominent Update Banner (Way A: Notify + Open Release / Safe .zip Download into DF-Loadout-Scanner-Data/downloads/)
+        if let Some(update_info) = self.available_update.clone().filter(|_| !self.update_banner_dismissed) {
+            egui::TopBottomPanel::top("update_banner")
+                .frame(
+                    Frame::default()
+                        .fill(Color32::from_rgb(42, 30, 12))
+                        .stroke(Stroke::new(1.0_f32, COLOR_AMBER))
+                        .inner_margin(Margin::symmetric(14.0, 6.0)),
+                )
+                .show(ctx, |ui| {
+                    ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
+                        let close_btn = egui::Button::new(
+                            RichText::new("✕").color(COLOR_TEXT_MUTED).size(11.0),
+                        )
+                        .fill(Color32::TRANSPARENT);
+                        if ui.add(close_btn).clicked() {
+                            self.update_banner_dismissed = true;
+                        }
+
+                        if let Some(dl_path) = &self.downloaded_update_path {
+                            let open_dir_btn = egui::Button::new(
+                                RichText::new(self.lang.t("[📂 MỞ THƯ MỤC TẢI]", "[📂 OPEN DOWNLOADS]"))
+                                    .color(COLOR_BG)
+                                    .size(11.0)
+                                    .strong(),
+                            )
+                            .fill(COLOR_ACCENT)
+                            .rounding(Rounding::same(2.0));
+                            if ui
+                                .add(open_dir_btn)
+                                .on_hover_text(format!("{}", dl_path.display()))
+                                .clicked()
+                            {
+                                if let Some(parent) = dl_path.parent() {
+                                    let _ = std::process::Command::new("explorer").arg(parent).spawn();
+                                }
+                            }
+                        } else if let Some(zip_url) = update_info.zip_download_url.clone() {
+                            let zip_label = if self.is_downloading_update {
+                                self.lang.t("[⏳ ĐANG TẢI .ZIP...]", "[⏳ DOWNLOADING .ZIP...]")
+                            } else {
+                                self.lang.t("[⬇ TẢI GÓI .ZIP]", "[⬇ DOWNLOAD .ZIP]")
+                            };
+                            let zip_btn = egui::Button::new(
+                                RichText::new(zip_label)
+                                    .color(if self.is_downloading_update { COLOR_TEXT_MUTED } else { COLOR_BG })
+                                    .size(11.0)
+                                    .strong(),
+                            )
+                            .fill(if self.is_downloading_update { Color32::from_rgb(60, 50, 30) } else { COLOR_AMBER })
+                            .rounding(Rounding::same(2.0));
+                            if ui
+                                .add_enabled(!self.is_downloading_update, zip_btn)
+                                .on_hover_text(self.lang.t(
+                                    "Tải gói .zip vào DF-Loadout-Scanner-Data/downloads/ (không ghi đè file .exe đang chạy)",
+                                    "Download .zip into DF-Loadout-Scanner-Data/downloads/ (safe, does not overwrite running .exe)",
+                                ))
+                                .clicked()
+                            {
+                                self.is_downloading_update = true;
+                                let file_name = update_info
+                                    .zip_file_name
+                                    .clone()
+                                    .unwrap_or_else(|| format!("DF-Loadout-Scanner-{}-Windows-x64.zip", update_info.tag_name));
+                                spawn_update_zip_download(self.tx_events.clone(), ctx.clone(), zip_url, file_name);
+                            }
+                        }
+
+                        let open_rel_btn = egui::Button::new(
+                            RichText::new(self.lang.t("[🌐 MỞ RELEASE]", "[🌐 OPEN RELEASE]"))
+                                .color(COLOR_AMBER)
+                                .size(11.0)
+                                .strong(),
+                        )
+                        .stroke(Stroke::new(1.0_f32, COLOR_AMBER))
+                        .rounding(Rounding::same(2.0));
+                        if ui.add(open_rel_btn).clicked() {
+                            ctx.open_url(egui::OpenUrl::new_tab(&update_info.html_url));
+                        }
+
+                        let mut auto_chk = self.auto_check_update;
+                        if ui
+                            .checkbox(
+                                &mut auto_chk,
+                                RichText::new(self.lang.t("Tự kiểm tra", "Auto-check"))
+                                    .color(COLOR_TEXT_MUTED)
+                                    .size(11.0),
+                            )
+                            .changed()
+                        {
+                            self.auto_check_update = auto_chk;
+                            self.save_current_config();
+                        }
+
+                        let rem_w = ui.available_width().max(60.0);
+                        ui.allocate_ui_with_layout(
+                            egui::vec2(rem_w, 20.0),
+                            Layout::left_to_right(Align::Center),
+                            |ui| {
+                                let banner_text = if update_info.summary.is_empty() {
+                                    format!(
+                                        "{} {} ({})",
+                                        self.lang.t("🚀 Có bản mới:", "🚀 Update available:"),
+                                        update_info.tag_name,
+                                        update_info.name
+                                    )
+                                } else {
+                                    format!(
+                                        "{} {} — {}",
+                                        self.lang.t("🚀 Có bản mới:", "🚀 Update available:"),
+                                        update_info.tag_name,
+                                        update_info.summary
+                                    )
+                                };
+                                ui.add(
+                                    egui::Label::new(
+                                        RichText::new(banner_text)
+                                            .color(COLOR_AMBER)
+                                            .size(12.0)
+                                            .strong(),
+                                    )
+                                    .truncate()
+                                    .selectable(false),
+                                );
+                            },
+                        );
+                    });
+                });
+        }
 
         // 5-Level Filter Bar (Directly below Header) or Favorites Banner
         if self.current_tab == AppTab::Scanner {
@@ -7182,17 +7700,17 @@ mod tests {
     fn test_ocr_rejects_vietnamese_aliases_and_category_only() {
         let candidates = get_test_candidates();
 
-        // 1. General Vietnamese nicknames (`cung`, `no`, `hai nong`, etc.) MUST remain disabled in OCR flow,
-        //    except for the explicit HUD title `Cung Phức Hợp` -> `COMPOUND BOW`.
+        // 1. General Vietnamese nicknames (`cung`, `no`, `sung truong`, etc.) MUST remain disabled in OCR flow,
+        //    except for explicit HUD titles `Cung Phức Hợp` -> `COMPOUND BOW` and `Shotgun Hai Nòng` -> `725 DOUBLE-BARREL`.
         for vi_nick in [
             "cung",
             "Cung",
             "Nỏ",
             "Nỏ chiến thuật",
-            "hai nong",
-            "Hai Nòng",
-            "Shotgun Hai Nòng",
-            "Súng săn Hai Nòng",
+            "sung truong",
+            "Súng trường",
+            "tieu lien",
+            "Bắn tỉa",
         ] {
             let (matched, _) = recognize_weapon_from_title(vi_nick, &candidates);
             assert!(
@@ -7207,6 +7725,17 @@ mod tests {
             let d = recognize_weapon_with_decision(bow_title, 0.90, None, &candidates);
             assert_eq!(d.weapon, Some("COMPOUND BOW"), "Title '{}' should map to COMPOUND BOW", bow_title);
             assert!(d.can_auto_copy, "Title '{}' should satisfy auto-copy guards", bow_title);
+        }
+
+        for db_title in ["Shotgun Hai Nòng", "Shotgun Hai Nong U", "Hai Nòng", "Hai Nong...", "HAI N0NG U"] {
+            let d = recognize_weapon_with_decision(db_title, 0.88, None, &candidates);
+            assert_eq!(
+                d.weapon,
+                Some("725 DOUBLE-BARREL"),
+                "Title '{}' should map to 725 DOUBLE-BARREL",
+                db_title
+            );
+            assert!(d.can_auto_copy, "Title '{}' should satisfy auto-copy guards", db_title);
         }
 
         // 2. Category-only OCR text with no weapon code characters MUST be rejected
@@ -7889,12 +8418,36 @@ mod tests {
         assert!(!locked_miss.can_auto_copy);
 
         // 2. Three mandatory Auto-Copy >= 75% safety guards
+        // When score >= 0.80, margin requirement relaxes to >= 0.05; below 0.80 keeps >= 0.12
         assert_eq!(evaluate_auto_copy_guards(0.78, 0.20, true, 3, 0.85), ConfidenceTier::High);
+        assert_eq!(evaluate_auto_copy_guards(0.78, 0.11, true, 3, 0.95), ConfidenceTier::Suspicious);
+        assert_eq!(evaluate_auto_copy_guards(0.95, 0.08, true, 3, 0.95), ConfidenceTier::High);
+        assert_eq!(evaluate_auto_copy_guards(0.95, 0.04, true, 3, 0.95), ConfidenceTier::Suspicious);
         assert_eq!(evaluate_auto_copy_guards(0.74, 0.20, true, 3, 0.85), ConfidenceTier::Rejected);
-        assert_eq!(evaluate_auto_copy_guards(0.95, 0.11, true, 3, 0.95), ConfidenceTier::Suspicious);
         assert_eq!(evaluate_auto_copy_guards(0.95, 0.50, false, 3, 0.95), ConfidenceTier::Suspicious);
         assert_eq!(evaluate_auto_copy_guards(0.95, 0.50, true, 1, 0.95), ConfidenceTier::Suspicious);
         assert_eq!(evaluate_auto_copy_guards(0.95, 0.50, true, 3, 0.54), ConfidenceTier::Suspicious);
+
+        // v2.0.2-beta Warfare real-world cases: prefix-category `Shotgun S12KU` -> `S12K` & smooth >= 75% auto-copy
+        for (raw_ocr, expected) in [
+            ("Shotgun S12KU", "S12K"),
+            ("S12KU Shotgun", "S12K"),
+            ("CAR-15 Assault Rifle", "CAR-15"),
+            ("G3 Battle Rifle", "G3"),
+            ("SVD Sniper Rifle", "SVD"),
+            ("R93 Sniper Rifle", "R93"),
+        ] {
+            let dec = recognize_weapon_with_decision(raw_ocr, 0.85, None, &candidates);
+            assert_eq!(dec.weapon, Some(expected), "Failed for '{}'", raw_ocr);
+            assert!(dec.score >= 0.75, "Score < 0.75 for '{}': {:.3}", raw_ocr, dec.score);
+            assert!(
+                dec.can_auto_copy,
+                "Expected auto-copy true for '{}' (score={:.3}, margin={:.3})",
+                raw_ocr,
+                dec.score,
+                dec.margin
+            );
+        }
 
         // End-to-end guard enforcement: no category -> blocks auto-copy; low CTC -> blocks auto-copy; 1-char code -> blocks auto-copy
         let unlocked = recognize_weapon_with_decision("SG552", 0.99, None, &candidates);
@@ -8461,6 +9014,92 @@ mod tests {
         );
 
         let _ = fs::remove_dir_all(&test_dir);
+    }
+
+    #[test]
+    fn test_semver_comparison_with_prerelease() {
+        // Pre-release progression: 2.0.1-beta < 2.0.1 < 2.0.2-beta < 2.0.2 < 2.1.0
+        assert!(is_newer_version("v2.0.1", "v2.0.1-beta"));
+        assert!(is_newer_version("2.0.2-beta", "v2.0.1-beta"));
+        assert!(is_newer_version("v2.0.2", "v2.0.1-beta"));
+        assert!(is_newer_version("v2.1.0", "v2.0.1-beta"));
+        assert!(is_newer_version("v2.0.1-beta.2", "v2.0.1-beta"));
+        assert!(is_newer_version("v2.0.1-rc.1", "v2.0.1-beta.2"));
+
+        // Equal or older versions MUST NOT trigger update
+        assert!(!is_newer_version("v2.0.1-beta", "v2.0.1-beta"));
+        assert!(!is_newer_version("2.0.1-beta", "v2.0.1-beta"));
+        assert!(!is_newer_version("v2.0.0", "v2.0.1-beta"));
+        assert!(!is_newer_version("v2.0.0-beta", "v2.0.1-beta"));
+        assert!(!is_newer_version("v1.4.6", "v2.0.1-beta"));
+
+        // Stable build ignores newer pre-release, but accepts newer stable release
+        assert!(!is_newer_version("v2.0.2-beta", "v2.0.1"));
+        assert!(is_newer_version("v2.0.2", "v2.0.1"));
+        assert!(is_newer_version("v2.1.0", "v2.0.1"));
+        assert!(!is_newer_version("v2.0.1-beta", "v2.0.1"));
+        assert!(!is_newer_version("invalid-tag", "v2.0.1-beta"));
+    }
+
+    #[test]
+    fn test_github_releases_payload_selection_and_config_default() {
+        let payload = serde_json::json!([
+            {
+                "tag_name": "v2.1.0-draft",
+                "name": "Draft Build",
+                "draft": true,
+                "prerelease": true,
+                "html_url": "https://github.com/TaiGiap/df-loadout-scanner/releases/tag/v2.1.0-draft",
+                "body": "Should be ignored",
+                "assets": []
+            },
+            {
+                "tag_name": "v2.0.2-beta",
+                "name": "DF Loadout Scanner v2.0.2-beta",
+                "draft": false,
+                "prerelease": true,
+                "html_url": "https://github.com/TaiGiap/df-loadout-scanner/releases/tag/v2.0.2-beta",
+                "body": "# Title\n---\nCải thiện tốc độ quét OCR và thêm vũ khí mùa mới.\n",
+                "assets": [
+                    {
+                        "name": "DF-Loadout-Scanner-v2.0.2-beta-Windows-x64.zip",
+                        "browser_download_url": "https://github.com/TaiGiap/df-loadout-scanner/releases/download/v2.0.2-beta/DF-Loadout-Scanner-v2.0.2-beta-Windows-x64.zip"
+                    }
+                ]
+            },
+            {
+                "tag_name": "v2.0.1-beta",
+                "name": "DF Loadout Scanner v2.0.1-beta",
+                "draft": false,
+                "prerelease": true,
+                "html_url": "https://github.com/TaiGiap/df-loadout-scanner/releases/tag/v2.0.1-beta",
+                "body": "Current release",
+                "assets": []
+            }
+        ]);
+
+        // From v2.0.1-beta, selects v2.0.2-beta with zip asset & extracted summary
+        let selected = select_latest_update_from_releases(&payload, "v2.0.1-beta")
+            .expect("should detect v2.0.2-beta from v2.0.1-beta");
+        assert_eq!(selected.tag_name, "v2.0.2-beta");
+        assert_eq!(selected.name, "DF Loadout Scanner v2.0.2-beta");
+        assert_eq!(selected.summary, "Cải thiện tốc độ quét OCR và thêm vũ khí mùa mới.");
+        assert_eq!(
+            selected.zip_file_name.as_deref(),
+            Some("DF-Loadout-Scanner-v2.0.2-beta-Windows-x64.zip")
+        );
+        assert!(selected.zip_download_url.is_some());
+
+        // From stable v2.0.1, ignores prerelease v2.0.2-beta
+        assert!(select_latest_update_from_releases(&payload, "v2.0.1").is_none());
+
+        // From v2.0.2-beta itself, no newer update
+        assert!(select_latest_update_from_releases(&payload, "v2.0.2-beta").is_none());
+
+        // Backward compatibility: old config.json without `auto_check_update` defaults to `true`
+        let old_cfg: UserConfig = serde_json::from_str(r#"{"server":"Garena","mode":"Warfare"}"#)
+            .expect("old config should deserialize");
+        assert!(old_cfg.auto_check_update);
     }
 }
 

@@ -11,17 +11,17 @@ Công cụ **mã nguồn mở (Open Source — MIT License)** tự động nhậ
 Người dùng thông thường chỉ cần tải bản đóng gói sẵn tại mục GitHub Releases:
 
 - **Phiên bản mới nhất (Latest Release):** [DF-Loadout-Scanner Releases](https://github.com/TaiGiap/df-loadout-scanner/releases/latest)
-- **Tệp cài đặt:** `DF-Loadout-Scanner-v2.0.1-beta-Windows-x64.zip` (Đã đóng gói trọn gói file thực thi `.exe` tích hợp mô hình `en_PP-OCRv4_rec.onnx`, `onnxruntime.dll`, tài liệu hướng dẫn và giấy phép).
+- **Tệp cài đặt:** `DF-Loadout-Scanner-v2.0.2-beta-Windows-x64.zip` (Đã đóng gói trọn gói file thực thi `.exe` tích hợp mô hình `en_PP-OCRv4_rec.onnx`, `onnxruntime.dll`, tài liệu hướng dẫn và giấy phép).
 
 > **Tác giả / Developed By:** Anh Bảy Chọ / Tài Giáp  
-> **Phiên bản / Version:** `v2.0.1-beta` (Threshold-Free 2-Pass AI OCR, Hard Category Lock & 3-Guard Auto-Copy)
+> **Phiên bản / Version:** `v2.0.2-beta` (Threshold-Free 2-Pass AI OCR, Shotgun Hai Nòng / S12KU, Margin `0.05` & GitHub Auto-Updater)
 
 ---
 
 ## Hướng Dẫn Cài Đặt & Sử Dụng (3 Bước)
 
 ### Bước 1: Tải về & Giải nén
-- Tải gói file nén `DF-Loadout-Scanner-v2.0.1-beta-Windows-x64.zip` từ trang [Releases](https://github.com/TaiGiap/df-loadout-scanner/releases/latest).
+- Tải gói file nén `DF-Loadout-Scanner-v2.0.2-beta-Windows-x64.zip` từ trang [Releases](https://github.com/TaiGiap/df-loadout-scanner/releases/latest).
 - Giải nén toàn bộ tệp (bao gồm `DF-Loadout-Scanner-Windows-x64.exe` và `onnxruntime.dll`) vào cùng một thư mục — không cần cài đặt thêm gói ngôn ngữ Windows OCR.
 
 ### Bước 2: Khởi chạy ứng dụng
@@ -107,7 +107,7 @@ Người dùng thông thường chỉ cần tải bản đóng gói sẵn tại 
 **DF Loadout Scanner** is a lightweight, real-time AI OCR weapon recognition and loadout synchronizer for Delta Force (Garena & Level Infinite / Steam), powered by offline **PaddleOCR v4 (`en_PP-OCRv4_rec` + ONNX Runtime CPU)**.
 
 ### Quick Start (3 Steps)
-1. **Download:** Grab `DF-Loadout-Scanner-v2.0.1-beta-Windows-x64.zip` from [GitHub Releases](https://github.com/TaiGiap/df-loadout-scanner/releases/latest) and extract all files (including `DF-Loadout-Scanner-Windows-x64.exe` and `onnxruntime.dll`) into the same folder.
+1. **Download:** Grab `DF-Loadout-Scanner-v2.0.2-beta-Windows-x64.zip` from [GitHub Releases](https://github.com/TaiGiap/df-loadout-scanner/releases/latest) and extract all files (including `DF-Loadout-Scanner-Windows-x64.exe` and `onnxruntime.dll`) into the same folder.
 2. **Launch:** Run `DF-Loadout-Scanner-Windows-x64.exe`. If the Windows SmartScreen prompt appears, click **More info** $\rightarrow$ **Run anyway** (requires admin rights for global hotkey capture and stable fullscreen screenshot). No Windows OCR language pack installation is required.
 3. **Use in Game:** Set game display to **Borderless Windowed** and enable Windows **Clipboard History (`Win + V`)**. In gunsmith menu, press hotkey (default `F9` or customizable to `Mouse 4/5` / `F1-F12`). Hit `Ctrl + V` to paste the top build, or `Win + V` to browse alternate builds.
 
@@ -191,7 +191,8 @@ Tác giả tôn trọng quyền sở hữu trí tuệ và mong muốn của các
 
 | Phiên bản | Điểm mới & Cải tiến chính |
 | :--- | :--- |
-| **v2.0.1-beta (Mới nhất)** | Nâng cấp toàn diện lõi OCR chống che mờ `18+`: Gỡ bỏ lọc ngưỡng trắng cứng giữ nguyên nét chữ xám tối trong Pass 1A, bổ sung **Pass 1B** (kéo dãn tương phản + `gamma = 0.55` 30% mép trái) và **Pass 2** dự phòng (quét góc trên trái thẻ đang chọn cột danh sách né tên skin + ghép Loại súng đã khóa); Quy đổi khung HUD `16:9` trung tâm (`16:9`, `21:9`, `16:10`) tại `x: 24.0%–41.5%, y: 15.0%–19.6%`; **Khóa cứng Loại súng**, sửa lỗi dính chữ (`4A1Assault Rifle`, `Assault Rifleof oadu`, `Sniger`), hỗ trợ `aver-action` & `Cung Phức Hợp`; Hạ ngưỡng **Auto-Copy về `>= 75%`** kèm **3 rào chắn an toàn** (`category_locked`, `margin >= 12%`, `code >= 2` & `CTC >= 0.55`); Sửa triệt để lỗi đè chữ trên Status Bar và thêm cờ `DF_OCR_DEBUG=1`. |
+| **v2.0.2-beta (Mới nhất)** | Hỗ trợ ngoại lệ tiêu đề `Shotgun Hai Nòng` (`SHOTGUN HAI NONG`, `HAI NONG U`) $\rightarrow$ `725 DOUBLE-BARREL`; Sửa lỗi tiền tố loại súng (`Shotgun S12KU` $\rightarrow$ `S12K`) và dọn ký tự rác lẻ dính ở đuôi mã súng; Tinh chỉnh rào chắn Auto-Copy (`margin >= 0.05` khi `score >= 0.80`) giúp `CAR-15`, `G3`, `SVD`, `R93` tự động copy mượt mà; Tích hợp kiểm tra cập nhật tự động qua GitHub Releases API (SemVer pre-release, banner thông báo, nút `[KIỂM TRA CẬP NHẬT]` và tải `.zip` an toàn vào `DF-Loadout-Scanner-Data/downloads/`). |
+| **v2.0.1-beta** | Nâng cấp toàn diện lõi OCR chống che mờ `18+`: Gỡ bỏ lọc ngưỡng trắng cứng giữ nguyên nét chữ xám tối trong Pass 1A, bổ sung **Pass 1B** (kéo dãn tương phản + `gamma = 0.55` 30% mép trái) và **Pass 2** dự phòng (quét góc trên trái thẻ đang chọn cột danh sách né tên skin + ghép Loại súng đã khóa); Quy đổi khung HUD `16:9` trung tâm (`16:9`, `21:9`, `16:10`) tại `x: 24.0%–41.5%, y: 15.0%–19.6%`; **Khóa cứng Loại súng**, sửa lỗi dính chữ (`4A1Assault Rifle`, `Assault Rifleof oadu`, `Sniger`), hỗ trợ `aver-action` & `Cung Phức Hợp`; Hạ ngưỡng **Auto-Copy về `>= 75%`** kèm **3 rào chắn an toàn** (`category_locked`, `margin >= 12%`, `code >= 2` & `CTC >= 0.55`); Sửa triệt để lỗi đè chữ trên Status Bar và thêm cờ `DF_OCR_DEBUG=1`. |
 | **v2.0.0-beta** | Thay thế hoàn toàn Windows OCR API bằng lõi AI **PaddleOCR v4 Offline (`en_PP-OCRv4_rec.onnx` + `en_dict.txt` + `onnxruntime.dll`)** chạy trên CPU (~15ms/lần quét), loại bỏ hoàn toàn yêu cầu cài gói ngôn ngữ Windows; Tiền xử lý lọc bỏ màu vàng/cam `18+`, cô lập nét chữ trắng, chuẩn hóa chiều cao `48px` và giải mã CTC greedy; **Khóa cứng vùng quét duy nhất tại Tiêu đề chính giữa** (`x: 24.8%–45.0%`, `y: 14.5%–20.0%`), gỡ bỏ bước đọc cột danh sách trái (chống nhiễu skin) và mô tả góc dưới; Bổ sung thuật toán khớp **`[Hậu tố mã súng + Loại súng]`** khắc phục bị `18+` che 1–3 ký tự đầu (`M7`, `MK4`, `R93`, `VECTOR`, `SR-3M`, `QBZ95-1`), tắt bảng bí danh tiếng Việt khỏi OCR (chỉ giữ cho tìm kiếm UI) và từ chối nếu chỉ còn tên loại súng. |
 | **v1.4.6** | **[P0] Atomic Write Verification:** Bổ sung `atomic_write_verified` xác nhận file đích `> 0` bytes khi `fs::rename`/`fs::copy`, không bỏ qua lỗi ghi, bảo toàn DB cũ nếu ghi thất bại; **[P1] Định danh màn hình ổn định:** Chuyển sang `selected_monitor_id` (`<Tên thiết bị> (<W>x<H>)`) tự động fallback về cửa sổ game khi tháo màn hình phụ; **[P1] Gia cố Clipboard & Win+V:** Thêm `init_clipboard_with_retry` (3 lần, `35ms`) và báo cáo chính xác tỷ lệ nạp `success/total` vào `Win + V`; **[P1] Semantic Validator phía Rust:** Đối chiếu chéo tên súng trong `loadout_code` với trường `weapon` và khử trùng lặp theo `loadout_code` trước khi ghi `builds_local.json`; Bổ sung kiểm tra khớp phiên bản tự động trong GitHub Actions release. |
 | **v1.4.5** | Hỗ trợ **Đa Màn Hình thông minh** (tự động nhận diện màn hình chứa cửa sổ game đang focus qua Windows API `GetForegroundWindow`/`MonitorFromWindow`, kèm tùy chọn khóa màn hình thủ công lưu trong `config.json`); Gia cố độ tin cậy **Clipboard** với cơ chế thử lại tối đa 3 lần (`35ms`) + tự khởi tạo lại instance và chỉ phát tiếng bíp `MB_OK` khi bản build đầu tiên ghi thành công (báo lỗi rõ ràng nếu thất bại); Nâng cấp `match_weapon` với **Top-1 vs Top-2 Margin Check (`< 0.08`)** cho nhóm súng tên ngắn ($\le 3$ ký tự) chuyển về vùng xác nhận thủ công (`0.85`); Bổ sung `validate_downloaded_builds` kiểm tra tính hợp lệ dữ liệu tải về phía Rust trước khi ghi `builds_local.json`. |
