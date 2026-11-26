@@ -33,7 +33,7 @@ extern "system" {
 // Application & Author identity constants
 const AUTHOR_NAME: &str = "Anh Bảy Chọ / Tài Giáp";
 const APP_NAME: &str = "DF Loadout Scanner";
-const APP_VERSION: &str = "v2.0.2-beta";
+const APP_VERSION: &str = "v2.0.3-Beta";
 
 // VietQR donation constants
 const DONATE_BANK_ID: &str = "TCB";
@@ -160,9 +160,9 @@ const COLOR_CARD: Color32 = Color32::from_rgb(19, 27, 36);        // #131B24
 const COLOR_CARD_HOVER: Color32 = Color32::from_rgb(26, 37, 50);  // #1A2532
 const COLOR_ACCENT: Color32 = Color32::from_rgb(0, 229, 160);      // #00E5A0
 const COLOR_ACCENT_DIM: Color32 = Color32::from_rgb(0, 77, 54);   // #004D36
-const COLOR_TEXT_MAIN: Color32 = Color32::from_rgb(230, 237, 243);// #E6EDF3
-const COLOR_TEXT_MUTED: Color32 = Color32::from_rgb(139, 148, 158);// #8B949E
-const COLOR_BORDER: Color32 = Color32::from_rgb(35, 48, 62);      // #23303E
+const COLOR_TEXT_MAIN: Color32 = Color32::from_rgb(240, 245, 250);// #F0F5FA
+const COLOR_TEXT_MUTED: Color32 = Color32::from_rgb(184, 196, 210);// #B8C4D2
+const COLOR_BORDER: Color32 = Color32::from_rgb(56, 74, 94);      // #384A5E
 const COLOR_AMBER: Color32 = Color32::from_rgb(255, 190, 40);      // #FFBE28
 const COLOR_RED: Color32 = Color32::from_rgb(255, 92, 92);         // #FF5C5C
 
@@ -5169,16 +5169,19 @@ impl eframe::App for LoadoutTerminalApp {
                     ui.add_space(6.0);
 
                     // Navigation Tabs: [🔍 QUÉT & TRA CỨU] and [★ YÊU THÍCH (N)]
+                    let btn_idle_bg = Color32::from_rgb(25, 35, 47);
+                    let btn_idle_border = Color32::from_rgb(72, 92, 114);
+
                     let tab1_active = self.current_tab == AppTab::Scanner;
                     let tab1_label = self.lang.t("🔍 QUÉT & TRA CỨU", "🔍 SCAN & SEARCH");
                     let tab1_btn = egui::Button::new(
                         RichText::new(tab1_label)
-                            .color(if tab1_active { COLOR_ACCENT } else { COLOR_TEXT_MUTED })
+                            .color(if tab1_active { COLOR_ACCENT } else { COLOR_TEXT_MAIN })
                             .size(11.0)
                             .strong(),
                     )
-                    .fill(if tab1_active { COLOR_ACCENT_DIM } else { COLOR_CARD })
-                    .stroke(Stroke::new(1.0_f32, if tab1_active { COLOR_ACCENT } else { COLOR_BORDER }))
+                    .fill(if tab1_active { COLOR_ACCENT_DIM } else { btn_idle_bg })
+                    .stroke(Stroke::new(1.0_f32, if tab1_active { COLOR_ACCENT } else { btn_idle_border }))
                     .rounding(Rounding::same(3.0));
 
                     if ui.add(tab1_btn).on_hover_text(self.lang.t("Màn hình chính: Quét súng và tra cứu theo danh mục", "Main screen: Weapon scanner & catalog search")).clicked() {
@@ -5195,12 +5198,12 @@ impl eframe::App for LoadoutTerminalApp {
                     };
                     let tab2_btn = egui::Button::new(
                         RichText::new(tab2_label)
-                            .color(if tab2_active { Color32::from_rgb(255, 215, 0) } else { if fav_count > 0 { Color32::from_rgb(220, 190, 80) } else { COLOR_TEXT_MUTED } })
+                            .color(if tab2_active { Color32::from_rgb(255, 224, 64) } else if fav_count > 0 { Color32::from_rgb(245, 212, 100) } else { COLOR_TEXT_MAIN })
                             .size(11.0)
                             .strong(),
                     )
-                    .fill(if tab2_active { Color32::from_rgb(50, 42, 10) } else { COLOR_CARD })
-                    .stroke(Stroke::new(1.0_f32, if tab2_active { Color32::from_rgb(255, 215, 0) } else { COLOR_BORDER }))
+                    .fill(if tab2_active { Color32::from_rgb(50, 42, 10) } else { btn_idle_bg })
+                    .stroke(Stroke::new(1.0_f32, if tab2_active { Color32::from_rgb(255, 215, 0) } else { btn_idle_border }))
                     .rounding(Rounding::same(3.0));
 
                     if ui.add(tab2_btn).on_hover_text(self.lang.t("Kho lưu trữ: Toàn bộ cấu hình đã ghim và mã cá nhân", "Repository: All pinned builds and custom loadouts")).clicked() {
@@ -5210,14 +5213,15 @@ impl eframe::App for LoadoutTerminalApp {
                     ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
                         ui.spacing_mut().item_spacing.x = 5.0;
 
-                        let about_color = if self.show_about { COLOR_ACCENT } else { COLOR_TEXT_MUTED };
+                        let about_color = if self.show_about { COLOR_ACCENT } else { COLOR_TEXT_MAIN };
                         let about_btn = egui::Button::new(
                             RichText::new("[ABOUT]")
                                 .color(about_color)
                                 .size(11.0)
                                 .strong(),
                         )
-                        .stroke(Stroke::new(1.0_f32, if self.show_about { COLOR_ACCENT } else { COLOR_BORDER }))
+                        .fill(if self.show_about { COLOR_ACCENT_DIM } else { btn_idle_bg })
+                        .stroke(Stroke::new(1.0_f32, if self.show_about { COLOR_ACCENT } else { btn_idle_border }))
                         .rounding(Rounding::same(3.0));
 
                         if ui.add(about_btn).on_hover_text(self.lang.t("Thông tin tác giả", "Author information")).clicked() {
@@ -5225,9 +5229,9 @@ impl eframe::App for LoadoutTerminalApp {
                         }
 
                         let support_color = if self.show_support {
-                            Color32::from_rgb(255, 105, 180)
+                            Color32::from_rgb(255, 130, 195)
                         } else {
-                            Color32::from_rgb(255, 140, 180)
+                            Color32::from_rgb(255, 165, 205)
                         };
                         let support_btn = egui::Button::new(
                             RichText::new(self.lang.t("[❤ ỦNG HỘ]", "[❤ SUPPORT]"))
@@ -5235,7 +5239,8 @@ impl eframe::App for LoadoutTerminalApp {
                                 .size(11.0)
                                 .strong(),
                         )
-                        .stroke(Stroke::new(1.0_f32, if self.show_support { Color32::from_rgb(255, 105, 180) } else { Color32::from_rgb(180, 60, 100) }))
+                        .fill(if self.show_support { Color32::from_rgb(56, 22, 40) } else { btn_idle_bg })
+                        .stroke(Stroke::new(1.0_f32, if self.show_support { Color32::from_rgb(255, 120, 185) } else { Color32::from_rgb(200, 80, 125) }))
                         .rounding(Rounding::same(3.0));
 
                         if ui.add(support_btn).on_hover_text(self.lang.t("Ủng hộ tác giả (VietQR)", "Support developer (VietQR)")).clicked() {
@@ -5250,14 +5255,15 @@ impl eframe::App for LoadoutTerminalApp {
                         } else {
                             self.lang.t("[GHIM: TẮT]", "[PIN: OFF]")
                         };
-                        let top_color = if self.always_on_top { COLOR_ACCENT } else { COLOR_TEXT_MUTED };
+                        let top_color = if self.always_on_top { COLOR_ACCENT } else { COLOR_TEXT_MAIN };
                         let top_btn = egui::Button::new(
                             RichText::new(top_icon)
                                 .color(top_color)
                                 .size(11.0)
                                 .strong(),
                         )
-                        .stroke(Stroke::new(1.0_f32, if self.always_on_top { COLOR_ACCENT } else { COLOR_BORDER }))
+                        .fill(if self.always_on_top { COLOR_ACCENT_DIM } else { btn_idle_bg })
+                        .stroke(Stroke::new(1.0_f32, if self.always_on_top { COLOR_ACCENT } else { btn_idle_border }))
                         .rounding(Rounding::same(3.0));
 
                         if ui.add(top_btn).on_hover_text(self.lang.t("Ghim trên cùng", "Always on Top")).clicked() {
@@ -5279,7 +5285,8 @@ impl eframe::App for LoadoutTerminalApp {
                                 .size(11.0)
                                 .strong(),
                         )
-                        .stroke(Stroke::new(1.0_f32, COLOR_BORDER))
+                        .fill(btn_idle_bg)
+                        .stroke(Stroke::new(1.0_f32, btn_idle_border))
                         .rounding(Rounding::same(3.0));
 
                         if ui.add(lang_btn).on_hover_text(self.lang.t("Chuyển sang English", "Switch to Tiếng Việt")).clicked() {
@@ -5291,14 +5298,15 @@ impl eframe::App for LoadoutTerminalApp {
                         }
 
                         let guide_label = self.lang.t("[HƯỚNG DẪN]", "[GUIDE]");
-                        let guide_color = if self.show_guide { COLOR_ACCENT } else { COLOR_TEXT_MUTED };
+                        let guide_color = if self.show_guide { COLOR_ACCENT } else { COLOR_TEXT_MAIN };
                         let guide_btn = egui::Button::new(
                             RichText::new(guide_label)
                                 .color(guide_color)
                                 .size(11.0)
                                 .strong(),
                         )
-                        .stroke(Stroke::new(1.0_f32, if self.show_guide { COLOR_ACCENT } else { COLOR_BORDER }))
+                        .fill(if self.show_guide { COLOR_ACCENT_DIM } else { btn_idle_bg })
+                        .stroke(Stroke::new(1.0_f32, if self.show_guide { COLOR_ACCENT } else { btn_idle_border }))
                         .rounding(Rounding::same(3.0));
 
                         if ui.add(guide_btn).on_hover_text(self.lang.t("Mở bảng hướng dẫn sử dụng", "Open User Guide")).clicked() {
@@ -5424,10 +5432,12 @@ impl eframe::App for LoadoutTerminalApp {
                             ctx.request_repaint_after(Duration::from_secs(1));
                         }
 
-                        let (db_text, can_update, db_color) = if self.is_updating {
+                        let (db_text, can_update, db_color, db_bg, db_border) = if self.is_updating {
                             (
                                 self.lang.t("[ĐANG TẢI DB...]", "[UPDATING DB...]").to_string(),
                                 false,
+                                COLOR_AMBER,
+                                Color32::from_rgb(44, 34, 14),
                                 COLOR_AMBER,
                             )
                         } else if let Some(rem_secs) = remaining_cooldown_secs {
@@ -5436,12 +5446,20 @@ impl eframe::App for LoadoutTerminalApp {
                                 AppLang::Vi => format!("[CHỜ DB {}M]", rem_mins),
                                 AppLang::En => format!("[WAIT DB {}M]", rem_mins),
                             };
-                            (label, false, COLOR_TEXT_MUTED)
+                            (
+                                label,
+                                false,
+                                Color32::from_rgb(205, 215, 226),
+                                Color32::from_rgb(26, 36, 48),
+                                Color32::from_rgb(72, 92, 114),
+                            )
                         } else {
                             (
                                 self.lang.t("[CẬP NHẬT DB]", "[UPDATE DB]").to_string(),
                                 true,
                                 COLOR_ACCENT,
+                                Color32::from_rgb(25, 35, 47),
+                                Color32::from_rgb(72, 92, 114),
                             )
                         };
 
@@ -5451,7 +5469,8 @@ impl eframe::App for LoadoutTerminalApp {
                                 .size(11.0)
                                 .strong(),
                         )
-                        .stroke(Stroke::new(1.0_f32, if self.is_updating { COLOR_AMBER } else { COLOR_BORDER }))
+                        .fill(db_bg)
+                        .stroke(Stroke::new(1.0_f32, db_border))
                         .rounding(Rounding::same(3.0));
 
                         let tooltip = if self.is_updating {
@@ -5479,17 +5498,21 @@ impl eframe::App for LoadoutTerminalApp {
                         }
 
                         // Manual Check App Update button (grouped neatly with DB Update on the right)
-                        let (upd_text, upd_enabled, upd_color) = if self.is_checking_update {
+                        let (upd_text, upd_enabled, upd_color, upd_bg, upd_border) = if self.is_checking_update {
                             (
                                 self.lang.t("[ĐANG KIỂM TRA...]", "[CHECKING...]"),
                                 false,
+                                COLOR_AMBER,
+                                Color32::from_rgb(44, 34, 14),
                                 COLOR_AMBER,
                             )
                         } else {
                             (
                                 self.lang.t("[KIỂM TRA CẬP NHẬT]", "[CHECK UPDATE]"),
                                 true,
-                                COLOR_TEXT_MUTED,
+                                COLOR_TEXT_MAIN,
+                                Color32::from_rgb(25, 35, 47),
+                                Color32::from_rgb(72, 92, 114),
                             )
                         };
                         let upd_btn = egui::Button::new(
@@ -5498,7 +5521,8 @@ impl eframe::App for LoadoutTerminalApp {
                                 .size(11.0)
                                 .strong(),
                         )
-                        .stroke(Stroke::new(1.0_f32, if self.is_checking_update { COLOR_AMBER } else { COLOR_BORDER }))
+                        .fill(upd_bg)
+                        .stroke(Stroke::new(1.0_f32, upd_border))
                         .rounding(Rounding::same(3.0));
 
                         if ui
