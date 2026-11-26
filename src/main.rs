@@ -574,9 +574,9 @@ fn save_favorites(favorites: &[BuildItem]) -> Result<(), String> {
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ConfidenceTier {
-    High,       // >= 0.90: Tự động sao chép vào Clipboard
-    Suspicious, // 0.75 <= score < 0.90: Vùng nghi ngờ, yêu cầu xác nhận thủ công
-    Rejected,   // < 0.75: Từ chối / không nhận diện
+    High,       // Đủ điều kiện tự động sao chép vào Clipboard
+    Suspicious, // Vùng nghi ngờ: cần người dùng bấm [✔ XÁC NHẬN & COPY]
+    Rejected,   // Từ chối / không nhận diện (< 0.75)
 }
 
 pub fn classify_confidence(score: f64) -> ConfidenceTier {
@@ -586,6 +586,30 @@ pub fn classify_confidence(score: f64) -> ConfidenceTier {
         ConfidenceTier::Suspicious
     } else {
         ConfidenceTier::Rejected
+    }
+}
+
+/// Evaluates v2.0.1-beta `>= 0.75` auto-copy gate guarded by 3 mandatory safety barriers:
+/// 1) Weapon category locked (or explicit special override like `Cung Phức Hợp` / `Lever-action`)
+/// 2) Top-1 vs Top-2 score margin `>= 0.12`
+/// 3) Extracted code has `>= 2` alphanumeric characters AND `ctc_confidence >= 0.55`
+pub fn evaluate_auto_copy_guards(
+    score: f64,
+    margin: f64,
+    category_locked: bool,
+    code_alnum_len: usize,
+    ctc_confidence: f32,
+) -> ConfidenceTier {
+    if score < 0.75 {
+        ConfidenceTier::Rejected
+    } else if category_locked
+        && margin >= 0.12
+        && code_alnum_len >= 2
+        && ctc_confidence >= 0.55
+    {
+        ConfidenceTier::High
+    } else {
+        ConfidenceTier::Suspicious
     }
 }
 
@@ -1036,128 +1060,116 @@ fn ctc_greedy_decode(shape: &[i64], data: &[f32], dict: &[&str]) -> Result<(Stri
     Ok((text.trim().to_string(), avg_conf))
 }
 
-/// Preprocesses a cropped weapon header image for PaddleOCR v4 (`[1, 3, 48, W]` NCHW):
-/// 1. Isolates bright white text glyphs while suppressing colored yellow/orange `18+` graphics and dark HUD background.
-/// 2. Tight-bounds the active white text rows/cols and adds clean uniform padding so glyphs fill ~70% of 48px height.
-/// 3. Resizes preserving aspect ratio to height `48px`, right-pads to at least `320px` (multiple of 8), and normalizes `(v/255 - 0.5)/0.5`.
-fn preprocess_for_paddle_ocr(img: &xcap::image::RgbaImage) -> (usize, Vec<f32>) {
+/// Boosts local brightness and contrast on the left `left_ratio` fraction (e.g. `0.30` for Pass 1B)
+/// using histogram percentile stretch + gamma correction (`gamma = 0.55`) to recover dark text under the 18+ overlay.
+fn boost_left_region_gamma(
+    img: &xcap::image::RgbaImage,
+    left_ratio: f32,
+    gamma: f32,
+) -> xcap::image::RgbaImage {
     let w = img.width().max(1);
     let h = img.height().max(1);
-    let mut mask = vec![0u8; (w * h) as usize];
+    let left_end = (((w as f32) * left_ratio).round() as u32).clamp(1, w);
 
-    let mut min_x = w;
-    let mut min_y = h;
-    let mut max_x = 0u32;
-    let mut max_y = 0u32;
-    let mut found_bright = false;
-
+    let mut hist = [0u32; 256];
+    let mut total = 0u32;
     for y in 0..h {
-        let mut row_bright_x_min = w;
-        let mut row_bright_x_max = 0u32;
-        let mut row_hits = 0u32;
-
-        for x in 0..w {
+        for x in 0..left_end {
             let p = img.get_pixel(x, y);
-            let r = p[0];
-            let g = p[1];
-            let b = p[2];
-            let min_c = r.min(g).min(b);
-            let max_c = r.max(g).max(b);
-            let spread = max_c - min_c;
-
-            // Suppress saturated yellow/orange/amber colors (e.g., 18+ warning box where R >> B)
-            let is_yellow_orange = r > b.saturating_add(40) || spread > 55;
-            let intensity = if !is_yellow_orange && min_c >= 145 {
-                let luma = r as f32 * 0.299 + g as f32 * 0.587 + b as f32 * 0.114;
-                ((luma - 135.0) / 115.0 * 255.0).clamp(0.0, 255.0) as u8
-            } else if !is_yellow_orange && min_c >= 110 && spread <= 40 {
-                ((min_c as f32 - 110.0) / 145.0 * 180.0).clamp(0.0, 255.0) as u8
-            } else {
-                0
-            };
-
-            mask[(y * w + x) as usize] = intensity;
-            if intensity >= 95 {
-                row_hits += 1;
-                row_bright_x_min = row_bright_x_min.min(x);
-                row_bright_x_max = row_bright_x_max.max(x);
-            }
-        }
-
-        if row_hits >= 2 {
-            found_bright = true;
-            min_y = min_y.min(y);
-            max_y = max_y.max(y);
-            min_x = min_x.min(row_bright_x_min);
-            max_x = max_x.max(row_bright_x_max);
+            let luma = (p[0] as f32 * 0.299 + p[1] as f32 * 0.587 + p[2] as f32 * 0.114)
+                .round()
+                .clamp(0.0, 255.0) as usize;
+            hist[luma] += 1;
+            total += 1;
         }
     }
 
-    let (box_x, box_y, box_w, box_h) = if found_bright && max_x > min_x && max_y >= min_y {
-        (min_x, min_y, max_x - min_x + 1, max_y - min_y + 1)
-    } else {
-        (0, 0, w, h)
-    };
+    let p_low_target = ((total as f32) * 0.05) as u32;
+    let p_high_target = ((total as f32) * 0.98).max(1.0) as u32;
+    let mut acc = 0u32;
+    let mut lo = 0.0_f32;
+    let mut hi = 255.0_f32;
+    let mut found_lo = false;
+    for (val, &cnt) in hist.iter().enumerate() {
+        acc += cnt;
+        if !found_lo && acc >= p_low_target {
+            lo = val as f32;
+            found_lo = true;
+        }
+        if acc >= p_high_target {
+            hi = val as f32;
+            break;
+        }
+    }
 
-    // Add virtual clean background margins around isolated text box before scaling to 48px
-    let pad_y = ((box_h as f64 * 0.25).round().max(4.0)) as u32;
-    let pad_x = ((box_h as f64 * 0.35).round().max(8.0)) as u32;
-    let virt_w = (box_w + pad_x * 2).max(1);
-    let virt_h = (box_h + pad_y * 2).max(1);
+    let mut out = img.clone();
+    let span = hi - lo;
+    for y in 0..h {
+        for x in 0..left_end {
+            let p = img.get_pixel(x, y);
+            let mut rgb = [0u8; 3];
+            for c in 0..3 {
+                let norm = if span >= 18.0 {
+                    ((p[c] as f32 - lo) / span).clamp(0.0, 1.0)
+                } else {
+                    (p[c] as f32) / 255.0
+                };
+                rgb[c] = (norm.powf(gamma) * 255.0).round().clamp(0.0, 255.0) as u8;
+            }
+            out.put_pixel(x, y, xcap::image::Rgba([rgb[0], rgb[1], rgb[2], 255]));
+        }
+    }
+    out
+}
+
+/// Preprocesses a clean RGB crop for PaddleOCR v4 (`[1, 3, 48, W]` NCHW):
+/// - Preserves full RGB intensity gradients (no hard binary white thresholding that erases shadowed glyphs under 18+ box)
+/// - Bilinearly resizes preserving aspect ratio to height `48px`
+/// - Right-pads with dark HUD background (`-1.0`) up to `max(resized_w, 320)` (multiple of 8)
+/// - Normalizes pixel channels to `[-1.0, 1.0]` via `(v / 255.0 - 0.5) / 0.5`.
+fn preprocess_for_paddle_ocr(img: &xcap::image::RgbaImage) -> (usize, Vec<f32>) {
+    let w = img.width().max(1);
+    let h = img.height().max(1);
 
     let dst_h: usize = 48;
-    let resized_w = ((virt_w as f64 * dst_h as f64) / virt_h as f64)
+    let resized_w = ((w as f64 * dst_h as f64) / h as f64)
         .round()
         .clamp(16.0, 640.0) as usize;
     let target_w = ((resized_w.max(320) + 7) / 8) * 8;
 
-    let sample_virt = |vx: f64, vy: f64| -> f32 {
-        let gx = vx - pad_x as f64;
-        let gy = vy - pad_y as f64;
-        if gx < 0.0 || gy < 0.0 || gx >= (box_w as f64 - 1.0) || gy >= (box_h as f64 - 1.0) {
-            if gx >= -0.5 && gx <= box_w as f64 - 0.5 && gy >= -0.5 && gy <= box_h as f64 - 0.5 {
-                let cx = (gx.round() as i32).clamp(0, box_w as i32 - 1) as u32;
-                let cy = (gy.round() as i32).clamp(0, box_h as i32 - 1) as u32;
-                return mask[((box_y + cy) * w + (box_x + cx)) as usize] as f32;
-            }
-            return 0.0;
-        }
-        let x0 = gx.floor() as u32;
-        let y0 = gy.floor() as u32;
-        let x1 = (x0 + 1).min(box_w - 1);
-        let y1 = (y0 + 1).min(box_h - 1);
-        let dx = (gx - x0 as f64) as f32;
-        let dy = (gy - y0 as f64) as f32;
-        let p00 = mask[((box_y + y0) * w + (box_x + x0)) as usize] as f32;
-        let p10 = mask[((box_y + y0) * w + (box_x + x1)) as usize] as f32;
-        let p01 = mask[((box_y + y1) * w + (box_x + x0)) as usize] as f32;
-        let p11 = mask[((box_y + y1) * w + (box_x + x1)) as usize] as f32;
-        let top = p00 * (1.0 - dx) + p10 * dx;
-        let bot = p01 * (1.0 - dx) + p11 * dx;
-        top * (1.0 - dy) + bot * dy
-    };
-
-    // Invert isolated bright white text into high-contrast black ink on light background, matching PaddleOCR training distribution
-    // Padding value: 0.0 normalized -> +1.0 for pure white pad or 0.0 neutral pad
     let plane_size = dst_h * target_w;
-    let pad_norm = (255.0_f32 / 255.0 - 0.5) / 0.5; // +1.0 (white background)
+    // Pad extra right width with dark background (`0` -> -1.0 normalized) matching HUD contrast
+    let pad_norm = -1.0_f32;
     let mut nchw = vec![pad_norm; 3 * plane_size];
 
-    let scale_x = virt_w as f64 / resized_w as f64;
-    let scale_y = virt_h as f64 / dst_h as f64;
+    let scale_x = w as f64 / resized_w as f64;
+    let scale_y = h as f64 / dst_h as f64;
 
     for dy in 0..dst_h {
-        let sy = (dy as f64 + 0.5) * scale_y - 0.5;
+        let sy = ((dy as f64 + 0.5) * scale_y - 0.5).clamp(0.0, (h - 1) as f64);
+        let y0 = sy.floor() as u32;
+        let y1 = (y0 + 1).min(h - 1);
+        let fy = (sy - y0 as f64) as f32;
         let row_off = dy * target_w;
+
         for dx in 0..resized_w {
-            let sx = (dx as f64 + 0.5) * scale_x - 0.5;
-            let fg_white = sample_virt(sx, sy).clamp(0.0, 255.0);
-            let ink_val = 255.0_f32 - fg_white;
-            let norm = (ink_val / 255.0_f32 - 0.5_f32) / 0.5_f32;
+            let sx = ((dx as f64 + 0.5) * scale_x - 0.5).clamp(0.0, (w - 1) as f64);
+            let x0 = sx.floor() as u32;
+            let x1 = (x0 + 1).min(w - 1);
+            let fx = (sx - x0 as f64) as f32;
+
+            let p00 = img.get_pixel(x0, y0);
+            let p10 = img.get_pixel(x1, y0);
+            let p01 = img.get_pixel(x0, y1);
+            let p11 = img.get_pixel(x1, y1);
+
             let idx = row_off + dx;
-            nchw[idx] = norm;
-            nchw[plane_size + idx] = norm;
-            nchw[2 * plane_size + idx] = norm;
+            for ch in 0..3 {
+                let top = p00[ch] as f32 * (1.0 - fx) + p10[ch] as f32 * fx;
+                let bot = p01[ch] as f32 * (1.0 - fx) + p11[ch] as f32 * fx;
+                let val = top * (1.0 - fy) + bot * fy;
+                nchw[ch * plane_size + idx] = (val / 255.0_f32 - 0.5_f32) / 0.5_f32;
+            }
         }
     }
 
@@ -1771,9 +1783,52 @@ fn sanitize_ocr_code_token(raw_code: &str) -> String {
     s.to_string()
 }
 
-/// Normalizes a raw OCR center-header string and extracts `(cleaned_code, detected_category)`.
-/// Does NOT consult Vietnamese aliases; rejects category-only text with no weapon code characters.
-fn parse_weapon_header(raw: &str) -> (String, Option<OcrWeaponCategory>) {
+#[derive(Debug, Clone)]
+struct ParsedWeaponHeader {
+    code: String,
+    category: Option<OcrWeaponCategory>,
+    special_weapon: Option<&'static str>,
+}
+
+/// Checks unique OCR title exceptions outside generic Vietnamese aliases:
+/// 1. `Cung Phức Hợp` (`Jng Phurc Hop`, `Cung Phuc Hop`, ...) -> `COMPOUND BOW`
+/// 2. Truncated `Lever-action Rifle` (`aver-action Rifle`, ...) -> `MARLIN LEVER-ACTION`
+fn detect_special_title_override(text_upper: &str) -> Option<&'static str> {
+    let norm = text_upper.replace(['_', '.'], " ");
+    for pat in [
+        "CUNG PHUC",
+        "PHUC HOP",
+        "PHURC HOP",
+        "PHUC H0P",
+        "PHURC H0P",
+        "JNG PHURC",
+        "JNG PHUC",
+    ] {
+        if norm.contains(pat) {
+            return Some("COMPOUND BOW");
+        }
+    }
+
+    for pat in [
+        "LEVER-ACTION",
+        "LEVER ACTION",
+        "AVER-ACTION",
+        "AVER ACTION",
+        "VER-ACTION",
+        "VER ACTION",
+    ] {
+        if norm.contains(pat) {
+            return Some("MARLIN LEVER-ACTION");
+        }
+    }
+
+    None
+}
+
+/// Normalizes a raw OCR center-header string and extracts `(code, detected_category, special_weapon)`.
+/// Supports glued category phrases (`4A1Assault Rifle`), sticky trailing noise (`S552 Assault Rifleof oadu`),
+/// and 1-2 char OCR typos in category names (`Sniger Rifle`, `Assauit Rifle`, `Submachlne Gun`, `Marksmam Rifle`).
+fn parse_weapon_header(raw: &str) -> ParsedWeaponHeader {
     let normalized_unicode = raw.replace('…', "...");
     let raw_skin_stripped = strip_skin_suffix(&normalized_unicode);
 
@@ -1834,35 +1889,98 @@ fn parse_weapon_header(raw: &str) -> (String, Option<OcrWeaponCategory>) {
         .collect();
     let mut text = tokens.join(" ");
 
-    // Extract category from English category labels, stripping the category phrase
-    // and any sticky trailing HUD noise after it (e.g. "S552 ASSAULT RIFLEOF OADU" -> "S552").
+    if let Some(special) = detect_special_title_override(&text) {
+        return ParsedWeaponHeader {
+            code: special.to_string(),
+            category: None,
+            special_weapon: Some(special),
+        };
+    }
+
     let mut detected_cat: Option<OcrWeaponCategory> = None;
+
+    // 1. Direct substring match for long multi-word category phrases (supports glued prefix & sticky trailing noise)
     for &(phrase, cat) in OCR_CATEGORY_RULES {
-        let is_short_abbr = phrase.len() <= 3;
-        if !is_short_abbr {
-            if text.starts_with(phrase) {
-                detected_cat = Some(cat);
-                text.clear();
-                break;
-            }
-            let needle = format!(" {}", phrase);
-            if let Some(pos) = text.find(&needle) {
+        if phrase.len() >= 10 {
+            if let Some(pos) = text.find(phrase) {
                 detected_cat = Some(cat);
                 text = text[..pos].trim().to_string();
                 break;
             }
-        } else {
-            let suffix = format!(" {}", phrase);
-            if text.ends_with(&suffix) {
-                detected_cat = Some(cat);
-                text = text[..text.len() - suffix.len()].trim().to_string();
-                break;
+        }
+    }
+
+    // 2. Fuzzy 3-word / 2-word category matching (handles "Sniger Rifle", "Sniner Rifle", "Assauit Rifle", "Submachlne Gun", "Marksmam Rifle")
+    if detected_cat.is_none() {
+        let words: Vec<&str> = text.split_whitespace().collect();
+        'outer_fuzzy: for win_len in [3usize, 2usize] {
+            if words.len() < win_len {
+                continue;
             }
-            let middle = format!(" {} ", phrase);
-            if let Some(pos) = text.find(&middle) {
-                detected_cat = Some(cat);
-                text = text[..pos].trim().to_string();
-                break;
+            for i in 0..=words.len() - win_len {
+                if words[i].len() < 4 {
+                    continue;
+                }
+                let mut win_parts: Vec<String> = words[i..i + win_len]
+                    .iter()
+                    .map(|w| (*w).to_string())
+                    .collect();
+                if let Some(last) = win_parts.last_mut() {
+                    if last.starts_with("RIFLE") && last.len() > 5 {
+                        *last = "RIFLE".to_string();
+                    } else if last.starts_with("GUN") && last.len() > 3 {
+                        *last = "GUN".to_string();
+                    }
+                }
+                let candidate_phrase = win_parts.join(" ");
+                for &(phrase, cat) in OCR_CATEGORY_RULES {
+                    let phrase_words = phrase.split_whitespace().count();
+                    if phrase_words != win_len {
+                        continue;
+                    }
+                    let max_dist = if phrase.len() >= 14 { 2 } else { 1 };
+                    if strsim::levenshtein(&candidate_phrase, phrase) <= max_dist {
+                        detected_cat = Some(cat);
+                        text = words[..i].join(" ");
+                        break 'outer_fuzzy;
+                    }
+                }
+            }
+        }
+    }
+
+    // 3. Single-word category & trailing abbreviation match
+    if detected_cat.is_none() {
+        for &(phrase, cat) in OCR_CATEGORY_RULES {
+            if phrase.split_whitespace().count() > 1 {
+                continue;
+            }
+            let is_short_abbr = phrase.len() <= 3;
+            if !is_short_abbr {
+                if text.starts_with(phrase) {
+                    detected_cat = Some(cat);
+                    text.clear();
+                    break;
+                }
+                let needle = format!(" {}", phrase);
+                if let Some(pos) = text.find(&needle) {
+                    detected_cat = Some(cat);
+                    text = text[..pos].trim().to_string();
+                    break;
+                }
+            } else {
+                let suffix = format!(" {}", phrase);
+                if text.ends_with(&suffix) {
+                    detected_cat = Some(cat);
+                    text = text[..text.len() - suffix.len()].trim().to_string();
+                    break;
+                }
+                let middle = format!(" {} ", phrase);
+                if let Some(pos) = text.find(&middle) {
+                    detected_cat = Some(cat);
+                    text = text[..pos].trim().to_string();
+                    break;
+                }
             }
         }
     }
@@ -1874,21 +1992,29 @@ fn parse_weapon_header(raw: &str) -> (String, Option<OcrWeaponCategory>) {
 
     let code_part = sanitize_ocr_code_token(&text);
     if CATEGORY_PHRASES.contains(&code_part.as_str()) {
-        return (String::new(), detected_cat);
+        return ParsedWeaponHeader {
+            code: String::new(),
+            category: detected_cat,
+            special_weapon: None,
+        };
     }
 
-    (code_part, detected_cat)
+    ParsedWeaponHeader {
+        code: code_part,
+        category: detected_cat,
+        special_weapon: None,
+    }
 }
 
 fn clean_ocr_text(raw: &str) -> String {
-    let (code_part, _) = parse_weapon_header(raw);
-    if code_part.is_empty() {
+    let parsed = parse_weapon_header(raw);
+    if parsed.code.is_empty() {
         return String::new();
     }
-    if let Some(canonical) = resolve_ocr_code_normalization(&code_part) {
+    if let Some(canonical) = resolve_ocr_code_normalization(&parsed.code) {
         return canonical.to_string();
     }
-    code_part
+    parsed.code
 }
 
 /// Normalizes character pairs commonly misidentified by Windows OCR on game fonts:
@@ -2077,143 +2203,349 @@ fn match_weapon<'a>(cleaned: &str, candidates: &'a [String]) -> Option<(&'a str,
     match_weapon_in_slice(cleaned, &refs)
 }
 
-/// Pairwise `[WeaponCodeSuffix + WeaponCategory]` weapon matcher for the locked center-header OCR title.
-/// Incorporates `ctc_confidence`, same-category Levenshtein<=1 recovery (`S552` -> `SG552`),
-/// and safety gates (1-char code <= 0.82, low CTC confidence < 0.55 <= 0.85).
-fn recognize_weapon_from_title_with_conf<'a>(
-    raw_ocr: &str,
+#[derive(Debug, Clone)]
+struct OcrRecognitionDecision<'a> {
+    weapon: Option<&'a str>,
+    score: f64,
+    margin: f64,
+    category: Option<OcrWeaponCategory>,
+    category_locked: bool,
+    code_alnum_len: usize,
     ctc_confidence: f32,
-    candidates: &'a [String],
-) -> (Option<(&'a str, f64)>, String) {
-    let (code_part, cat_opt) = parse_weapon_header(raw_ocr);
-    if code_part.is_empty() {
-        return (None, String::new());
+    can_auto_copy: bool,
+    cleaned: String,
+}
+
+impl<'a> OcrRecognitionDecision<'a> {
+    fn debug_summary(&self) -> String {
+        format!(
+            "weapon={:?} score={:.3} margin={:.3} locked={} len={} ctc={:.3} auto={} clean='{}'",
+            self.weapon,
+            self.score,
+            self.margin,
+            self.category_locked,
+            self.code_alnum_len,
+            self.ctc_confidence,
+            self.can_auto_copy,
+            self.cleaned
+        )
+    }
+}
+
+fn common_suffix_len(a: &str, b: &str) -> usize {
+    a.chars()
+        .rev()
+        .zip(b.chars().rev())
+        .take_while(|(ca, cb)| ca == cb)
+        .count()
+}
+
+/// Scores an occluded/corrupted OCR weapon code against a candidate within the locked category.
+/// Prioritizes intact occluded-prefix suffixes (`K47` -> `MK47` over `K437`) and handles
+/// leading half-cut glyphs (`3552` -> `SG552`, `317` -> `KC-17`, `JG` -> `AUG`, `7D` -> `SVD`)
+/// as well as length-adaptive Levenshtein matching (`<= 1` short, `<= 2` when len >= 6).
+fn score_occluded_candidate(code_stripped: &str, cand_stripped: &str) -> f64 {
+    if code_stripped.is_empty() || cand_stripped.is_empty() {
+        return 0.0;
+    }
+    if code_stripped == cand_stripped {
+        return 1.0;
     }
 
-    let normalized_code = resolve_ocr_code_normalization(&code_part)
-        .map(|s| s.to_string())
-        .unwrap_or_else(|| code_part.clone());
-    let code_stripped = ocr_strip_separators(&normalized_code.to_uppercase());
-    let all_refs: Vec<&'a String> = candidates.iter().collect();
+    let c_len = code_stripped.chars().count();
+    let w_len = cand_stripped.chars().count();
+    let sl = common_suffix_len(code_stripped, cand_stripped);
 
-    let finalize = |res: Option<(&'a str, f64)>| -> (Option<(&'a str, f64)>, String) {
-        let adjusted = res.map(|(w, mut score)| {
-            if code_stripped.len() == 1 {
-                score = score.min(0.82);
+    // 1. Intact leading-occluded suffix (e.g. `4A1` -> `M4A1`, `K47` -> `MK47`, `57` -> `AR57`, `SS` -> `VSS`)
+    if c_len >= 2 && cand_stripped.ends_with(code_stripped) {
+        return 0.94 + 0.04 * (c_len as f64 / w_len as f64);
+    }
+    if c_len >= 3 {
+        let code_homo = ocr_normalize_homoglyphs(code_stripped);
+        let cand_homo = ocr_normalize_homoglyphs(cand_stripped);
+        if cand_homo.ends_with(&code_homo) {
+            return 0.93 + 0.03 * (c_len as f64 / w_len as f64);
+        }
+    }
+
+    // 2. Single-char suffix match when candidate ends cleanly with it (always guarded by len >= 2 rule)
+    if c_len == 1 && cand_stripped.ends_with(code_stripped) {
+        return 0.82;
+    }
+
+    // 3. Strong body/prefix 1-edit match (`S552` -> `SG552`, `QZ951` -> `QBZ951`) vs interior mismatch (`K47` vs `K437`)
+    let dist = strsim::levenshtein(code_stripped, cand_stripped);
+    if c_len >= 3 && w_len >= 3 && dist <= 1 {
+        if sl >= 2 || c_len >= 4 {
+            return 0.94;
+        }
+        return 0.82;
+    }
+
+    // 4. Corrupted-leading-glyph suffix match (`3552`->`SG552`, `3Z951`->`QBZ951`, `317`->`KC17`, `137`->`K437`, `116`->`K416`, `20171`->`QCQ171`, `JG`->`AUG`, `7D`->`SVD`, `VM`->`AWM`)
+    let len_diff = (c_len as isize - w_len as isize).abs();
+    if (sl >= 2 || (sl == 1 && c_len == 2 && w_len <= 3)) && len_diff <= 2 {
+        let prefix_c_len = c_len.saturating_sub(sl);
+        let prefix_w_len = w_len.saturating_sub(sl);
+        if prefix_c_len <= prefix_w_len + 1 {
+            if sl == 1 {
+                return 0.80;
             }
+            return 0.80 + 0.10 * (sl as f64 / w_len as f64);
+        }
+    }
+
+    // 5. Longer weapon names (>= 6 chars, e.g. `tomoson` -> `THOMPSON`) allow Levenshtein <= 2 inside locked category
+    if c_len >= 6 && dist <= 2 {
+        return (0.88 - 0.04 * dist as f64).max(0.75);
+    }
+
+    0.0
+}
+
+/// Core matcher returning full decision details (`weapon`, `score`, `margin`, `category`, `can_auto_copy`).
+/// Enforces hard category locking (no full-DB fallback once category is identified) and 3-guard auto-copy >= 0.75.
+fn recognize_weapon_with_decision<'a>(
+    raw_ocr: &str,
+    ctc_confidence: f32,
+    forced_category: Option<OcrWeaponCategory>,
+    candidates: &'a [String],
+) -> OcrRecognitionDecision<'a> {
+    let parsed = parse_weapon_header(raw_ocr);
+    let effective_cat = forced_category.or(parsed.category);
+
+    // Handle explicit title overrides (`Cung Phức Hợp`, `Lever-action`)
+    if let Some(spec_name) = parsed.special_weapon {
+        if let Some(cand) = candidates
+            .iter()
+            .find(|c| c.eq_ignore_ascii_case(spec_name))
+        {
+            let ctc_clamped = (ctc_confidence as f64).clamp(0.40, 1.0);
+            let mut score = 0.94 * (0.94 + 0.06 * ctc_clamped);
             if ctc_confidence < 0.55 {
                 score = score.min(0.85);
             }
-            (w, score)
-        });
-        (adjusted, normalized_code.clone())
-    };
+            let alnum_len = parsed.code.chars().filter(|c| c.is_ascii_alphanumeric()).count();
+            let tier = evaluate_auto_copy_guards(score, score, true, alnum_len, ctc_confidence);
+            return OcrRecognitionDecision {
+                weapon: Some(cand.as_str()),
+                score,
+                margin: score,
+                category: effective_cat,
+                category_locked: true,
+                code_alnum_len: alnum_len,
+                ctc_confidence,
+                can_auto_copy: tier == ConfidenceTier::High,
+                cleaned: parsed.code,
+            };
+        }
+    }
 
-    if let Some(cat) = cat_opt {
+    if parsed.code.is_empty() {
+        return OcrRecognitionDecision {
+            weapon: None,
+            score: 0.0,
+            margin: 0.0,
+            category: effective_cat,
+            category_locked: effective_cat.is_some(),
+            code_alnum_len: 0,
+            ctc_confidence,
+            can_auto_copy: false,
+            cleaned: String::new(),
+        };
+    }
+
+    let normalized_code = resolve_ocr_code_normalization(&parsed.code)
+        .map(|s| s.to_string())
+        .unwrap_or_else(|| parsed.code.clone());
+    let code_upper = normalized_code.to_uppercase();
+    let code_stripped = ocr_strip_separators(&code_upper);
+    let code_homo = ocr_normalize_homoglyphs(&code_stripped);
+    let code_alnum_len = code_stripped
+        .chars()
+        .filter(|c| c.is_ascii_alphanumeric())
+        .count();
+    let tokens: Vec<&str> = code_upper.split_whitespace().collect();
+    let first_tok = tokens
+        .first()
+        .map(|t| ocr_strip_separators(t))
+        .unwrap_or_default();
+    let first_two = if tokens.len() >= 2 {
+        ocr_strip_separators(&format!("{}{}", tokens[0], tokens[1]))
+    } else {
+        String::new()
+    };
+    let ctc_factor = 0.94 + 0.06 * (ctc_confidence as f64).clamp(0.40, 1.0);
+
+    if let Some(cat) = effective_cat {
+        // HARD CATEGORY LOCK: only evaluate weapons inside `cat`; never fallback to unrelated categories
         let cat_pool: Vec<&'a String> = candidates
             .iter()
             .filter(|c| cat.contains_weapon(&c.to_uppercase()))
             .collect();
 
-        if let Some((cand, score)) = match_weapon_in_slice(&normalized_code, &cat_pool) {
-            if score >= 0.90 {
-                return finalize(Some((cand, score)));
+        let mut scored: Vec<(&'a str, f64, usize)> = Vec::new();
+        for &cand in &cat_pool {
+            let cand_upper = cand.to_uppercase();
+            let cand_stripped = ocr_strip_separators(&cand_upper);
+            let occ_score = score_occluded_candidate(&code_stripped, &cand_stripped);
+            // Only consult legacy Jaro-Winkler scoring when geometric suffix/edit scoring returned 0.0
+            // (e.g. multi-word or extra-suffix tokens like `M82A1` / `CVECTOR`), so explicit penalties like `K47` vs `K437` hold.
+            let best_s = if occ_score > 0.0 {
+                occ_score
+            } else {
+                score_weapon_candidate(
+                    &code_upper,
+                    &code_stripped,
+                    &code_homo,
+                    &tokens,
+                    &first_tok,
+                    &first_two,
+                    cand,
+                )
+                .map(|(s, _)| s * 0.96)
+                .unwrap_or(0.0)
+            };
+            if best_s > 0.0 {
+                scored.push((cand.as_str(), best_s, cand_stripped.len()));
             }
         }
 
-        // Cross-category fallback ONLY for absolute exact/stripped weapon names
-        if let Some((cand, score)) = match_weapon_in_slice(&normalized_code, &all_refs) {
-            if score >= 0.98 {
-                return finalize(Some((cand, score)));
-            }
+        if scored.is_empty() {
+            return OcrRecognitionDecision {
+                weapon: None,
+                score: 0.0,
+                margin: 0.0,
+                category: Some(cat),
+                category_locked: true,
+                code_alnum_len,
+                ctc_confidence,
+                can_auto_copy: false,
+                cleaned: normalized_code,
+            };
         }
 
-        // Category-scoped Suffix Matching when 18+ overlay occludes 1-3 leading characters
-        if !code_stripped.is_empty() && !cat_pool.is_empty() {
-            let mut suffix_hits: Vec<(&'a String, usize)> = cat_pool
+        scored.sort_by(|a, b| {
+            b.1.partial_cmp(&a.1)
+                .unwrap_or(std::cmp::Ordering::Equal)
+                .then_with(|| a.2.cmp(&b.2))
+                .then_with(|| a.0.cmp(b.0))
+        });
+
+        let top1_cand = scored[0].0;
+        let top1_base = scored[0].1;
+        let top2_base = scored.get(1).map(|s| s.1).unwrap_or(0.0);
+
+        // Reject broad >= 3-way 1-char suffix ties inside large category pools
+        if code_alnum_len == 1 {
+            let tie_count = scored
                 .iter()
-                .filter_map(|&cand| {
-                    let cand_stripped = ocr_strip_separators(&cand.to_uppercase());
-                    if cand_stripped.len() > code_stripped.len()
-                        && cand_stripped.ends_with(&code_stripped)
-                    {
-                        Some((cand, cand_stripped.len()))
-                    } else {
-                        None
-                    }
-                })
-                .collect();
-
-            if suffix_hits.is_empty() && code_stripped.len() >= 3 {
-                let code_homo = ocr_normalize_homoglyphs(&code_stripped);
-                suffix_hits = cat_pool
-                    .iter()
-                    .filter_map(|&cand| {
-                        let cand_stripped = ocr_strip_separators(&cand.to_uppercase());
-                        let cand_homo = ocr_normalize_homoglyphs(&cand_stripped);
-                        if cand_stripped.len() > code_stripped.len()
-                            && cand_homo.ends_with(&code_homo)
-                        {
-                            Some((cand, cand_stripped.len()))
-                        } else {
-                            None
-                        }
-                    })
-                    .collect();
-            }
-
-            suffix_hits.sort_by(|a, b| a.1.cmp(&b.1).then_with(|| a.0.cmp(b.0)));
-
-            match suffix_hits.len() {
-                1 => {
-                    let hit = suffix_hits[0].0;
-                    let score = if code_stripped.len() >= 2 { 0.94 } else { 0.82 };
-                    return finalize(Some((hit.as_str(), score)));
-                }
-                2 => {
-                    return finalize(Some((suffix_hits[0].0.as_str(), 0.82)));
-                }
-                len if len >= 3 => {
-                    return (None, normalized_code);
-                }
-                _ => {}
+                .filter(|s| (s.1 - top1_base).abs() < 1e-6)
+                .count();
+            if tie_count >= 3 {
+                return OcrRecognitionDecision {
+                    weapon: None,
+                    score: 0.0,
+                    margin: 0.0,
+                    category: Some(cat),
+                    category_locked: true,
+                    code_alnum_len,
+                    ctc_confidence,
+                    can_auto_copy: false,
+                    cleaned: normalized_code,
+                };
             }
         }
 
-        // Same-category Levenshtein <= 1 fuzzy recovery for >= 3-char OCR codes (e.g. "S552" -> "SG552", "QZ95-1" -> "QBZ95-1")
-        if code_stripped.len() >= 3 && !cat_pool.is_empty() {
-            let mut lev_hits: Vec<(&'a String, usize)> = cat_pool
-                .iter()
-                .filter_map(|&cand| {
-                    let cand_stripped = ocr_strip_separators(&cand.to_uppercase());
-                    if cand_stripped.len() >= 3 {
-                        let dist = strsim::levenshtein(&code_stripped, &cand_stripped);
-                        if dist <= 1 {
-                            return Some((cand, dist));
-                        }
-                    }
-                    None
-                })
-                .collect();
-            lev_hits.sort_by(|a, b| a.1.cmp(&b.1).then_with(|| a.0.cmp(b.0)));
+        let mut final_score = top1_base * ctc_factor;
+        let margin = (top1_base - top2_base).max(0.0) * ctc_factor;
 
-            if lev_hits.len() == 1 {
-                let score = if ctc_confidence >= 0.75 { 0.94 } else { 0.85 };
-                return finalize(Some((lev_hits[0].0.as_str(), score)));
-            } else if lev_hits.len() == 2 {
-                return finalize(Some((lev_hits[0].0.as_str(), 0.85)));
-            }
+        if code_alnum_len == 1 {
+            final_score = final_score.min(0.82);
+        }
+        if ctc_confidence < 0.55 {
+            final_score = final_score.min(0.85);
         }
 
-        let matched = if !cat_pool.is_empty() {
-            match_weapon_in_slice(&normalized_code, &cat_pool)
+        let tier = evaluate_auto_copy_guards(
+            final_score,
+            margin,
+            true,
+            code_alnum_len,
+            ctc_confidence,
+        );
+        let weapon_opt = if tier != ConfidenceTier::Rejected {
+            Some(top1_cand)
         } else {
-            match_weapon_in_slice(&normalized_code, &all_refs)
+            None
         };
-        finalize(matched)
+
+        OcrRecognitionDecision {
+            weapon: weapon_opt,
+            score: final_score,
+            margin,
+            category: Some(cat),
+            category_locked: true,
+            code_alnum_len,
+            ctc_confidence,
+            can_auto_copy: tier == ConfidenceTier::High,
+            cleaned: normalized_code,
+        }
     } else {
-        finalize(match_weapon_in_slice(&normalized_code, &all_refs))
+        // No category detected: evaluate across all weapons with `category_locked = false`
+        let all_refs: Vec<&'a String> = candidates.iter().collect();
+        if let Some((cand, base_score)) = match_weapon_in_slice(&normalized_code, &all_refs) {
+            let mut final_score = base_score * ctc_factor;
+            if code_alnum_len == 1 {
+                final_score = final_score.min(0.82);
+            }
+            if ctc_confidence < 0.55 {
+                final_score = final_score.min(0.85);
+            }
+            let tier = if final_score >= 0.75 {
+                ConfidenceTier::Suspicious
+            } else {
+                ConfidenceTier::Rejected
+            };
+            OcrRecognitionDecision {
+                weapon: if tier != ConfidenceTier::Rejected {
+                    Some(cand)
+                } else {
+                    None
+                },
+                score: final_score,
+                margin: 0.0,
+                category: None,
+                category_locked: false,
+                code_alnum_len,
+                ctc_confidence,
+                can_auto_copy: false,
+                cleaned: normalized_code,
+            }
+        } else {
+            OcrRecognitionDecision {
+                weapon: None,
+                score: 0.0,
+                margin: 0.0,
+                category: None,
+                category_locked: false,
+                code_alnum_len,
+                ctc_confidence,
+                can_auto_copy: false,
+                cleaned: normalized_code,
+            }
+        }
     }
+}
+
+#[cfg(test)]
+fn recognize_weapon_from_title_with_conf<'a>(
+    raw_ocr: &str,
+    ctc_confidence: f32,
+    candidates: &'a [String],
+) -> (Option<(&'a str, f64)>, String) {
+    let d = recognize_weapon_with_decision(raw_ocr, ctc_confidence, None, candidates);
+    (d.weapon.map(|w| (w, d.score)), d.cleaned)
 }
 
 #[cfg(test)]
@@ -2272,6 +2604,164 @@ fn crop_hud_16_9_region(
         y_end_pct,
     );
     xcap::image::imageops::crop_imm(full_image, crop_x, crop_y, crop_w, crop_h).to_image()
+}
+
+/// Pass 2 helper: locates the active bright-white-bordered weapon card inside the centered 16:9
+/// left weapon list (`x: 7.0%..23.6%`, `y: 13.0%..90.0%`) and returns ONLY the top-left code strip
+/// (`x_card_left + 2px` to `min(x_card_right, offset_x + 0.170 * virtual_w)`) excluding skin names.
+fn find_selected_card_prefix_rect_16_9(full_image: &xcap::image::RgbaImage) -> Option<(u32, u32, u32, u32)> {
+    let img_w = full_image.width();
+    let img_h = full_image.height();
+    let virtual_w = (img_h as f32 * 16.0 / 9.0).min(img_w as f32);
+    let offset_x = (img_w as f32 - virtual_w) / 2.0;
+
+    let col_x = ((offset_x + virtual_w * 0.070).round().max(0.0) as u32).min(img_w);
+    let col_x2 = ((offset_x + virtual_w * 0.236).round().max(0.0) as u32).min(img_w);
+    let col_w = col_x2.saturating_sub(col_x);
+    let col_y = ((img_h as f32 * 0.130).round().max(0.0) as u32).min(img_h);
+    let col_y2 = ((img_h as f32 * 0.900).round().max(0.0) as u32).min(img_h);
+    let col_h = col_y2.saturating_sub(col_y);
+
+    if col_w < 50 || col_h < 100 {
+        return None;
+    }
+
+    let cw = col_w as usize;
+    let ch = col_h as usize;
+    let mut row_white = vec![0u32; ch];
+    let stride = ch + 1;
+    let mut col_prefix = vec![0u32; cw * stride];
+
+    for rx in 0..cw {
+        let px = col_x + rx as u32;
+        let col_offset = rx * stride;
+        let mut acc = 0u32;
+        for ry in 0..ch {
+            let py = col_y + ry as u32;
+            let p = full_image.get_pixel(px, py);
+            let is_white = if p[0] >= 185 && p[1] >= 185 && p[2] >= 185 { 1u32 } else { 0u32 };
+            row_white[ry] += is_white;
+            acc += is_white;
+            col_prefix[col_offset + ry + 1] = acc;
+        }
+    }
+
+    let h_min = ((img_h as f64 * 0.095).round() as usize).max(50).min(ch);
+    let h_max = ((img_h as f64 * 0.138).round() as usize).min(ch).max(h_min);
+    let left_limit = (cw * 22 / 100).max(12).min(cw / 2);
+    let right_start = cw.saturating_sub((cw * 22 / 100).max(12)).max(cw / 2);
+
+    let mut best_y: usize = 0;
+    let mut best_left_rx: usize = 0;
+    let mut best_right_rx: usize = cw.saturating_sub(1);
+    let mut max_score: f64 = 0.0;
+
+    let max_ry = ch.saturating_sub(h_min);
+    for ry in (0..=max_ry).step_by(2) {
+        let top_end = (ry + 2).min(ch - 1);
+        let mut best_top_ry = ry;
+        let mut top_max = 0u32;
+        for r in ry..=top_end {
+            if row_white[r] > top_max {
+                top_max = row_white[r];
+                best_top_ry = r;
+            }
+        }
+        let top_ratio = top_max as f64 / cw as f64;
+        if top_ratio < 0.08 {
+            continue;
+        }
+
+        let mut h = h_min;
+        while h <= h_max {
+            let bot_y = (best_top_ry + h).min(ch - 1);
+            let span_u = bot_y.saturating_sub(best_top_ry);
+            if span_u < (h_min * 3) / 4 {
+                break;
+            }
+            let bot_start = bot_y.saturating_sub(2);
+            let mut bot_max = 0u32;
+            for r in bot_start..=bot_y {
+                if row_white[r] > bot_max {
+                    bot_max = row_white[r];
+                }
+            }
+            let bottom_ratio = bot_max as f64 / cw as f64;
+            let span = span_u as f64;
+
+            let mut left_max = 0u32;
+            let mut cand_left_rx = 0usize;
+            for rx in 0..left_limit {
+                let off = rx * stride;
+                let cnt = col_prefix[off + bot_y] - col_prefix[off + best_top_ry];
+                if cnt > left_max {
+                    left_max = cnt;
+                    cand_left_rx = rx;
+                }
+            }
+            let left_ratio = left_max as f64 / span;
+
+            let mut right_max = 0u32;
+            let mut cand_right_rx = cw - 1;
+            for rx in right_start..cw {
+                let off = rx * stride;
+                let cnt = col_prefix[off + bot_y] - col_prefix[off + best_top_ry];
+                if cnt > right_max {
+                    right_max = cnt;
+                    cand_right_rx = rx;
+                }
+            }
+            let right_ratio = right_max as f64 / span;
+
+            let top_lr_min = top_ratio.min(left_ratio).min(right_ratio);
+            let bot_lr_min = bottom_ratio.min(left_ratio).min(right_ratio);
+            let score =
+                top_ratio + bottom_ratio + left_ratio + right_ratio + 1.5 * top_lr_min + 1.0 * bot_lr_min;
+
+            if score > max_score {
+                max_score = score;
+                best_y = best_top_ry;
+                best_left_rx = cand_left_rx;
+                best_right_rx = cand_right_rx;
+            }
+
+            if h == h_max || best_top_ry + h >= ch - 1 {
+                break;
+            }
+            h = (h + 3).min(h_max);
+        }
+    }
+
+    if max_score < 1.20 {
+        return None;
+    }
+
+    let abs_y = col_y + best_y as u32;
+    let card_left = col_x + best_left_rx as u32;
+    let card_right = col_x + best_right_rx as u32;
+    let x_cap = (offset_x + virtual_w * 0.170).round().max(0.0) as u32;
+
+    let strip_x0 = (card_left + 2).min(img_w.saturating_sub(1));
+    let strip_x1 = card_right.min(x_cap).min(img_w);
+    let strip_w = strip_x1.saturating_sub(strip_x0).max(1);
+
+    let title_y = (abs_y + ((img_h as f32 * 0.005).round().max(2.0) as u32)).min(img_h.saturating_sub(1));
+    let title_h = ((img_h as f32 * 0.036).round().max(16.0) as u32)
+        .min(img_h.saturating_sub(title_y))
+        .max(1);
+
+    Some((strip_x0, title_y, strip_w, title_h))
+}
+
+/// Cleans OCR text from Pass 2 top-left card crop by removing skin delimiters (`-`, `–`, `—`, `_`)
+/// without breaking hyphenated weapon codes (e.g. `SR-3M`, `QBZ95-1`, `AR-57`).
+fn clean_left_card_ocr_text(raw: &str) -> String {
+    let with_spaces = raw.replace('_', " ");
+    let stripped_skin = strip_skin_suffix(&with_spaces);
+    stripped_skin
+        .trim()
+        .trim_end_matches(|c: char| matches!(c, '-' | '–' | '—' | '_' | ' '))
+        .to_string()
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -2424,6 +2914,20 @@ fn select_target_monitor(
     Ok(monitors.swap_remove(idx))
 }
 
+/// Truncates raw OCR debug text on Unicode scalar boundaries for compact status bar display.
+fn truncate_ocr_preview(s: &str, max_chars: usize) -> String {
+    let trimmed = s.trim();
+    if trimmed.chars().count() <= max_chars {
+        return trimmed.to_string();
+    }
+    if max_chars <= 3 {
+        return trimmed.chars().take(max_chars).collect();
+    }
+    let take_chars = max_chars - 3;
+    let prefix: String = trimmed.chars().take(take_chars).collect();
+    format!("{}...", prefix.trim_end())
+}
+
 /// Initializes `arboard::Clipboard` retrying up to `max_retries` times (35ms apart)
 /// to overcome transient Windows clipboard locks from other processes.
 fn init_clipboard_with_retry(max_retries: usize) -> Result<arboard::Clipboard, String> {
@@ -2528,20 +3032,151 @@ fn copy_codes_sequence_to_clipboard(
     })
 }
 
+struct CapturedScanOutcome<'a> {
+    weapon: Option<&'a str>,
+    score: f64,
+    can_auto_copy: bool,
+    raw_ocr: String,
+    cleaned: String,
+}
+
+/// Executes Pass 1A -> Pass 1B (left 30% gamma boost) -> Pass 2 (left-card prefix + locked category)
+/// on a captured screen image. Saves intermediate crops ONLY when `DF_OCR_DEBUG=1`.
+fn recognize_from_captured_image<'a>(
+    ocr_engine: &mut PaddleOcrEngine,
+    full_image: &xcap::image::RgbaImage,
+    candidates: &'a [String],
+) -> Result<CapturedScanOutcome<'a>, Box<dyn std::error::Error + Send + Sync>> {
+    let debug_dir = if std::env::var("DF_OCR_DEBUG").as_deref() == Ok("1") {
+        let dir = app_data_dir().join("debug_ocr");
+        let _ = fs::create_dir_all(&dir);
+        Some(dir)
+    } else {
+        None
+    };
+
+    let mut debug_lines: Vec<String> = Vec::new();
+
+    // Pass 1A: Tight center header inside centered 16:9 viewport (x: 24.0% -> 41.5%, y: 15.0% -> 19.6%)
+    let center_img = crop_hud_16_9_region(full_image, 0.240, 0.415, 0.150, 0.196);
+    if let Some(ref dir) = debug_dir {
+        let _ = center_img.save(dir.join("pass1a_center.png"));
+    }
+    let (raw_1a, ctc_1a) = ocr_engine.recognize(&center_img)?;
+    let dec_1a = recognize_weapon_with_decision(&raw_1a, ctc_1a, None, candidates);
+    if debug_dir.is_some() {
+        debug_lines.push(format!("pass1a raw='{}' {}", raw_1a.trim(), dec_1a.debug_summary()));
+    }
+
+    if dec_1a.can_auto_copy && dec_1a.score >= 0.85 {
+        if let Some(ref dir) = debug_dir {
+            let _ = fs::write(dir.join("decision.log"), debug_lines.join("\n"));
+        }
+        return Ok(CapturedScanOutcome {
+            weapon: dec_1a.weapon,
+            score: dec_1a.score,
+            can_auto_copy: true,
+            raw_ocr: raw_1a,
+            cleaned: dec_1a.cleaned,
+        });
+    }
+
+    let mut best_dec = dec_1a.clone();
+    let mut best_raw = raw_1a.clone();
+
+    // Pass 1B: Local contrast stretch + gamma 0.55 on the left 30% shadowed by 18+ box
+    let boosted_img = boost_left_region_gamma(&center_img, 0.30, 0.55);
+    if let Some(ref dir) = debug_dir {
+        let _ = boosted_img.save(dir.join("pass1b_boosted.png"));
+    }
+    if let Ok((raw_1b, ctc_1b)) = ocr_engine.recognize(&boosted_img) {
+        let dec_1b = recognize_weapon_with_decision(&raw_1b, ctc_1b, None, candidates);
+        if debug_dir.is_some() {
+            debug_lines.push(format!("pass1b raw='{}' {}", raw_1b.trim(), dec_1b.debug_summary()));
+        }
+        let replace_1b = (dec_1b.can_auto_copy && !best_dec.can_auto_copy)
+            || (dec_1b.can_auto_copy == best_dec.can_auto_copy && dec_1b.score > best_dec.score);
+        if replace_1b {
+            best_dec = dec_1b;
+            best_raw = raw_1b;
+        } else if best_dec.category.is_none() && dec_1b.category.is_some() {
+            best_dec.category = dec_1b.category;
+        }
+    }
+
+    if best_dec.can_auto_copy {
+        if let Some(ref dir) = debug_dir {
+            let _ = fs::write(dir.join("decision.log"), debug_lines.join("\n"));
+        }
+        return Ok(CapturedScanOutcome {
+            weapon: best_dec.weapon,
+            score: best_dec.score,
+            can_auto_copy: true,
+            raw_ocr: best_raw,
+            cleaned: best_dec.cleaned,
+        });
+    }
+
+    // Pass 2: Left selected card top-left code strip (immune to 18+ overlay & skin names),
+    // paired with the weapon category locked during Pass 1.
+    let locked_cat = best_dec.category;
+    if let Some((lx, ly, lw, lh)) = find_selected_card_prefix_rect_16_9(full_image) {
+        let left_crop = xcap::image::imageops::crop_imm(full_image, lx, ly, lw, lh).to_image();
+        if let Some(ref dir) = debug_dir {
+            let _ = left_crop.save(dir.join("pass2_leftcard.png"));
+        }
+        if let Ok((raw_2, ctc_2)) = ocr_engine.recognize(&left_crop) {
+            let clean_2 = clean_left_card_ocr_text(&raw_2);
+            if !clean_2.is_empty() {
+                let dec_2 = recognize_weapon_with_decision(&clean_2, ctc_2, locked_cat, candidates);
+                if debug_dir.is_some() {
+                    debug_lines.push(format!("pass2 raw='{}' clean_2='{}' {}", raw_2.trim(), clean_2, dec_2.debug_summary()));
+                }
+                let replace_2 = (dec_2.can_auto_copy && !best_dec.can_auto_copy)
+                    || (dec_2.weapon.is_some()
+                        && (best_dec.weapon.is_none() || dec_2.score > best_dec.score));
+                if replace_2 {
+                    if let Some(ref dir) = debug_dir {
+                        let _ = fs::write(dir.join("decision.log"), debug_lines.join("\n"));
+                    }
+                    let diag_raw = if best_raw.trim().is_empty() {
+                        raw_2
+                    } else {
+                        format!("{} | Card: {}", best_raw.trim(), raw_2.trim())
+                    };
+                    return Ok(CapturedScanOutcome {
+                        weapon: dec_2.weapon,
+                        score: dec_2.score,
+                        can_auto_copy: dec_2.can_auto_copy,
+                        raw_ocr: diag_raw,
+                        cleaned: dec_2.cleaned,
+                    });
+                }
+            }
+        }
+    }
+
+    if let Some(ref dir) = debug_dir {
+        let _ = fs::write(dir.join("decision.log"), debug_lines.join("\n"));
+    }
+
+    Ok(CapturedScanOutcome {
+        weapon: best_dec.weapon,
+        score: best_dec.score,
+        can_auto_copy: best_dec.can_auto_copy,
+        raw_ocr: best_raw,
+        cleaned: best_dec.cleaned,
+    })
+}
+
 fn capture_and_recognize_weapon<'a>(
     ocr_engine: &mut PaddleOcrEngine,
     candidates: &'a [String],
     selected_monitor_id: Option<&str>,
-) -> Result<(Option<(&'a str, f64)>, String, String), Box<dyn std::error::Error + Send + Sync>> {
+) -> Result<CapturedScanOutcome<'a>, Box<dyn std::error::Error + Send + Sync>> {
     let target_monitor = select_target_monitor(selected_monitor_id)?;
     let full_image = target_monitor.capture_image()?;
-
-    // Locked single center-header ROI using centered 16:9 virtual viewport (supports 16:9, 21:9 Ultrawide, 16:10)
-    // Tightly bounds the weapon title line (`x: 24.8% -> 41.5%`, `y: 15.2% -> 19.3%`) to avoid right-edge HUD noise.
-    let center_cropped = crop_hud_16_9_region(&full_image, 0.248, 0.415, 0.152, 0.193);
-    let (raw_ocr, ctc_conf) = ocr_engine.recognize(&center_cropped)?;
-    let (matched_opt, cleaned) = recognize_weapon_from_title_with_conf(&raw_ocr, ctc_conf, candidates);
-    Ok((matched_opt, raw_ocr, cleaned))
+    recognize_from_captured_image(ocr_engine, &full_image, candidates)
 }
 
 fn sort_builds_prioritized(builds: &[&BuildItem], favorite_codes: &HashSet<String>) -> Vec<BuildItem> {
@@ -2676,20 +3311,22 @@ fn start_hotkey_worker(
                     };
 
                     match capture_and_recognize_weapon(&mut ocr_engine, &candidates, cur_monitor_id.as_deref()) {
-                        Ok((Some((matched_weapon, score)), raw_ocr, cleaned)) => {
-                            let conf_tier = classify_confidence(score);
-                            if conf_tier == ConfidenceTier::Rejected {
+                        Ok(outcome) => {
+                            let Some(matched_weapon) = outcome.weapon.filter(|_| outcome.score >= 0.75) else {
                                 unsafe {
                                     let _ = MessageBeep(MB_ICONERROR);
                                 }
                                 let _ = tx.send(WorkerEvent::ScanFailed {
-                                    raw_ocr,
-                                    cleaned,
+                                    raw_ocr: outcome.raw_ocr,
+                                    cleaned: outcome.cleaned,
                                 });
                                 ctx.request_repaint();
                                 was_pressed = is_pressed;
                                 continue;
-                            }
+                            };
+                            let score = outcome.score;
+                            let can_auto_copy = outcome.can_auto_copy;
+                            let raw_ocr = outcome.raw_ocr;
 
                             let all_builds = shared_builds.read().unwrap().clone();
                             let matching: Vec<&BuildItem> = all_builds
@@ -2752,8 +3389,8 @@ fn start_hotkey_worker(
                             let sorted = sort_builds_prioritized(&matching, &fav_codes);
                             let selected: Vec<BuildItem> = sorted.into_iter().take(5).collect();
 
-                            if conf_tier == ConfidenceTier::High {
-                                // Độ tin cậy cao (>= 90%): Tự động nạp vào Clipboard kèm Retry
+                            if can_auto_copy {
+                                // Đạt cả 3 rào chắn Auto-Copy >= 75%: Category Lock + Margin >= 12% + Code >= 2 ký tự & CTC >= 0.55
                                 let mut clipboard_error: Option<String> = None;
                                 let mut clipboard_report: Option<(usize, usize)> = None;
                                 if !selected.is_empty() {
@@ -2794,7 +3431,7 @@ fn start_hotkey_worker(
                                     clipboard_report,
                                 });
                             } else {
-                                // Vùng nghi ngờ (75% - 89%): KHÔNG tự động ghi đè Clipboard, yêu cầu xác nhận
+                                // Thiếu một trong 3 rào chắn an toàn Auto-Copy: KHÔNG ghi đè Clipboard, yêu cầu người dùng xác nhận
                                 unsafe {
                                     let _ = MessageBeep(MB_ICONWARNING);
                                 }
@@ -2809,16 +3446,6 @@ fn start_hotkey_worker(
                                     clipboard_report: None,
                                 });
                             }
-                            ctx.request_repaint();
-                        }
-                        Ok((None, raw_ocr, cleaned)) => {
-                            unsafe {
-                                let _ = MessageBeep(MB_ICONERROR);
-                            }
-                            let _ = tx.send(WorkerEvent::ScanFailed {
-                                raw_ocr,
-                                cleaned,
-                            });
                             ctx.request_repaint();
                         }
                         Err(_) => {
@@ -3610,22 +4237,23 @@ impl eframe::App for LoadoutTerminalApp {
                     let m = self.selected_mode.as_str();
                     let src = self.selected_source.as_str();
                     let is_empty = builds.is_empty();
+                    let ocr_preview = truncate_ocr_preview(&raw_ocr, 24);
 
                     if is_uncertain {
                         self.pending_confirm_builds = Some((weapon.clone(), builds));
                         self.pending_confirm_score = Some(score);
                         let msg = match self.lang {
                             AppLang::Vi => format!(
-                                "Nghi ngờ nhận diện: [{}] ({:.1}%) — Bấm [✔ XÁC NHẬN & COPY] để sao chép (OCR: '{}')",
+                                "Nghi ngờ nhận diện: [{}] ({:.1}%) — Bấm [✔ XÁC NHẬN & COPY] (OCR: '{}')",
                                 weapon,
                                 score * 100.0,
-                                raw_ocr.trim()
+                                ocr_preview
                             ),
                             AppLang::En => format!(
-                                "Suspicious match: [{}] ({:.1}%) — Click [✔ CONFIRM & COPY] to copy (OCR: '{}')",
+                                "Confirm match: [{}] ({:.1}%) — Click [✔ CONFIRM & COPY] (OCR: '{}')",
                                 weapon,
                                 score * 100.0,
-                                raw_ocr.trim()
+                                ocr_preview
                             ),
                         };
                         self.status_message = Some((msg, Instant::now(), true));
@@ -3658,18 +4286,18 @@ impl eframe::App for LoadoutTerminalApp {
                                 if is_empty {
                                     format!("Đã nhận diện súng [{}] ({:.1}%) nhưng chưa có cấu hình cho bộ lọc hiện tại [{}/{}/{}]", weapon, score * 100.0, src, s, m)
                                 } else if partial_clip {
-                                    format!("Nhận diện: {} ({:.1}%) — Cảnh báo chỉ nạp được{} - OCR: '{}'", weapon, score * 100.0, ratio_suffix, raw_ocr.trim())
+                                    format!("Nhận diện: {} ({:.1}%) — Cảnh báo chỉ nạp được{} - OCR: '{}'", weapon, score * 100.0, ratio_suffix, ocr_preview)
                                 } else {
-                                    format!("Nhận diện: {} ({:.1}%) [{}/{}/{}]{} - OCR: '{}'", weapon, score * 100.0, src, s, m, ratio_suffix, raw_ocr.trim())
+                                    format!("Nhận diện: {} ({:.1}%) [{}/{}/{}]{} - OCR: '{}'", weapon, score * 100.0, src, s, m, ratio_suffix, ocr_preview)
                                 }
                             }
                             AppLang::En => {
                                 if is_empty {
                                     format!("Recognized gun [{}] ({:.1}%) but no builds found for current filter [{}/{}/{}]", weapon, score * 100.0, src, s, m)
                                 } else if partial_clip {
-                                    format!("Recognized: {} ({:.1}%) — Warning partial clipboard{} - OCR: '{}'", weapon, score * 100.0, ratio_suffix, raw_ocr.trim())
+                                    format!("Recognized: {} ({:.1}%) — Warning partial clipboard{} - OCR: '{}'", weapon, score * 100.0, ratio_suffix, ocr_preview)
                                 } else {
-                                    format!("Recognized: {} ({:.1}%) [{}/{}/{}]{} - OCR: '{}'", weapon, score * 100.0, src, s, m, ratio_suffix, raw_ocr.trim())
+                                    format!("Recognized: {} ({:.1}%) [{}/{}/{}]{} - OCR: '{}'", weapon, score * 100.0, src, s, m, ratio_suffix, ocr_preview)
                                 }
                             }
                         };
@@ -3679,9 +4307,11 @@ impl eframe::App for LoadoutTerminalApp {
                 WorkerEvent::ScanFailed { raw_ocr, cleaned } => {
                     self.pending_confirm_builds = None;
                     self.pending_confirm_score = None;
+                    let ocr_preview = truncate_ocr_preview(&raw_ocr, 28);
+                    let cleaned_preview = truncate_ocr_preview(&cleaned, 24);
                     let msg = match self.lang {
-                        AppLang::Vi => format!("Không nhận diện được súng! (OCR: '{}' | Xử lý: '{}')", raw_ocr.trim(), cleaned),
-                        AppLang::En => format!("Weapon not recognized! (OCR: '{}' | Cleaned: '{}')", raw_ocr.trim(), cleaned),
+                        AppLang::Vi => format!("Không nhận diện được súng! (OCR: '{}' | Xử lý: '{}')", ocr_preview, cleaned_preview),
+                        AppLang::En => format!("Weapon not recognized! (OCR: '{}' | Cleaned: '{}')", ocr_preview, cleaned_preview),
                     };
                     self.status_message = Some((msg, Instant::now(), true));
                 }
@@ -4461,7 +5091,7 @@ impl eframe::App for LoadoutTerminalApp {
         let mut confirm_pending = false;
         let mut cancel_pending = false;
 
-        // Bottom Status Bar
+        // Bottom Status Bar (right-aligned info & confirm buttons reserved first so status text truncates cleanly without overlap)
         egui::TopBottomPanel::bottom("status_bar")
             .frame(
                 Frame::default()
@@ -4470,21 +5100,38 @@ impl eframe::App for LoadoutTerminalApp {
                     .inner_margin(Margin::symmetric(14.0, 6.0)),
             )
             .show(ctx, |ui| {
-                ui.horizontal(|ui| {
-                    if let Some((msg, _time, is_error)) = &self.status_message {
-                        let icon = if *is_error { "[!] " } else { "[i] " };
-                        let color = if self.pending_confirm_builds.is_some() {
-                            COLOR_AMBER
-                        } else if *is_error {
-                            COLOR_RED
-                        } else {
-                            COLOR_ACCENT
-                        };
-                        ui.add(egui::Label::new(RichText::new(format!("{}{}", icon, msg)).color(color).size(12.0)).selectable(false));
-                    }
+                ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
+                    let status_info = format!(
+                        "Source: {} | Server: {} | Mode: {} | Total: {} Builds",
+                        self.selected_source.as_str(),
+                        self.selected_server.as_str().to_uppercase(),
+                        self.selected_mode.as_str().to_uppercase(),
+                        self.builds.len()
+                    );
+                    ui.add(
+                        egui::Label::new(
+                            RichText::new(status_info)
+                                .color(COLOR_TEXT_MUTED)
+                                .size(11.0)
+                                .monospace(),
+                        )
+                        .selectable(false),
+                    );
+
+                    ui.add_space(10.0);
 
                     if self.pending_confirm_builds.is_some() {
-                        ui.add_space(8.0);
+                        let cancel_btn = egui::Button::new(
+                            RichText::new("✕")
+                                .color(COLOR_TEXT_MUTED)
+                                .size(11.0),
+                        )
+                        .fill(Color32::TRANSPARENT);
+
+                        if ui.add(cancel_btn).clicked() {
+                            cancel_pending = true;
+                        }
+
                         let confirm_btn = egui::Button::new(
                             RichText::new(self.lang.t("✔ XÁC NHẬN & COPY", "✔ CONFIRM & COPY"))
                                 .color(COLOR_BG)
@@ -4497,44 +5144,43 @@ impl eframe::App for LoadoutTerminalApp {
                         if ui
                             .add(confirm_btn)
                             .on_hover_text(self.lang.t(
-                                "Nhận diện ở ngưỡng nghi ngờ (75%-89%). Bấm để xác nhận súng này và sao chép vào Clipboard",
-                                "Suspicious OCR match (75%-89%). Click to confirm weapon and copy loadouts to Clipboard"
+                                "Nhận diện chưa đủ rào chắn an toàn Auto-Copy. Bấm để xác nhận súng này và sao chép vào Clipboard",
+                                "Match requires manual confirmation (safety guard triggered). Click to confirm weapon and copy loadouts to Clipboard"
                             ))
                             .clicked()
                         {
                             confirm_pending = true;
                         }
 
-                        let cancel_btn = egui::Button::new(
-                            RichText::new("✕")
-                                .color(COLOR_TEXT_MUTED)
-                                .size(11.0),
-                        )
-                        .fill(Color32::TRANSPARENT);
-
-                        if ui.add(cancel_btn).clicked() {
-                            cancel_pending = true;
-                        }
+                        ui.add_space(6.0);
                     }
 
-                    ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
-                        let status_info = format!(
-                            "Source: {} | Server: {} | Mode: {} | Total: {} Builds",
-                            self.selected_source.as_str(),
-                            self.selected_server.as_str().to_uppercase(),
-                            self.selected_mode.as_str().to_uppercase(),
-                            self.builds.len()
-                        );
-                        ui.add(
-                            egui::Label::new(
-                                RichText::new(status_info)
-                                    .color(COLOR_TEXT_MUTED)
-                                    .size(11.0)
-                                    .monospace(),
-                            )
-                            .selectable(false),
-                        );
-                    });
+                    let remaining_w = ui.available_width().max(40.0);
+                    ui.allocate_ui_with_layout(
+                        egui::vec2(remaining_w, 18.0),
+                        Layout::left_to_right(Align::Center),
+                        |ui| {
+                            if let Some((msg, _time, is_error)) = &self.status_message {
+                                let icon = if *is_error { "[!] " } else { "[i] " };
+                                let color = if self.pending_confirm_builds.is_some() {
+                                    COLOR_AMBER
+                                } else if *is_error {
+                                    COLOR_RED
+                                } else {
+                                    COLOR_ACCENT
+                                };
+                                ui.add(
+                                    egui::Label::new(
+                                        RichText::new(format!("{}{}", icon, msg))
+                                            .color(color)
+                                            .size(12.0),
+                                    )
+                                    .truncate()
+                                    .selectable(false),
+                                );
+                            }
+                        },
+                    );
                 });
             });
 
@@ -6536,12 +7182,13 @@ mod tests {
     fn test_ocr_rejects_vietnamese_aliases_and_category_only() {
         let candidates = get_test_candidates();
 
-        // 1. Vietnamese nicknames (`cung`, `hai nong`, etc.) MUST be disabled in OCR flow
+        // 1. General Vietnamese nicknames (`cung`, `no`, `hai nong`, etc.) MUST remain disabled in OCR flow,
+        //    except for the explicit HUD title `Cung Phức Hợp` -> `COMPOUND BOW`.
         for vi_nick in [
             "cung",
             "Cung",
-            "Cung phức hợp",
-            "Nỏ phức hợp",
+            "Nỏ",
+            "Nỏ chiến thuật",
             "hai nong",
             "Hai Nòng",
             "Shotgun Hai Nòng",
@@ -6554,6 +7201,12 @@ mod tests {
                 vi_nick,
                 matched
             );
+        }
+
+        for bow_title in ["Cung Phức Hợp", "Cung Phuc Hop", "Jng Phurc Hop"] {
+            let d = recognize_weapon_with_decision(bow_title, 0.90, None, &candidates);
+            assert_eq!(d.weapon, Some("COMPOUND BOW"), "Title '{}' should map to COMPOUND BOW", bow_title);
+            assert!(d.can_auto_copy, "Title '{}' should satisfy auto-copy guards", bow_title);
         }
 
         // 2. Category-only OCR text with no weapon code characters MUST be rejected
@@ -7127,11 +7780,12 @@ mod tests {
             assert_eq!(classify_confidence(score), ConfidenceTier::Suspicious);
         }
 
-        // 2. Ambiguous 2-match suffix (`...14 Marksman Rifle` matches M14 & MINI-14) stays in Suspicious confirm zone
-        let (amb_matched, _) = recognize_weapon_from_title("...14 Marksman Rifle", &candidates);
-        let amb = amb_matched.expect("ambiguous suffix should surface top candidate for confirm");
-        assert!(amb.0 == "M14" || amb.0 == "MINI-14");
-        assert_eq!(classify_confidence(amb.1), ConfidenceTier::Suspicious);
+        // 2. Ambiguous 2-match suffix (`...14 Marksman Rifle` matches M14 & MINI-14) MUST block Auto-Copy (`margin < 0.12`)
+        let amb_dec = recognize_weapon_with_decision("...14 Marksman Rifle", 1.0, None, &candidates);
+        let amb_w = amb_dec.weapon.expect("ambiguous suffix should surface top candidate for confirm");
+        assert!(amb_w == "M14" || amb_w == "MINI-14");
+        assert!(amb_dec.margin < 0.12, "M14 vs MINI-14 margin should be < 0.12, got {:.3}", amb_dec.margin);
+        assert!(!amb_dec.can_auto_copy, "Close margin < 0.12 must block Auto-Copy and require confirmation");
 
         // 3. Broad ambiguous 1-char suffix in large pool (`...2 Assault Rifle` matches AK-12, PTR-32, SG552, ASH-12) must be rejected
         let (too_broad, _) = recognize_weapon_from_title("...2 Assault Rifle", &candidates);
@@ -7168,70 +7822,122 @@ mod tests {
     fn test_v201_sticky_suffix_16_9_aspect_and_ctc_safety() {
         let candidates = get_test_candidates();
 
-        // 1. Sticky trailing HUD noise after category + 1-char Levenshtein recovery ("S552 Assault Rifleof oadu" -> SG552)
-        let (sg_matched, sg_cleaned) =
-            recognize_weapon_from_title_with_conf("S552 Assault Rifleof oadu", 0.90, &candidates);
-        assert_eq!(sg_cleaned, "S552");
-        let (sg_weapon, sg_score) = sg_matched.expect("S552 Assault Rifleof oadu should match SG552");
-        assert_eq!(sg_weapon, "SG552");
-        assert!(sg_score >= 0.90, "Expected >= 0.90 for SG552, got {:.3}", sg_score);
-        assert_eq!(classify_confidence(sg_score), ConfidenceTier::High);
+        // 1. Sticky trailing HUD noise + 19 real Warfare occluded / noisy strings MUST resolve with Auto-Copy
+        let warfare_cases = [
+            ("4A1Assault Rifle", "M4A1"),
+            ("3552 Assault Rifle", "SG552"),
+            ("S552 Assault Rifleof oadu", "SG552"),
+            ("3Z95-1Assault Rifle", "QBZ95-1"),
+            ("QZ95-1 Assault Rifle", "QBZ95-1"),
+            ("317 Assault Rifle", "KC-17"),
+            ("137 Assault Rifle", "K437"),
+            ("116 Assault Rifle", "K416"),
+            ("JG Assault Rifle", "AUG"),
+            ("K47 Assault Rifle", "MK47"),
+            ("57 Assault Rifle", "AR-57"),
+            ("AR-57 Assault Rifle", "AR-57"),
+            ("tomoson Submachine Gun", "THOMPSON"),
+            ("20171 Submachine Gun", "QCQ171"),
+            ("aver-action Rifle", "MARLIN LEVER-ACTION"),
+            ("SS Marksman Rifle", "VSS"),
+            ("7CH Marksman Rifle", "SVCH"),
+            ("7D Sniger Rifle", "SVD"),
+            ("-98 Sniner Rifle", "SV-98"),
+            ("VM Sniger Rifle", "AWM"),
+            ("Jng Phurc Hop", "COMPOUND BOW"),
+        ];
 
-        // Levenshtein <= 1 with missing char ("QZ95-1 Assault Rifle" -> QBZ95-1)
-        let (qbz_matched, _) =
-            recognize_weapon_from_title_with_conf("QZ95-1 Assault Rifle", 0.88, &candidates);
-        let (qbz_weapon, qbz_score) = qbz_matched.expect("QZ95-1 Assault Rifle should match QBZ95-1");
-        assert_eq!(qbz_weapon, "QBZ95-1");
-        assert!(qbz_score >= 0.90, "Expected >= 0.90 for QBZ95-1, got {:.3}", qbz_score);
+        for (raw_ocr, expected) in warfare_cases {
+            let dec = recognize_weapon_with_decision(raw_ocr, 0.88, None, &candidates);
+            assert_eq!(
+                dec.weapon,
+                Some(expected),
+                "Warfare OCR '{}' (cleaned: '{}'): expected '{}', got {:?}",
+                raw_ocr,
+                dec.cleaned,
+                expected,
+                dec.weapon
+            );
+            assert!(
+                dec.score >= 0.75,
+                "Warfare OCR '{}' -> '{}' expected score >= 0.75, got {:.3}",
+                raw_ocr,
+                expected,
+                dec.score
+            );
+            assert!(
+                dec.can_auto_copy,
+                "Warfare OCR '{}' -> '{}' must pass all 3 auto-copy guards (score={:.3}, margin={:.3}, locked={}, len={}, ctc={:.3})",
+                raw_ocr,
+                expected,
+                dec.score,
+                dec.margin,
+                dec.category_locked,
+                dec.code_alnum_len,
+                dec.ctc_confidence
+            );
+        }
 
-        // 2. Low CTC confidence (< 0.55) MUST downgrade into manual confirmation zone (<= 0.85)
-        let (low_ctc_matched, _) =
-            recognize_weapon_from_title_with_conf("S552 Assault Rifleof oadu", 0.45, &candidates);
-        let (low_weapon, low_score) = low_ctc_matched.expect("Low CTC should still return candidate");
-        assert_eq!(low_weapon, "SG552");
-        assert!(low_score <= 0.85, "Low CTC (< 0.55) must cap score <= 0.85, got {:.3}", low_score);
-        assert_eq!(classify_confidence(low_score), ConfidenceTier::Suspicious);
+        // Verify K47 specifically prefers MK47 over K437 inside Assault Rifle lock
+        let k47_dec = recognize_weapon_with_decision("K47 Assault Rifle", 0.90, None, &candidates);
+        assert_eq!(k47_dec.weapon, Some("MK47"));
+        assert!(k47_dec.margin >= 0.12);
 
-        let (low_exact_matched, _) =
-            recognize_weapon_from_title_with_conf("M4A1 Assault Rifle", 0.40, &candidates);
-        let (_, low_exact_score) = low_exact_matched.unwrap();
-        assert!(low_exact_score <= 0.85);
-        assert_eq!(classify_confidence(low_exact_score), ConfidenceTier::Suspicious);
+        // Hard Category Lock: unmatched code inside a locked category must NEVER escape to another category
+        let locked_miss = recognize_weapon_with_decision("57 Sniper Rifle", 0.95, None, &candidates);
+        assert_ne!(locked_miss.weapon, Some("AR-57"));
+        assert!(!locked_miss.can_auto_copy);
 
-        // 3. Single-character code ("7" or "M") must NEVER auto-copy (<= 0.82)
-        let (single_m, _) = recognize_weapon_from_title_with_conf("7 Battle Rifle", 0.99, &candidates);
-        let (single_w, single_s) = single_m.unwrap();
-        assert_eq!(single_w, "M7");
-        assert!(single_s <= 0.82, "1-char code must cap <= 0.82, got {:.3}", single_s);
-        assert_eq!(classify_confidence(single_s), ConfidenceTier::Suspicious);
+        // 2. Three mandatory Auto-Copy >= 75% safety guards
+        assert_eq!(evaluate_auto_copy_guards(0.78, 0.20, true, 3, 0.85), ConfidenceTier::High);
+        assert_eq!(evaluate_auto_copy_guards(0.74, 0.20, true, 3, 0.85), ConfidenceTier::Rejected);
+        assert_eq!(evaluate_auto_copy_guards(0.95, 0.11, true, 3, 0.95), ConfidenceTier::Suspicious);
+        assert_eq!(evaluate_auto_copy_guards(0.95, 0.50, false, 3, 0.95), ConfidenceTier::Suspicious);
+        assert_eq!(evaluate_auto_copy_guards(0.95, 0.50, true, 1, 0.95), ConfidenceTier::Suspicious);
+        assert_eq!(evaluate_auto_copy_guards(0.95, 0.50, true, 3, 0.54), ConfidenceTier::Suspicious);
 
-        // 4. Centered 16:9 HUD ROI calculation across 16:9 (1920x1080), 21:9 (3440x1440), and 16:10 (1920x1200)
-        // 1920x1080 (16:9): virtual_w=1920, offset_x=0
-        let r_1080 = compute_hud_16_9_roi_rect(1920, 1080, 0.248, 0.415, 0.152, 0.193);
-        assert_eq!(r_1080, (476, 164, 321, 44));
+        // End-to-end guard enforcement: no category -> blocks auto-copy; low CTC -> blocks auto-copy; 1-char code -> blocks auto-copy
+        let unlocked = recognize_weapon_with_decision("SG552", 0.99, None, &candidates);
+        assert_eq!(unlocked.weapon, Some("SG552"));
+        assert!(!unlocked.can_auto_copy, "Unlocked category must require manual confirmation");
+
+        let low_ctc = recognize_weapon_with_decision("S552 Assault Rifleof oadu", 0.45, None, &candidates);
+        assert_eq!(low_ctc.weapon, Some("SG552"));
+        assert!(low_ctc.score <= 0.85);
+        assert!(!low_ctc.can_auto_copy);
+
+        let single_char = recognize_weapon_with_decision("7 Battle Rifle", 0.99, None, &candidates);
+        assert_eq!(single_char.weapon, Some("M7"));
+        assert!(single_char.score <= 0.82);
+        assert!(!single_char.can_auto_copy);
+
+        // 3. Centered 16:9 HUD ROI calculation across 16:9 (1920x1080), 21:9 (3440x1440), and 16:10 (1920x1200)
+        // Tight center header ROI: x: 24.0% -> 41.5%, y: 15.0% -> 19.6%
+        let r_1080 = compute_hud_16_9_roi_rect(1920, 1080, 0.240, 0.415, 0.150, 0.196);
+        assert_eq!(r_1080, (461, 162, 336, 50));
 
         // 3440x1440 (21:9 Ultrawide): virtual_w=2560, offset_x=440
-        let r_uw = compute_hud_16_9_roi_rect(3440, 1440, 0.248, 0.415, 0.152, 0.193);
-        assert_eq!(r_uw, (1075, 219, 427, 59));
+        let r_uw = compute_hud_16_9_roi_rect(3440, 1440, 0.240, 0.415, 0.150, 0.196);
+        assert_eq!(r_uw, (1054, 216, 448, 66));
 
         // 1920x1200 (16:10): virtual_w=1920, offset_x=0
-        let r_1610 = compute_hud_16_9_roi_rect(1920, 1200, 0.248, 0.415, 0.152, 0.193);
-        assert_eq!(r_1610, (476, 182, 321, 50));
+        let r_1610 = compute_hud_16_9_roi_rect(1920, 1200, 0.240, 0.415, 0.150, 0.196);
+        assert_eq!(r_1610, (461, 180, 336, 55));
     }
 
     #[test]
     fn test_center_roi_and_yellow_18plus_preprocessing() {
-        // Construct synthetic image with bright orange/yellow 18+ block on the left + bright white bar on the right
+        // Threshold-free RGB preprocessing must preserve dimmed shadowed 18+ gray tones and keep background dark
         let mut img = xcap::image::RgbaImage::from_pixel(240, 48, xcap::image::Rgba([18, 22, 28, 255]));
-        // Yellow/orange 18+ area at x = 0..45
-        for y in 4..44 {
-            for x in 4..45 {
-                img.put_pixel(x, y, xcap::image::Rgba([255, 190, 20, 255]));
+        // Dimmed semi-transparent 18+-shadowed glyphs in left 30% (x = 12..56)
+        for y in 14..32 {
+            for x in 12..56 {
+                img.put_pixel(x, y, xcap::image::Rgba([105, 108, 112, 255]));
             }
         }
-        // Bright white text glyph simulation at x = 70..180
+        // Bright white text glyph simulation on the clean right side (x = 90..190)
         for y in 14..32 {
-            for x in 70..180 {
+            for x in 90..190 {
                 img.put_pixel(x, y, xcap::image::Rgba([248, 248, 250, 255]));
             }
         }
@@ -7239,9 +7945,22 @@ mod tests {
         let (target_w, nchw) = preprocess_for_paddle_ocr(&img);
         assert!(target_w >= 320 && target_w % 8 == 0);
         assert_eq!(nchw.len(), 3 * 48 * target_w);
-        // Dark ink (< 0.0) must exist where white bar was, while yellow left box must remain white background (+1.0)
-        assert!(nchw[..48 * target_w].iter().any(|&v| v < -0.5));
-        assert!(nchw[..48 * target_w].iter().any(|&v| v > 0.8));
+        // Dark HUD background stays dark (< -0.7), bright text stays positive (> 0.8),
+        // AND mid-tone shadowed gray is preserved intact (-0.30..0.0) without threshold erasure
+        assert!(nchw[..48 * target_w].iter().any(|&v| v < -0.75));
+        assert!(nchw[..48 * target_w].iter().any(|&v| v > 0.85));
+        assert!(nchw[..48 * target_w].iter().any(|&v| v > -0.30 && v < 0.05));
+
+        // Pass 1B gamma boost (0.55) on left 30% lifts dimmed [105,108,112] significantly,
+        // keeps dark background dark (<= original 18), and leaves right 70% untouched.
+        let boosted = boost_left_region_gamma(&img, 0.30, 0.55);
+        assert!(
+            boosted.get_pixel(30, 20)[0] > 175,
+            "Expected boosted shadowed gray > 175, got {}",
+            boosted.get_pixel(30, 20)[0]
+        );
+        assert!(boosted.get_pixel(5, 5)[0] <= img.get_pixel(5, 5)[0]);
+        assert_eq!(boosted.get_pixel(150, 20)[0], img.get_pixel(150, 20)[0]);
     }
 
     #[test]
@@ -7464,6 +8183,66 @@ mod tests {
             cat_raw,
             cat_match
         );
+
+        // Helper to blit rendered HUD strip onto a 1920x1080 screen canvas
+        let blit_strip = |dst: &mut xcap::image::RgbaImage, src: &xcap::image::RgbaImage, dx: u32, dy: u32, max_w: u32, max_h: u32| {
+            let copy_w = src.width().min(max_w).min(dst.width().saturating_sub(dx));
+            let copy_h = src.height().min(max_h).min(dst.height().saturating_sub(dy));
+            for sy in 0..copy_h {
+                for sx in 0..copy_w {
+                    dst.put_pixel(dx + sx, dy + sy, *src.get_pixel(sx, sy));
+                }
+            }
+        };
+
+        // Pass 1B ONNX recovery: dim 18+-shadowed text in left 30% of center header (`x: 24.0%..41.5%, y: 15.0%..19.6%`)
+        let mut frame_1b = xcap::image::RgbaImage::from_pixel(1920, 1080, xcap::image::Rgba([20, 26, 34, 255]));
+        let mut dim_center = render_hud_title("SG552 Assault Rifle", false);
+        let dim_w = (dim_center.width() as f32 * 0.25) as u32;
+        for y in 0..dim_center.height() {
+            for x in 0..dim_w {
+                let p = dim_center.get_pixel(x, y);
+                // Dim foreground glyphs while keeping subtle warm shadow box so Pass 1B gamma boost recovers cleanly
+                if p[0] > 80 {
+                    dim_center.put_pixel(x, y, xcap::image::Rgba([95, 92, 88, 255]));
+                } else {
+                    dim_center.put_pixel(x, y, xcap::image::Rgba([28, 24, 18, 255]));
+                }
+            }
+        }
+        blit_strip(&mut frame_1b, &dim_center, 461, 162, 336, 50);
+        let out_1b = recognize_from_captured_image(&mut engine, &frame_1b, &candidates)
+            .expect("Pass 1B E2E recognition should run cleanly");
+        assert_eq!(out_1b.weapon, Some("SG552"), "Pass 1B raw='{}'", out_1b.raw_ocr);
+        assert!(out_1b.can_auto_copy, "Pass 1B SG552 should allow auto-copy");
+
+        // Pass 2 ONNX fallback: center header shows ONLY category (`Assault Rifle`), while left white-bordered card
+        // carries top-left code + skin (`K437 - Scarlet`) inside `x: 7.0%..23.6%, y: 13.0%..90.0%`
+        let mut frame_p2 = xcap::image::RgbaImage::from_pixel(1920, 1080, xcap::image::Rgba([20, 26, 34, 255]));
+        blit_strip(&mut frame_p2, &render_hud_title("     Assault Rifle", false), 461, 162, 336, 50);
+
+        // White-bordered active card at (148..428, 300..396) in 1920x1080
+        let (cx1, cy1, cx2, cy2) = (148u32, 300u32, 428u32, 396u32);
+        let white = xcap::image::Rgba([248, 248, 248, 255]);
+        for x in cx1..cx2 {
+            frame_p2.put_pixel(x, cy1, white);
+            frame_p2.put_pixel(x, cy1 + 1, white);
+            frame_p2.put_pixel(x, cy2 - 1, white);
+            frame_p2.put_pixel(x, cy2 - 2, white);
+        }
+        for y in cy1..cy2 {
+            frame_p2.put_pixel(cx1, y, white);
+            frame_p2.put_pixel(cx1 + 1, y, white);
+            frame_p2.put_pixel(cx2 - 1, y, white);
+            frame_p2.put_pixel(cx2 - 2, y, white);
+        }
+        let card_text = render_hud_title("K437 - Scarlet", false);
+        blit_strip(&mut frame_p2, &card_text, cx1 + 4, cy1 + 4, cx2 - cx1 - 8, 42);
+
+        let out_p2 = recognize_from_captured_image(&mut engine, &frame_p2, &candidates)
+            .expect("Pass 2 E2E recognition should run cleanly");
+        assert_eq!(out_p2.weapon, Some("K437"), "Pass 2 raw='{}'", out_p2.raw_ocr);
+        assert!(out_p2.can_auto_copy, "Pass 2 K437 + locked Assault Rifle should auto-copy");
     }
 
     #[test]
