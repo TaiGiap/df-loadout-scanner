@@ -2,7 +2,7 @@
 
 use std::collections::HashSet;
 use std::fs;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicBool, AtomicI32, Ordering};
 use std::sync::mpsc::{channel, Receiver, Sender};
 use std::sync::{Arc, OnceLock, RwLock};
@@ -674,6 +674,7 @@ enum WorkerEvent {
         result: Result<Option<ReleaseUpdateInfo>, String>,
     },
     UpdateDownloadFinished {
+        target_tag: String,
         result: Result<PathBuf, String>,
     },
 }
@@ -2292,7 +2293,271 @@ fn spawn_update_check(tx: Sender<WorkerEvent>, ctx: egui::Context, manual: bool)
     });
 }
 
-fn spawn_update_zip_download(tx: Sender<WorkerEvent>, ctx: egui::Context, url: String, file_name: String) {
+fn inspect_zip_entries(bytes: &[u8]) -> Result<Vec<String>, String> {
+    if bytes.len() < 22 || !bytes.starts_with(&[0x50, 0x4B, 0x03, 0x04]) {
+        return Err("Tệp tải về không phải định dạng .zip hợp lệ (sai chữ ký PK)".to_string());
+    }
+
+    let min_eocd_search = bytes.len().saturating_sub(65558);
+    let mut eocd_pos: Option<usize> = None;
+    let mut i = bytes.len() - 22;
+    loop {
+        if bytes[i..i + 4] == [0x50, 0x4B, 0x05, 0x06] {
+            eocd_pos = Some(i);
+            break;
+        }
+        if i <= min_eocd_search {
+            break;
+        }
+        i -= 1;
+    }
+
+    let eocd = eocd_pos.ok_or_else(|| "Tệp .zip bị lỗi cấu trúc (thiếu End of Central Directory)".to_string())?;
+    let total_entries = u16::from_le_bytes([bytes[eocd + 10], bytes[eocd + 11]]) as usize;
+    let cd_size = u32::from_le_bytes([bytes[eocd + 12], bytes[eocd + 13], bytes[eocd + 14], bytes[eocd + 15]]) as usize;
+    let cd_offset = u32::from_le_bytes([bytes[eocd + 16], bytes[eocd + 17], bytes[eocd + 18], bytes[eocd + 19]]) as usize;
+
+    if cd_offset.checked_add(cd_size).map_or(true, |end| end > eocd) {
+        return Err("Tệp .zip bị hỏng (Central Directory vượt quá kích thước tệp)".to_string());
+    }
+
+    let mut entries = Vec::with_capacity(total_entries);
+    let mut cursor = cd_offset;
+    for _ in 0..total_entries {
+        if cursor + 46 > eocd || bytes[cursor..cursor + 4] != [0x50, 0x4B, 0x01, 0x02] {
+            return Err("Tệp .zip bị hỏng trong danh sách Central Directory".to_string());
+        }
+        let name_len = u16::from_le_bytes([bytes[cursor + 28], bytes[cursor + 29]]) as usize;
+        let extra_len = u16::from_le_bytes([bytes[cursor + 30], bytes[cursor + 31]]) as usize;
+        let comment_len = u16::from_le_bytes([bytes[cursor + 32], bytes[cursor + 33]]) as usize;
+        let name_start = cursor + 46;
+        let name_end = name_start + name_len;
+        let next_cursor = name_end + extra_len + comment_len;
+        if next_cursor > eocd {
+            return Err("Tệp .zip bị cắt cụt (entry vượt quá Central Directory)".to_string());
+        }
+        let entry_name = String::from_utf8_lossy(&bytes[name_start..name_end]).to_string();
+        entries.push(entry_name);
+        cursor = next_cursor;
+    }
+
+    Ok(entries)
+}
+
+fn validate_update_zip_archive(zip_path: &Path) -> Result<Vec<String>, String> {
+    let meta = fs::metadata(zip_path).map_err(|e| format!("Không đọc được tệp .zip: {}", e))?;
+    if meta.len() == 0 {
+        return Err("Tệp .zip rỗng (0 bytes)".to_string());
+    }
+    let bytes = fs::read(zip_path).map_err(|e| format!("Không mở được tệp .zip: {}", e))?;
+    let entries = inspect_zip_entries(&bytes)?;
+    let has_exe = entries
+        .iter()
+        .any(|e| !e.ends_with('/') && e.to_ascii_lowercase().ends_with(".exe"));
+    if !has_exe {
+        return Err("Gói .zip không chứa tệp thực thi .exe hợp lệ".to_string());
+    }
+    Ok(entries)
+}
+
+fn updates_dir_path() -> PathBuf {
+    app_data_dir().join("updates")
+}
+
+fn just_updated_flag_path() -> PathBuf {
+    updates_dir_path().join("just_updated_to.txt")
+}
+
+#[cfg(test)]
+fn write_just_updated_flag_at(path: &Path, version: &str) -> Result<(), String> {
+    atomic_write_verified(path, version.trim())
+}
+
+fn consume_just_updated_flag_at(path: &Path) -> Option<String> {
+    let content = fs::read_to_string(path).ok()?;
+    let _ = fs::remove_file(path);
+    let trimmed = content.trim().to_string();
+    if trimmed.is_empty() {
+        None
+    } else {
+        Some(trimmed)
+    }
+}
+
+const APPLY_UPDATE_PS1: &str = r#"param(
+    [int]$AppPid,
+    [string]$ExeDir,
+    [string]$CurrentExe,
+    [string]$ZipPath,
+    [string]$DataDir,
+    [string]$TargetVersion,
+    [string]$LogPath,
+    [string]$FlagPath
+)
+
+$ErrorActionPreference = 'Stop'
+
+function Write-UpdateLog([string]$Message) {
+    $ts = Get-Date -Format 'yyyy-MM-dd HH:mm:ss'
+    $line = "[$ts] $Message`r`n"
+    $parent = Split-Path -Parent $LogPath
+    if ($parent -and -not (Test-Path -LiteralPath $parent)) {
+        New-Item -ItemType Directory -Force -Path $parent | Out-Null
+    }
+    [System.IO.File]::AppendAllText($LogPath, $line, [System.Text.UTF8Encoding]::new($false))
+}
+
+function Copy-WithRetry([string]$Source, [string]$Destination, [bool]$Recurse = $false) {
+    $maxRetries = 6
+    for ($attempt = 1; $attempt -le $maxRetries; $attempt++) {
+        try {
+            if ($Recurse) {
+                Copy-Item -LiteralPath $Source -Destination $Destination -Recurse -Force
+            } else {
+                Copy-Item -LiteralPath $Source -Destination $Destination -Force
+            }
+            return
+        } catch {
+            if ($attempt -eq $maxRetries) {
+                throw
+            }
+            Start-Sleep -Milliseconds 400
+        }
+    }
+}
+
+$StageDir = Join-Path (Split-Path -Parent $LogPath) ("stage_" + $AppPid)
+
+try {
+    Write-UpdateLog "Bat dau cap nhat len $TargetVersion (PID=$AppPid)"
+
+    for ($i = 0; $i -lt 60; $i++) {
+        $proc = Get-Process -Id $AppPid -ErrorAction SilentlyContinue
+        if (-not $proc) {
+            break
+        }
+        Start-Sleep -Milliseconds 500
+    }
+    Start-Sleep -Milliseconds 400
+
+    if (Test-Path -LiteralPath $StageDir) {
+        Remove-Item -LiteralPath $StageDir -Recurse -Force -ErrorAction SilentlyContinue
+    }
+    New-Item -ItemType Directory -Force -Path $StageDir | Out-Null
+
+    Write-UpdateLog "Giai nen $ZipPath vao $StageDir"
+    Expand-Archive -LiteralPath $ZipPath -DestinationPath $StageDir -Force
+
+    $FoundExe = Get-ChildItem -LiteralPath $StageDir -Filter '*.exe' -File -Recurse | Select-Object -First 1
+    if (-not $FoundExe) {
+        throw "Khong tim thay tep thuc thi .exe trong goi cap nhat"
+    }
+    $SourceRoot = $FoundExe.DirectoryName
+    Write-UpdateLog "Da xac nhan file .exe moi: $($FoundExe.FullName)"
+
+    $ProtectedNames = @(
+        'config.json',
+        'favorites.json',
+        'builds_local.json',
+        'df_history.json',
+        'DF-Loadout-Scanner-Data'
+    )
+
+    Copy-WithRetry -Source $FoundExe.FullName -Destination $CurrentExe -Recurse $false
+
+    $Items = Get-ChildItem -LiteralPath $SourceRoot -Force
+    foreach ($item in $Items) {
+        if ($ProtectedNames -contains $item.Name) {
+            continue
+        }
+        if ($item.FullName -eq $FoundExe.FullName) {
+            continue
+        }
+        $destPath = Join-Path $ExeDir $item.Name
+        if ($item.PSIsContainer) {
+            Copy-WithRetry -Source $item.FullName -Destination $ExeDir -Recurse $true
+        } else {
+            Copy-WithRetry -Source $item.FullName -Destination $destPath -Recurse $false
+        }
+    }
+
+    $flagParent = Split-Path -Parent $FlagPath
+    if ($flagParent -and -not (Test-Path -LiteralPath $flagParent)) {
+        New-Item -ItemType Directory -Force -Path $flagParent | Out-Null
+    }
+    [System.IO.File]::WriteAllText($FlagPath, $TargetVersion, [System.Text.UTF8Encoding]::new($false))
+
+    Remove-Item -LiteralPath $StageDir -Recurse -Force -ErrorAction SilentlyContinue
+    Write-UpdateLog "Cap nhat thanh cong. Khoi chay lai $CurrentExe"
+    Start-Process -FilePath $CurrentExe -WorkingDirectory $ExeDir
+} catch {
+    Write-UpdateLog "LOI CAP NHAT: $($_.Exception.Message)"
+    if (Test-Path -LiteralPath $StageDir) {
+        Remove-Item -LiteralPath $StageDir -Recurse -Force -ErrorAction SilentlyContinue
+    }
+    exit 1
+}
+"#;
+
+fn launch_update_installer_script(zip_path: &Path, target_version: &str) -> Result<(), String> {
+    use std::os::windows::process::CommandExt;
+    const CREATE_NO_WINDOW: u32 = 0x08000000;
+
+    let current_exe = std::env::current_exe()
+        .map_err(|e| format!("Không xác định được đường dẫn .exe hiện tại: {}", e))?;
+    let exe_dir = current_exe
+        .parent()
+        .ok_or_else(|| "Không xác định được thư mục cài đặt hiện tại".to_string())?;
+    let data_dir = app_data_dir();
+    let updates_dir = updates_dir_path();
+    fs::create_dir_all(&updates_dir)
+        .map_err(|e| format!("Không tạo được thư mục updates: {}", e))?;
+
+    let script_path = updates_dir.join("apply_update.ps1");
+    let log_path = updates_dir.join("update_last.log");
+    let flag_path = just_updated_flag_path();
+
+    atomic_write_verified(&script_path, APPLY_UPDATE_PS1)?;
+
+    std::process::Command::new("powershell.exe")
+        .creation_flags(CREATE_NO_WINDOW)
+        .args([
+            "-NoProfile",
+            "-NonInteractive",
+            "-ExecutionPolicy",
+            "Bypass",
+            "-WindowStyle",
+            "Hidden",
+            "-File",
+        ])
+        .arg(&script_path)
+        .args(["-AppPid", &std::process::id().to_string()])
+        .arg("-ExeDir")
+        .arg(exe_dir)
+        .arg("-CurrentExe")
+        .arg(&current_exe)
+        .arg("-ZipPath")
+        .arg(zip_path)
+        .arg("-DataDir")
+        .arg(&data_dir)
+        .args(["-TargetVersion", target_version])
+        .arg("-LogPath")
+        .arg(&log_path)
+        .arg("-FlagPath")
+        .arg(&flag_path)
+        .spawn()
+        .map_err(|e| format!("Không thể khởi chạy trình cập nhật tự động: {}", e))?;
+
+    Ok(())
+}
+
+fn spawn_update_zip_download(
+    tx: Sender<WorkerEvent>,
+    ctx: egui::Context,
+    url: String,
+    file_name: String,
+    target_tag: String,
+) {
     thread::spawn(move || {
         let res = (|| -> Result<PathBuf, String> {
             let downloads_dir = app_data_dir().join("downloads");
@@ -2338,10 +2603,15 @@ fn spawn_update_zip_download(tx: Sender<WorkerEvent>, ctx: egui::Context, url: S
                 })?;
                 let _ = fs::remove_file(&tmp_path);
             }
+
+            validate_update_zip_archive(&target_path)?;
             Ok(target_path)
         })();
 
-        let _ = tx.send(WorkerEvent::UpdateDownloadFinished { result: res });
+        let _ = tx.send(WorkerEvent::UpdateDownloadFinished {
+            target_tag,
+            result: res,
+        });
         ctx.request_repaint();
     });
 }
@@ -3829,9 +4099,11 @@ struct LoadoutTerminalApp {
     available_update: Option<ReleaseUpdateInfo>,
     is_checking_update: bool,
     is_downloading_update: bool,
+    is_applying_update: bool,
     downloaded_update_path: Option<PathBuf>,
     update_banner_dismissed: bool,
     up_to_date_banner_until: Option<Instant>,
+    just_updated_version: Option<String>,
 
     egui_ctx: egui::Context,
     tx_events: Sender<WorkerEvent>,
@@ -3976,7 +4248,20 @@ impl LoadoutTerminalApp {
 
         let default_weapon = determine_startup_weapon(&unique_weapons, &builds, selected_server, selected_mode);
 
-        let (initial_status, is_err) = if let Err(ref ocr_err) = ocr_init_res {
+        let just_updated_version = consume_just_updated_flag_at(&just_updated_flag_path());
+        if just_updated_version.is_some() {
+            unsafe {
+                let _ = MessageBeep(MB_OK);
+            }
+        }
+
+        let (initial_status, is_err) = if let Some(ref updated_ver) = just_updated_version {
+            let msg = match lang {
+                AppLang::Vi => format!("✔ Đã cập nhật thành công lên phiên bản {}! Sẵn sàng với {} cấu hình.", updated_ver, builds.len()),
+                AppLang::En => format!("✔ Successfully updated to version {}! Ready with {} builds.", updated_ver, builds.len()),
+            };
+            (msg, false)
+        } else if let Err(ref ocr_err) = ocr_init_res {
             let msg = match lang {
                 AppLang::Vi => format!(
                     "CẢNH BÁO: Chưa nạp được lõi PaddleOCR v4 ({})! Phím {} bị tắt. Hãy đảm bảo tệp onnxruntime.dll nằm cạnh .exe. Bạn vẫn có thể tra cứu thủ công.",
@@ -4060,9 +4345,11 @@ impl LoadoutTerminalApp {
             available_update: None,
             is_checking_update: auto_check_update,
             is_downloading_update: false,
+            is_applying_update: false,
             downloaded_update_path: None,
             update_banner_dismissed: false,
             up_to_date_banner_until: None,
+            just_updated_version,
             egui_ctx: cc.egui_ctx.clone(),
             tx_events: tx,
             rx,
@@ -4695,28 +4982,48 @@ impl eframe::App for LoadoutTerminalApp {
                         }
                     }
                 }
-                WorkerEvent::UpdateDownloadFinished { result } => {
+                WorkerEvent::UpdateDownloadFinished { target_tag, result } => {
                     self.is_downloading_update = false;
                     match result {
                         Ok(path) => {
-                            unsafe {
-                                let _ = MessageBeep(MB_OK);
+                            self.downloaded_update_path = Some(path.clone());
+                            self.is_applying_update = true;
+                            match launch_update_installer_script(&path, &target_tag) {
+                                Ok(()) => {
+                                    let msg = match self.lang {
+                                        AppLang::Vi => format!(
+                                            "⚡ Đã xác thực gói .zip! Đang đóng ứng dụng để cập nhật lên {}...",
+                                            target_tag
+                                        ),
+                                        AppLang::En => format!(
+                                            "⚡ Validated .zip package! Closing app to update to {}...",
+                                            target_tag
+                                        ),
+                                    };
+                                    self.status_message = Some((msg, Instant::now(), false));
+                                    ctx.send_viewport_cmd(egui::ViewportCommand::Close);
+                                }
+                                Err(err) => {
+                                    self.is_applying_update = false;
+                                    unsafe {
+                                        let _ = MessageBeep(MB_ICONERROR);
+                                    }
+                                    let msg = match self.lang {
+                                        AppLang::Vi => format!("Lỗi khởi chạy trình cập nhật: {}", err),
+                                        AppLang::En => format!("Failed to launch updater: {}", err),
+                                    };
+                                    self.status_message = Some((msg, Instant::now(), true));
+                                }
                             }
-                            self.update_banner_dismissed = false;
-                            let msg = match self.lang {
-                                AppLang::Vi => format!("✔ Đã tải xong gói cập nhật về: {}", path.display()),
-                                AppLang::En => format!("✔ Downloaded update package to: {}", path.display()),
-                            };
-                            self.downloaded_update_path = Some(path);
-                            self.status_message = Some((msg, Instant::now(), false));
                         }
                         Err(err) => {
+                            self.is_applying_update = false;
                             unsafe {
                                 let _ = MessageBeep(MB_ICONERROR);
                             }
                             let msg = match self.lang {
-                                AppLang::Vi => format!("Tải gói cập nhật thất bại: {}", err),
-                                AppLang::En => format!("Failed to download update: {}", err),
+                                AppLang::Vi => format!("Tải/kiểm tra gói cập nhật thất bại: {}", err),
+                                AppLang::En => format!("Update download/validation failed: {}", err),
                             };
                             self.status_message = Some((msg, Instant::now(), true));
                         }
@@ -5264,43 +5571,28 @@ impl eframe::App for LoadoutTerminalApp {
                             self.update_banner_dismissed = true;
                         }
 
-                        if let Some(dl_path) = &self.downloaded_update_path {
-                            let open_dir_btn = egui::Button::new(
-                                RichText::new(self.lang.t("[📂 MỞ THƯ MỤC TẢI]", "[📂 OPEN DOWNLOADS]"))
-                                    .color(COLOR_BG)
-                                    .size(11.0)
-                                    .strong(),
-                            )
-                            .fill(COLOR_ACCENT)
-                            .rounding(Rounding::same(2.0));
-                            if ui
-                                .add(open_dir_btn)
-                                .on_hover_text(format!("{}", dl_path.display()))
-                                .clicked()
-                            {
-                                if let Some(parent) = dl_path.parent() {
-                                    let _ = std::process::Command::new("explorer").arg(parent).spawn();
-                                }
-                            }
-                        } else if let Some(zip_url) = update_info.zip_download_url.clone() {
-                            let zip_label = if self.is_downloading_update {
-                                self.lang.t("[⏳ ĐANG TẢI .ZIP...]", "[⏳ DOWNLOADING .ZIP...]")
+                        if let Some(zip_url) = update_info.zip_download_url.clone() {
+                            let busy = self.is_downloading_update || self.is_applying_update;
+                            let zip_label = if self.is_applying_update {
+                                self.lang.t("[⚡ ĐANG CHUẨN BỊ CẬP NHẬT...]", "[⚡ PREPARING UPDATE...]")
+                            } else if self.is_downloading_update {
+                                self.lang.t("[⏳ ĐANG TẢI & KIỂM TRA .ZIP...]", "[⏳ DOWNLOADING & VERIFYING .ZIP...]")
                             } else {
-                                self.lang.t("[⬇ TẢI GÓI .ZIP]", "[⬇ DOWNLOAD .ZIP]")
+                                self.lang.t("[⚡ TỰ CẬP NHẬT NGAY]", "[⚡ AUTO-UPDATE NOW]")
                             };
                             let zip_btn = egui::Button::new(
                                 RichText::new(zip_label)
-                                    .color(if self.is_downloading_update { COLOR_TEXT_MUTED } else { COLOR_BG })
+                                    .color(if busy { COLOR_TEXT_MUTED } else { COLOR_BG })
                                     .size(11.0)
                                     .strong(),
                             )
-                            .fill(if self.is_downloading_update { Color32::from_rgb(60, 50, 30) } else { COLOR_AMBER })
+                            .fill(if busy { Color32::from_rgb(60, 50, 30) } else { COLOR_AMBER })
                             .rounding(Rounding::same(2.0));
                             if ui
-                                .add_enabled(!self.is_downloading_update, zip_btn)
+                                .add_enabled(!busy, zip_btn)
                                 .on_hover_text(self.lang.t(
-                                    "Tải gói .zip vào DF-Loadout-Scanner-Data/downloads/ (không ghi đè file .exe đang chạy)",
-                                    "Download .zip into DF-Loadout-Scanner-Data/downloads/ (safe, does not overwrite running .exe)",
+                                    "Tải gói .zip vào DF-Loadout-Scanner-Data/downloads/, tự đóng app, cài đè bản mới (giữ nguyên dữ liệu người dùng) và tự mở lại",
+                                    "Download .zip into DF-Loadout-Scanner-Data/downloads/, close app, apply update (preserving user data) and relaunch",
                                 ))
                                 .clicked()
                             {
@@ -5309,7 +5601,13 @@ impl eframe::App for LoadoutTerminalApp {
                                     .zip_file_name
                                     .clone()
                                     .unwrap_or_else(|| format!("DF-Loadout-Scanner-{}-Windows-x64.zip", update_info.tag_name));
-                                spawn_update_zip_download(self.tx_events.clone(), ctx.clone(), zip_url, file_name);
+                                spawn_update_zip_download(
+                                    self.tx_events.clone(),
+                                    ctx.clone(),
+                                    zip_url,
+                                    file_name,
+                                    update_info.tag_name.clone(),
+                                );
                             }
                         }
 
@@ -5386,6 +5684,49 @@ impl eframe::App for LoadoutTerminalApp {
                                             .color(text_color)
                                             .size(12.0)
                                             .strong(),
+                                    )
+                                    .truncate()
+                                    .selectable(false),
+                                );
+                            },
+                        );
+                    });
+                });
+        } else if let Some(updated_ver) = self.just_updated_version.clone() {
+            egui::TopBottomPanel::top("post_update_banner")
+                .frame(
+                    Frame::default()
+                        .fill(Color32::from_rgb(16, 44, 30))
+                        .stroke(Stroke::new(1.0_f32, COLOR_ACCENT))
+                        .inner_margin(Margin::symmetric(14.0, 6.0)),
+                )
+                .show(ctx, |ui| {
+                    ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
+                        let close_btn = egui::Button::new(
+                            RichText::new("✕").color(COLOR_TEXT_MUTED).size(11.0),
+                        )
+                        .fill(Color32::TRANSPARENT);
+                        if ui.add(close_btn).clicked() {
+                            self.just_updated_version = None;
+                        }
+                        let rem_w = ui.available_width().max(60.0);
+                        ui.allocate_ui_with_layout(
+                            egui::vec2(rem_w, 20.0),
+                            Layout::left_to_right(Align::Center),
+                            |ui| {
+                                let msg = match self.lang {
+                                    AppLang::Vi => format!(
+                                        "🎉 Đã cập nhật thành công lên phiên bản mới {}! Toàn bộ cấu hình và dữ liệu cá nhân được giữ nguyên.",
+                                        updated_ver
+                                    ),
+                                    AppLang::En => format!(
+                                        "🎉 Successfully updated to version {}! All your settings and personal data were preserved.",
+                                        updated_ver
+                                    ),
+                                };
+                                ui.add(
+                                    egui::Label::new(
+                                        RichText::new(msg).color(COLOR_ACCENT).size(12.0).strong(),
                                     )
                                     .truncate()
                                     .selectable(false),
@@ -9192,6 +9533,104 @@ mod tests {
         let old_cfg: UserConfig = serde_json::from_str(r#"{"server":"Garena","mode":"Warfare"}"#)
             .expect("old config should deserialize");
         assert!(old_cfg.auto_check_update);
+    }
+
+    #[test]
+    fn test_zip_archive_validation_and_post_update_flag() {
+        let build_minimal_zip = |entry_names: &[&str]| -> Vec<u8> {
+            let mut out = Vec::new();
+            let mut cd = Vec::new();
+            for &name in entry_names {
+                let name_bytes = name.as_bytes();
+                let local_offset = out.len() as u32;
+                // Local file header
+                out.extend_from_slice(&[0x50, 0x4B, 0x03, 0x04]);
+                out.extend_from_slice(&20u16.to_le_bytes());
+                out.extend_from_slice(&0u16.to_le_bytes());
+                out.extend_from_slice(&0u16.to_le_bytes());
+                out.extend_from_slice(&0u16.to_le_bytes());
+                out.extend_from_slice(&0u16.to_le_bytes());
+                out.extend_from_slice(&0u32.to_le_bytes());
+                out.extend_from_slice(&0u32.to_le_bytes());
+                out.extend_from_slice(&0u32.to_le_bytes());
+                out.extend_from_slice(&(name_bytes.len() as u16).to_le_bytes());
+                out.extend_from_slice(&0u16.to_le_bytes());
+                out.extend_from_slice(name_bytes);
+
+                // Central directory file header
+                cd.extend_from_slice(&[0x50, 0x4B, 0x01, 0x02]);
+                cd.extend_from_slice(&20u16.to_le_bytes());
+                cd.extend_from_slice(&20u16.to_le_bytes());
+                cd.extend_from_slice(&0u16.to_le_bytes());
+                cd.extend_from_slice(&0u16.to_le_bytes());
+                cd.extend_from_slice(&0u16.to_le_bytes());
+                cd.extend_from_slice(&0u16.to_le_bytes());
+                cd.extend_from_slice(&0u32.to_le_bytes());
+                cd.extend_from_slice(&0u32.to_le_bytes());
+                cd.extend_from_slice(&0u32.to_le_bytes());
+                cd.extend_from_slice(&(name_bytes.len() as u16).to_le_bytes());
+                cd.extend_from_slice(&0u16.to_le_bytes());
+                cd.extend_from_slice(&0u16.to_le_bytes());
+                cd.extend_from_slice(&0u16.to_le_bytes());
+                cd.extend_from_slice(&0u16.to_le_bytes());
+                cd.extend_from_slice(&0u32.to_le_bytes());
+                cd.extend_from_slice(&local_offset.to_le_bytes());
+                cd.extend_from_slice(name_bytes);
+            }
+            let cd_offset = out.len() as u32;
+            let cd_size = cd.len() as u32;
+            out.extend_from_slice(&cd);
+            // End of central directory
+            out.extend_from_slice(&[0x50, 0x4B, 0x05, 0x06]);
+            out.extend_from_slice(&0u16.to_le_bytes());
+            out.extend_from_slice(&0u16.to_le_bytes());
+            out.extend_from_slice(&(entry_names.len() as u16).to_le_bytes());
+            out.extend_from_slice(&(entry_names.len() as u16).to_le_bytes());
+            out.extend_from_slice(&cd_size.to_le_bytes());
+            out.extend_from_slice(&cd_offset.to_le_bytes());
+            out.extend_from_slice(&0u16.to_le_bytes());
+            out
+        };
+
+        let test_dir = std::env::temp_dir().join(format!(
+            "df_helper_wayb_test_{}_{}",
+            std::process::id(),
+            get_current_time_str().replace(':', "")
+        ));
+        let _ = fs::create_dir_all(&test_dir);
+
+        // 1. Valid release .zip with .exe + onnxruntime.dll passes validation
+        let valid_zip = test_dir.join("valid_release.zip");
+        let valid_bytes = build_minimal_zip(&[
+            "DF-Loadout-Scanner/DF-Loadout-Scanner-Windows-x64.exe",
+            "DF-Loadout-Scanner/onnxruntime.dll",
+        ]);
+        fs::write(&valid_zip, &valid_bytes).expect("write valid zip");
+        let entries = validate_update_zip_archive(&valid_zip).expect("valid zip should pass");
+        assert_eq!(entries.len(), 2);
+
+        // 2. Archive missing .exe MUST fail validation
+        let no_exe_zip = test_dir.join("no_exe.zip");
+        fs::write(&no_exe_zip, build_minimal_zip(&["DF-Loadout-Scanner/README.md"]))
+            .expect("write no_exe zip");
+        assert!(validate_update_zip_archive(&no_exe_zip).is_err());
+
+        // 3. Corrupted / non-zip file MUST fail validation
+        let bad_zip = test_dir.join("corrupted.zip");
+        fs::write(&bad_zip, b"not a zip archive").expect("write bad zip");
+        assert!(validate_update_zip_archive(&bad_zip).is_err());
+
+        // 4. One-shot post-update flag is written, read once, and automatically removed
+        let flag_path = test_dir.join("just_updated_to.txt");
+        write_just_updated_flag_at(&flag_path, "v2.0.3-beta").expect("write flag");
+        assert_eq!(
+            consume_just_updated_flag_at(&flag_path),
+            Some("v2.0.3-beta".to_string())
+        );
+        assert_eq!(consume_just_updated_flag_at(&flag_path), None);
+        assert!(!flag_path.exists());
+
+        let _ = fs::remove_dir_all(&test_dir);
     }
 }
 
