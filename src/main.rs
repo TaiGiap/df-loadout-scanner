@@ -33,7 +33,7 @@ extern "system" {
 // Application & Author identity constants
 const AUTHOR_NAME: &str = "Anh Bảy Chọ / Tài Giáp";
 const APP_NAME: &str = "DF Loadout Scanner";
-const APP_VERSION: &str = "v2.0.3-Beta";
+const APP_VERSION: &str = "v2.0.4-Beta";
 
 // VietQR donation constants
 const DONATE_BANK_ID: &str = "TCB";
@@ -646,6 +646,7 @@ struct ReleaseUpdateInfo {
     html_url: String,
     zip_download_url: Option<String>,
     zip_file_name: Option<String>,
+    sha256sums_url: Option<String>,
     is_prerelease: bool,
 }
 
@@ -2225,14 +2226,20 @@ fn select_latest_update_from_releases(
 
         let mut zip_download_url: Option<String> = None;
         let mut zip_file_name: Option<String> = None;
+        let mut sha256sums_url: Option<String> = None;
         if let Some(assets) = item["assets"].as_array() {
             for asset in assets {
                 let asset_name = asset["name"].as_str().unwrap_or("").trim();
                 let dl_url = asset["browser_download_url"].as_str().unwrap_or("").trim();
-                if asset_name.to_ascii_lowercase().ends_with(".zip") && dl_url.starts_with("https://") {
+                if !dl_url.starts_with("https://") {
+                    continue;
+                }
+                let lower_name = asset_name.to_ascii_lowercase();
+                if zip_download_url.is_none() && lower_name.ends_with(".zip") {
                     zip_download_url = Some(dl_url.to_string());
                     zip_file_name = Some(asset_name.to_string());
-                    break;
+                } else if sha256sums_url.is_none() && lower_name == "sha256sums.txt" {
+                    sha256sums_url = Some(dl_url.to_string());
                 }
             }
         }
@@ -2244,6 +2251,7 @@ fn select_latest_update_from_releases(
             html_url,
             zip_download_url,
             zip_file_name,
+            sha256sums_url,
             is_prerelease,
         };
 
@@ -2384,6 +2392,135 @@ fn consume_just_updated_flag_at(path: &Path) -> Option<String> {
     }
 }
 
+fn sha256_hex(data: &[u8]) -> String {
+    const K: [u32; 64] = [
+        0x428a2f98, 0x71374491, 0xb5c0fbcf, 0xe9b5dba5, 0x3956c25b, 0x59f111f1, 0x923f82a4, 0xab1c5ed5,
+        0xd807aa98, 0x12835b01, 0x243185be, 0x550c7dc3, 0x72be5d74, 0x80deb1fe, 0x9bdc06a7, 0xc19bf174,
+        0xe49b69c1, 0xefbe4786, 0x0fc19dc6, 0x240ca1cc, 0x2de92c6f, 0x4a7484aa, 0x5cb0a9dc, 0x76f988da,
+        0x983e5152, 0xa831c66d, 0xb00327c8, 0xbf597fc7, 0xc6e00bf3, 0xd5a79147, 0x06ca6351, 0x14292967,
+        0x27b70a85, 0x2e1b2138, 0x4d2c6dfc, 0x53380d13, 0x650a7354, 0x766a0abb, 0x81c2c92e, 0x92722c85,
+        0xa2bfe8a1, 0xa81a664b, 0xc24b8b70, 0xc76c51a3, 0xd192e819, 0xd6990624, 0xf40e3585, 0x106aa070,
+        0x19a4c116, 0x1e376c08, 0x2748774c, 0x34b0bcb5, 0x391c0cb3, 0x4ed8aa4a, 0x5b9cca4f, 0x682e6ff3,
+        0x748f82ee, 0x78a5636f, 0x84c87814, 0x8cc70208, 0x90befffa, 0xa4506ceb, 0xbef9a3f7, 0xc67178f2,
+    ];
+    let mut h: [u32; 8] = [
+        0x6a09e667, 0xbb67ae85, 0x3c6ef372, 0xa54ff53a,
+        0x510e527f, 0x9b05688c, 0x1f83d9ab, 0x5be0cd19,
+    ];
+
+    let bit_len = (data.len() as u64).wrapping_mul(8);
+    let mut padded = data.to_vec();
+    padded.push(0x80);
+    while (padded.len() % 64) != 56 {
+        padded.push(0);
+    }
+    padded.extend_from_slice(&bit_len.to_be_bytes());
+
+    for chunk in padded.chunks_exact(64) {
+        let mut w = [0u32; 64];
+        for i in 0..16 {
+            w[i] = u32::from_be_bytes([
+                chunk[i * 4],
+                chunk[i * 4 + 1],
+                chunk[i * 4 + 2],
+                chunk[i * 4 + 3],
+            ]);
+        }
+        for i in 16..64 {
+            let s0 = w[i - 15].rotate_right(7) ^ w[i - 15].rotate_right(18) ^ (w[i - 15] >> 3);
+            let s1 = w[i - 2].rotate_right(17) ^ w[i - 2].rotate_right(19) ^ (w[i - 2] >> 10);
+            w[i] = w[i - 16].wrapping_add(s0).wrapping_add(w[i - 7]).wrapping_add(s1);
+        }
+
+        let [mut a, mut b, mut c, mut d, mut e, mut f, mut g, mut hh] = h;
+        for i in 0..64 {
+            let s1 = e.rotate_right(6) ^ e.rotate_right(11) ^ e.rotate_right(25);
+            let ch = (e & f) ^ ((!e) & g);
+            let temp1 = hh.wrapping_add(s1).wrapping_add(ch).wrapping_add(K[i]).wrapping_add(w[i]);
+            let s0 = a.rotate_right(2) ^ a.rotate_right(13) ^ a.rotate_right(22);
+            let maj = (a & b) ^ (a & c) ^ (b & c);
+            let temp2 = s0.wrapping_add(maj);
+
+            hh = g;
+            g = f;
+            f = e;
+            e = d.wrapping_add(temp1);
+            d = c;
+            c = b;
+            b = a;
+            a = temp1.wrapping_add(temp2);
+        }
+        h[0] = h[0].wrapping_add(a);
+        h[1] = h[1].wrapping_add(b);
+        h[2] = h[2].wrapping_add(c);
+        h[3] = h[3].wrapping_add(d);
+        h[4] = h[4].wrapping_add(e);
+        h[5] = h[5].wrapping_add(f);
+        h[6] = h[6].wrapping_add(g);
+        h[7] = h[7].wrapping_add(hh);
+    }
+
+    let mut hex = String::with_capacity(64);
+    for word in h {
+        use std::fmt::Write;
+        let _ = write!(&mut hex, "{:08x}", word);
+    }
+    hex
+}
+
+/// Parses `SHA256SUMS.txt` lines (`<64_hex>  <filename>`) and returns the lowercase SHA-256 for `target_filename`.
+fn parse_sha256sums_for_file(content: &str, target_filename: &str) -> Option<String> {
+    let target_base = Path::new(target_filename)
+        .file_name()
+        .and_then(|s| s.to_str())
+        .unwrap_or(target_filename)
+        .trim();
+
+    for raw_line in content.lines() {
+        let line = raw_line.trim();
+        if line.is_empty() || line.starts_with('#') {
+            continue;
+        }
+        let mut parts = line.split_whitespace();
+        let Some(hash_tok) = parts.next() else {
+            continue;
+        };
+        let Some(file_tok) = parts.next() else {
+            continue;
+        };
+        if hash_tok.len() != 64 || !hash_tok.chars().all(|c| c.is_ascii_hexdigit()) {
+            continue;
+        }
+        let cleaned_file = file_tok.trim_start_matches('*').trim();
+        let entry_base = Path::new(cleaned_file)
+            .file_name()
+            .and_then(|s| s.to_str())
+            .unwrap_or(cleaned_file);
+        if entry_base.eq_ignore_ascii_case(target_base) {
+            return Some(hash_tok.to_ascii_lowercase());
+        }
+    }
+    None
+}
+
+fn verify_zip_sha256_against_sums(zip_path: &Path, sums_content: &str, expected_filename: &str) -> Result<(), String> {
+    let expected = parse_sha256sums_for_file(sums_content, expected_filename).ok_or_else(|| {
+        format!(
+            "Không tìm thấy mã SHA-256 cho '{}' trong SHA256SUMS.txt",
+            expected_filename
+        )
+    })?;
+    let bytes = fs::read(zip_path).map_err(|e| format!("Không đọc được tệp .zip để kiểm tra SHA-256: {}", e))?;
+    let actual = sha256_hex(&bytes);
+    if !actual.eq_ignore_ascii_case(&expected) {
+        return Err(format!(
+            "Sai lệch mã kiểm tra SHA-256! Gói tải về có thể bị hỏng hoặc không khớp (kỳ vọng: {}, thực tế: {})",
+            expected, actual
+        ));
+    }
+    Ok(())
+}
+
 const APPLY_UPDATE_PS1: &str = r#"param(
     [int]$AppPid,
     [string]$ExeDir,
@@ -2426,7 +2563,10 @@ function Copy-WithRetry([string]$Source, [string]$Destination, [bool]$Recurse = 
     }
 }
 
-$StageDir = Join-Path (Split-Path -Parent $LogPath) ("stage_" + $AppPid)
+$UpdatesParent = Split-Path -Parent $LogPath
+$StageDir = Join-Path $UpdatesParent ("stage_" + $AppPid)
+$BackupDir = Join-Path $UpdatesParent ("backup_" + $AppPid)
+$BackedUpList = @()
 
 try {
     Write-UpdateLog "Bat dau cap nhat len $TargetVersion (PID=$AppPid)"
@@ -2443,7 +2583,11 @@ try {
     if (Test-Path -LiteralPath $StageDir) {
         Remove-Item -LiteralPath $StageDir -Recurse -Force -ErrorAction SilentlyContinue
     }
+    if (Test-Path -LiteralPath $BackupDir) {
+        Remove-Item -LiteralPath $BackupDir -Recurse -Force -ErrorAction SilentlyContinue
+    }
     New-Item -ItemType Directory -Force -Path $StageDir | Out-Null
+    New-Item -ItemType Directory -Force -Path $BackupDir | Out-Null
 
     Write-UpdateLog "Giai nen $ZipPath vao $StageDir"
     Expand-Archive -LiteralPath $ZipPath -DestinationPath $StageDir -Force
@@ -2463,7 +2607,12 @@ try {
         'DF-Loadout-Scanner-Data'
     )
 
-    Copy-WithRetry -Source $FoundExe.FullName -Destination $CurrentExe -Recurse $false
+    # Backup existing files before overwriting
+    if (Test-Path -LiteralPath $CurrentExe) {
+        $exeBak = Join-Path $BackupDir '__current_exe__.bak'
+        Copy-WithRetry -Source $CurrentExe -Destination $exeBak -Recurse $false
+        $BackedUpList += [PSCustomObject]@{ Backup = $exeBak; Target = $CurrentExe; IsDir = $false }
+    }
 
     $Items = Get-ChildItem -LiteralPath $SourceRoot -Force
     foreach ($item in $Items) {
@@ -2474,11 +2623,49 @@ try {
             continue
         }
         $destPath = Join-Path $ExeDir $item.Name
-        if ($item.PSIsContainer) {
-            Copy-WithRetry -Source $item.FullName -Destination $ExeDir -Recurse $true
-        } else {
-            Copy-WithRetry -Source $item.FullName -Destination $destPath -Recurse $false
+        if (Test-Path -LiteralPath $destPath) {
+            $bakPath = Join-Path $BackupDir $item.Name
+            Copy-WithRetry -Source $destPath -Destination $bakPath -Recurse ([bool]$item.PSIsContainer)
+            $BackedUpList += [PSCustomObject]@{ Backup = $bakPath; Target = $destPath; IsDir = ([bool]$item.PSIsContainer) }
         }
+    }
+    Write-UpdateLog "Da sao luu $($BackedUpList.Count) muc vao $BackupDir"
+
+    # Overwrite with automatic rollback on any failure
+    try {
+        Copy-WithRetry -Source $FoundExe.FullName -Destination $CurrentExe -Recurse $false
+        foreach ($item in $Items) {
+            if ($ProtectedNames -contains $item.Name) {
+                continue
+            }
+            if ($item.FullName -eq $FoundExe.FullName) {
+                continue
+            }
+            $destPath = Join-Path $ExeDir $item.Name
+            if ($item.PSIsContainer) {
+                Copy-WithRetry -Source $item.FullName -Destination $ExeDir -Recurse $true
+            } else {
+                Copy-WithRetry -Source $item.FullName -Destination $destPath -Recurse $false
+            }
+        }
+    } catch {
+        Write-UpdateLog "LOI SAO CHEP - TIEN HANH ROLLBACK: $($_.Exception.Message)"
+        foreach ($entry in $BackedUpList) {
+            try {
+                if ($entry.IsDir) {
+                    if (Test-Path -LiteralPath $entry.Target) {
+                        Remove-Item -LiteralPath $entry.Target -Recurse -Force -ErrorAction SilentlyContinue
+                    }
+                    Copy-WithRetry -Source $entry.Backup -Destination $ExeDir -Recurse $true
+                } else {
+                    Copy-WithRetry -Source $entry.Backup -Destination $entry.Target -Recurse $false
+                }
+            } catch {
+                Write-UpdateLog "Canh bao rollback ($($entry.Target)): $($_.Exception.Message)"
+            }
+        }
+        Write-UpdateLog "Da hoan tat rollback ban cu an toan."
+        throw
     }
 
     $flagParent = Split-Path -Parent $FlagPath
@@ -2487,6 +2674,7 @@ try {
     }
     [System.IO.File]::WriteAllText($FlagPath, $TargetVersion, [System.Text.UTF8Encoding]::new($false))
 
+    Remove-Item -LiteralPath $BackupDir -Recurse -Force -ErrorAction SilentlyContinue
     Remove-Item -LiteralPath $StageDir -Recurse -Force -ErrorAction SilentlyContinue
     Write-UpdateLog "Cap nhat thanh cong. Khoi chay lai $CurrentExe"
     Start-Process -FilePath $CurrentExe -WorkingDirectory $ExeDir
@@ -2556,6 +2744,7 @@ fn spawn_update_zip_download(
     ctx: egui::Context,
     url: String,
     file_name: String,
+    sha256sums_url: Option<String>,
     target_tag: String,
 ) {
     thread::spawn(move || {
@@ -2605,6 +2794,26 @@ fn spawn_update_zip_download(
             }
 
             validate_update_zip_archive(&target_path)?;
+
+            if let Some(sums_url) = sha256sums_url {
+                let sums_resp = ureq::get(&sums_url)
+                    .set("User-Agent", "DF-Loadout-Scanner")
+                    .timeout(Duration::from_secs(15))
+                    .call()
+                    .map_err(|e| {
+                        let _ = fs::remove_file(&target_path);
+                        format!("Không tải được SHA256SUMS.txt để xác minh gói: {}", e)
+                    })?;
+                let sums_text = sums_resp.into_string().map_err(|e| {
+                    let _ = fs::remove_file(&target_path);
+                    format!("Không đọc được nội dung SHA256SUMS.txt: {}", e)
+                })?;
+                if let Err(err) = verify_zip_sha256_against_sums(&target_path, &sums_text, &final_name) {
+                    let _ = fs::remove_file(&target_path);
+                    return Err(err);
+                }
+            }
+
             Ok(target_path)
         })();
 
@@ -5630,6 +5839,7 @@ impl eframe::App for LoadoutTerminalApp {
                                     ctx.clone(),
                                     zip_url,
                                     file_name,
+                                    update_info.sha256sums_url.clone(),
                                     update_info.tag_name.clone(),
                                 );
                             }
@@ -9521,6 +9731,10 @@ mod tests {
                     {
                         "name": "DF-Loadout-Scanner-v2.0.2-beta-Windows-x64.zip",
                         "browser_download_url": "https://github.com/TaiGiap/df-loadout-scanner/releases/download/v2.0.2-beta/DF-Loadout-Scanner-v2.0.2-beta-Windows-x64.zip"
+                    },
+                    {
+                        "name": "SHA256SUMS.txt",
+                        "browser_download_url": "https://github.com/TaiGiap/df-loadout-scanner/releases/download/v2.0.2-beta/SHA256SUMS.txt"
                     }
                 ]
             },
@@ -9546,6 +9760,10 @@ mod tests {
             Some("DF-Loadout-Scanner-v2.0.2-beta-Windows-x64.zip")
         );
         assert!(selected.zip_download_url.is_some());
+        assert_eq!(
+            selected.sha256sums_url.as_deref(),
+            Some("https://github.com/TaiGiap/df-loadout-scanner/releases/download/v2.0.2-beta/SHA256SUMS.txt")
+        );
 
         // From stable v2.0.1, ignores prerelease v2.0.2-beta
         assert!(select_latest_update_from_releases(&payload, "v2.0.1").is_none());
@@ -9653,6 +9871,69 @@ mod tests {
         );
         assert_eq!(consume_just_updated_flag_at(&flag_path), None);
         assert!(!flag_path.exists());
+
+        let _ = fs::remove_dir_all(&test_dir);
+    }
+
+    #[test]
+    fn test_sha256_and_sha256sums_verification() {
+        // 1. Standard NIST FIPS 180-4 test vectors
+        assert_eq!(
+            sha256_hex(b""),
+            "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        );
+        assert_eq!(
+            sha256_hex(b"abc"),
+            "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad"
+        );
+
+        // 2. Parse SHA256SUMS.txt cleanly (case-insensitive hex & filename, optional `*` prefix)
+        let sample_payload = b"DF-Loadout-Scanner-v2.0.4-Beta-payload";
+        let expected_hash = sha256_hex(sample_payload);
+        let sums_text = format!(
+            "# release checksums\n\
+             {}  DF-Loadout-Scanner-v2.0.4-Beta-Windows-x64.zip\n\
+             {} *other-file.txt\n",
+            expected_hash.to_uppercase(),
+            sha256_hex(b"other")
+        );
+
+        assert_eq!(
+            parse_sha256sums_for_file(&sums_text, "DF-Loadout-Scanner-v2.0.4-Beta-Windows-x64.zip"),
+            Some(expected_hash.clone())
+        );
+        assert_eq!(
+            parse_sha256sums_for_file(&sums_text, "missing-file.zip"),
+            None
+        );
+
+        // 3. Verify matching & mismatching zip files
+        let test_dir = std::env::temp_dir().join(format!(
+            "df_helper_sha256_test_{}_{}",
+            std::process::id(),
+            get_current_time_str().replace(':', "")
+        ));
+        let _ = fs::create_dir_all(&test_dir);
+        let zip_file = test_dir.join("DF-Loadout-Scanner-v2.0.4-Beta-Windows-x64.zip");
+        fs::write(&zip_file, sample_payload).expect("write payload");
+
+        assert!(verify_zip_sha256_against_sums(
+            &zip_file,
+            &sums_text,
+            "DF-Loadout-Scanner-v2.0.4-Beta-Windows-x64.zip"
+        )
+        .is_ok());
+
+        let tampered_sums = format!(
+            "{}  DF-Loadout-Scanner-v2.0.4-Beta-Windows-x64.zip\n",
+            "0".repeat(64)
+        );
+        assert!(verify_zip_sha256_against_sums(
+            &zip_file,
+            &tampered_sums,
+            "DF-Loadout-Scanner-v2.0.4-Beta-Windows-x64.zip"
+        )
+        .is_err());
 
         let _ = fs::remove_dir_all(&test_dir);
     }

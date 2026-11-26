@@ -3,7 +3,7 @@
 Công cụ **mã nguồn mở (MIT License)** tự động nhận diện vũ khí thời gian thực bằng AI **PaddleOCR v4 (ONNX Runtime CPU ngoại tuyến)** và đồng bộ mã trang bị (*loadout code*) cho **Delta Force** (*Warfare* & *Operations* — Garena / Level Infinite / Steam).
 
 - **Tác giả:** Anh Bảy Chọ / Tài Giáp
-- **Phiên bản hiện tại:** `v2.0.3-Beta`
+- **Phiên bản hiện tại:** `v2.0.4-Beta`
 - **Kho mã nguồn:** [TaiGiap/df-loadout-scanner](https://github.com/TaiGiap/df-loadout-scanner)
 
 ---
@@ -12,7 +12,7 @@ Công cụ **mã nguồn mở (MIT License)** tự động nhận diện vũ kh�
 
 ### 1. Tải về & Giải nén
 - Tải gói phát hành mới nhất tại [GitHub Releases](https://github.com/TaiGiap/df-loadout-scanner/releases/latest):
-  `DF-Loadout-Scanner-v2.0.3-Beta-Windows-x64.zip`
+  `DF-Loadout-Scanner-v2.0.4-Beta-Windows-x64.zip` (kèm tệp kiểm tra toàn vẹn `SHA256SUMS.txt`).
 - Giải nén **toàn bộ tệp trong gói** (`DF-Loadout-Scanner-Windows-x64.exe` và `onnxruntime.dll`) vào **cùng một thư mục**. Không cần cài thêm gói ngôn ngữ Windows OCR.
 
 ### 2. Thiết lập hệ thống & game
@@ -37,8 +37,9 @@ Công cụ **mã nguồn mở (MIT License)** tự động nhận diện vũ kh�
 - **Bộ Lọc 5 Cấp Độ, Tab Yêu Thích & Hàng Đợi `Win + V`:**
   - Lọc theo Nguồn (`ALL`, `DFTools`, `DFBuilds`, `FPSMeta`), Server, Chế độ, Loại súng và Tên súng (hỗ trợ tìm không dấu gạch ngang như `ar57`, `mini14` và biệt danh tiếng Việt trên ô tìm kiếm).
   - Ghim build yêu thích, thêm mã cá nhân (`favorites.json`), lưu lịch sử quét và nạp hàng đợi 5 mã vào `Win + V`.
-- **Tự Động Cập Nhật (Cách B) Bảo Toàn Dữ Liệu:**
-  - Kiểm tra phiên bản mới qua GitHub Releases API (hỗ trợ SemVer `-beta` / bản ổn định), xác thực cấu trúc `.zip` có tệp `.exe` hợp lệ trong `DF-Loadout-Scanner-Data/downloads/`, tự đóng ứng dụng, giải nén ghi đè bằng `apply_update.ps1` (giữ nguyên `config.json`, `favorites.json`, `builds_local.json`, `df_history.json`) và tự khởi động lại bản mới kèm thông báo xác nhận.
+- **Tự Động Cập Nhật (Cách B) Xác Minh SHA-256 & Rollback An Toàn:**
+  - Kiểm tra phiên bản mới qua GitHub Releases API (hỗ trợ SemVer `-beta` / bản ổn định), tải `.zip` vào `DF-Loadout-Scanner-Data/downloads/`, kiểm tra cấu trúc `.zip` hợp lệ và **đối chiếu mã băm SHA-256** với `SHA256SUMS.txt` (tự hủy và xóa tệp nếu sai lệch hash).
+  - Trước khi ghi đè, `apply_update.ps1` sao lưu bản cũ vào `DF-Loadout-Scanner-Data/updates/backup_<PID>` và **tự động rollback** nếu phát sinh lỗi, đồng thời bảo toàn toàn bộ dữ liệu cá nhân (`config.json`, `favorites.json`, `builds_local.json`, `df_history.json`). Ứng dụng chạy bằng quyền người dùng chuẩn (`asInvoker`).
 - **Ghi Dữ Liệu Nguyên Tử (`atomic_write_verified`) & An Toàn Kỹ Thuật:**
   - Xác nhận dung lượng `> 0` bytes trước khi thay thế tệp dữ liệu. Không đọc RAM game, không DLL injection, không macro gameplay.
 
@@ -72,7 +73,8 @@ cargo build --release
 
 | Phiên bản | Điểm mới & Cải tiến chính |
 | :--- | :--- |
-| **v2.0.3-Beta (Mới nhất)** | Tăng độ tương phản & độ sáng chữ, viền nút trên nền tối (`[HƯỚNG DẪN]`, `[LANG]`, `[GHIM]`, `[ABOUT]`, `[KIỂM TRA CẬP NHẬT]`, `[CHỜ DB]`); làm gọn `README.md` chuẩn tài liệu kỹ thuật. |
+| **v2.0.4-Beta (Mới nhất)** | Tự động tạo & đính kèm `SHA256SUMS.txt` trên GitHub Releases; kiểm tra đối chiếu SHA-256 trước khi cập nhật Cách B (hủy & xóa gói nếu sai hash); bổ sung cơ chế Backup & Rollback tự động trong `apply_update.ps1` và chuyển manifest Windows về quyền người dùng chuẩn `asInvoker`. |
+| **v2.0.3-Beta** | Tăng độ tương phản & độ sáng chữ, viền nút trên nền tối (`[HƯỚNG DẪN]`, `[LANG]`, `[GHIM]`, `[ABOUT]`, `[KIỂM TRA CẬP NHẬT]`, `[CHỜ DB]`); làm gọn `README.md` chuẩn tài liệu kỹ thuật. |
 | **v2.0.2-beta** | Ngoại lệ `Shotgun Hai Nòng` $\rightarrow$ `725 DOUBLE-BARREL`; xử lý tiền tố loại súng & ký tự rác đuôi (`Shotgun S12KU` $\rightarrow$ `S12K`); tinh chỉnh rào chắn Auto-Copy (`margin >= 0.05` khi `score >= 0.80`); bổ sung cơ chế tự cập nhật Cách B (`apply_update.ps1`, xác thực `.zip`, tự khởi động lại và bảo toàn dữ liệu người dùng) cùng bố cục Header 2 hàng. |
 | **v2.0.1-beta** | Tiền xử lý RGB không ngưỡng trắng + khung HUD `16:9` đa tỷ lệ; quy trình 2 tầng Pass 1A / Pass 1B / Pass 2; khóa cứng Loại súng; Auto-Copy `>= 75%` với 3 rào chắn; sửa tràn Status Bar và thêm `DF_OCR_DEBUG=1`. |
 | **v2.0.0-beta** | Thay Windows OCR bằng lõi **PaddleOCR v4 Offline (`en_PP-OCRv4_rec.onnx` + `onnxruntime.dll`)**; khóa vùng quét tiêu đề giữa và khớp cặp `[Hậu tố mã súng + Loại súng]`. |
