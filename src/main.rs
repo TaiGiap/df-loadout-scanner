@@ -33,7 +33,7 @@ extern "system" {
 // Application & Author identity constants
 const AUTHOR_NAME: &str = "Anh Bảy Chọ / Tài Giáp";
 const APP_NAME: &str = "DF Loadout Scanner";
-const APP_VERSION: &str = "v2.0.6-Beta";
+const APP_VERSION: &str = "v2.0.7-Beta";
 
 // VietQR donation constants
 const DONATE_BANK_ID: &str = "TCB";
@@ -339,7 +339,24 @@ impl BuildItem {
         if raw.is_empty() || (!lower.starts_with("https://") && !lower.starts_with("http://")) {
             return None;
         }
-        for bad in ["placeholder", "blank", "avatar", "favicon", ".svg", "data:"] {
+        for bad in [
+            "avatar",
+            "user",
+            "author",
+            "profile",
+            "member",
+            "icon",
+            "logo",
+            "emoji",
+            "badge",
+            "placeholder",
+            "sprite",
+            "blank",
+            "favicon",
+            ".svg",
+            "data:",
+            "blob:",
+        ] {
             if lower.contains(bad) {
                 return None;
             }
@@ -2400,9 +2417,20 @@ fn image_cache_path_for_url(url: &str) -> PathBuf {
     image_cache_path_in_dir(&image_cache_dir(), url)
 }
 
+fn is_avif_bytes(bytes: &[u8]) -> bool {
+    bytes.len() >= 12
+        && &bytes[4..8] == b"ftyp"
+        && (&bytes[8..12] == b"avif" || &bytes[8..12] == b"avis")
+}
+
 fn decode_preview_image_bytes(bytes: &[u8]) -> Result<(Vec<u8>, [usize; 2]), String> {
-    let mut dyn_img = image::load_from_memory(bytes)
-        .map_err(|e| format!("Không giải mã được ảnh xem trước: {}", e))?;
+    let mut dyn_img = image::load_from_memory(bytes).map_err(|e| {
+        if is_avif_bytes(bytes) {
+            "Định dạng ảnh AVIF chưa được hỗ trợ giải mã trên bản dựng này".to_string()
+        } else {
+            format!("Không giải mã được ảnh xem trước: {}", e)
+        }
+    })?;
     if dyn_img.width() > 960 || dyn_img.height() > 640 {
         dyn_img = dyn_img.resize(960, 640, image::imageops::FilterType::Triangle);
     }
@@ -5621,13 +5649,14 @@ impl eframe::App for LoadoutTerminalApp {
                     .fill(COLOR_CARD)
                     .stroke(Stroke::new(1.0_f32, COLOR_BORDER))
                     .inner_margin(Margin {
-                        left: 14.0,
+                        left: 12.0,
                         right: 12.0,
-                        top: 7.0,
-                        bottom: 7.0,
+                        top: 6.0,
+                        bottom: 6.0,
                     }),
             )
             .show(ctx, |ui| {
+                ui.spacing_mut().button_padding = egui::vec2(7.0, 3.0);
                 // Row 1: Logo + Primary Navigation Tabs (Left) | Utility Controls (Right)
                 ui.horizontal(|ui| {
                     ui.add(
@@ -5688,7 +5717,8 @@ impl eframe::App for LoadoutTerminalApp {
                     }
 
                     ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
-                        ui.spacing_mut().item_spacing.x = 5.0;
+                        ui.spacing_mut().item_spacing.x = 4.0;
+                        ui.spacing_mut().button_padding = egui::vec2(6.0, 3.0);
 
                         let about_color = if self.show_about { COLOR_ACCENT } else { COLOR_TEXT_MAIN };
                         let about_btn = egui::Button::new(
@@ -5891,7 +5921,8 @@ impl eframe::App for LoadoutTerminalApp {
                     }
 
                     ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
-                        ui.spacing_mut().item_spacing.x = 6.0;
+                        ui.spacing_mut().item_spacing.x = 4.0;
+                        ui.spacing_mut().button_padding = egui::vec2(7.0, 3.0);
 
                         // [UPDATE DB] button with 30-min cooldown
                         let cooldown_secs: u64 = 1800; // 30 minutes
@@ -6062,7 +6093,8 @@ impl eframe::App for LoadoutTerminalApp {
                 )
                 .show(ctx, |ui| {
                     ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
-                        ui.spacing_mut().item_spacing.x = 6.0;
+                        ui.spacing_mut().item_spacing.x = 4.0;
+                        ui.spacing_mut().button_padding = egui::vec2(7.0, 3.0);
 
                         let close_btn = egui::Button::new(
                             RichText::new("✕").color(COLOR_TEXT_MUTED).size(11.0),
@@ -6975,7 +7007,7 @@ impl eframe::App for LoadoutTerminalApp {
 
         // Left Column: Central Panel (Builds list or Favorites)
         egui::CentralPanel::default()
-            .frame(Frame::default().fill(COLOR_BG).inner_margin(Margin::same(14.0)))
+            .frame(Frame::default().fill(COLOR_BG).inner_margin(Margin::same(10.0)))
             .show(ctx, |ui| {
                 if self.current_tab == AppTab::Scanner {
                     if let Some(weapon_name) = self.selected_weapon.clone() {
@@ -6987,10 +7019,10 @@ impl eframe::App for LoadoutTerminalApp {
                         .fill(COLOR_CARD)
                         .stroke(Stroke::new(1.0_f32, COLOR_BORDER))
                         .rounding(Rounding::same(4.0))
-                        .inner_margin(Margin::same(12.0))
+                        .inner_margin(Margin::symmetric(10.0, 8.0))
                         .show(ui, |ui| {
                             ui.horizontal(|ui| {
-                                let (bar_rect, _) = ui.allocate_exact_size(Vec2::new(4.0, 38.0), egui::Sense::hover());
+                                let (bar_rect, _) = ui.allocate_exact_size(Vec2::new(4.0, 32.0), egui::Sense::hover());
                                 ui.painter().rect_filled(bar_rect, Rounding::same(2.0), COLOR_ACCENT);
 
                                 ui.add_space(10.0);
@@ -7141,19 +7173,19 @@ impl eframe::App for LoadoutTerminalApp {
                                         .fill(COLOR_CARD)
                                         .stroke(card_border)
                                         .rounding(Rounding::same(4.0))
-                                        .inner_margin(Margin::same(12.0))
+                                        .inner_margin(Margin::symmetric(10.0, 8.0))
                                         .show(ui, |ui| {
                                             ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
                                                 // Right-side action buttons reserved first so long descriptions never push them out
                                                 let copy_btn = egui::Button::new(
                                                     RichText::new(self.lang.t("SAO CHÉP", "COPY"))
                                                         .color(COLOR_BG)
-                                                        .size(12.0)
+                                                        .size(11.5)
                                                         .strong(),
                                                 )
                                                 .fill(COLOR_ACCENT)
                                                 .rounding(Rounding::same(3.0))
-                                                .min_size(Vec2::new(88.0, 26.0));
+                                                .min_size(Vec2::new(82.0, 24.0));
 
                                                 if ui.add(copy_btn).clicked() {
                                                     build_to_copy = Some((b.weapon.clone(), b.classification.clone(), b.copy_count, b.loadout_code.clone()));
@@ -7513,19 +7545,19 @@ impl eframe::App for LoadoutTerminalApp {
                                     .fill(COLOR_CARD)
                                     .stroke(Stroke::new(1.0_f32, Color32::from_rgb(255, 215, 0)))
                                     .rounding(Rounding::same(4.0))
-                                    .inner_margin(Margin::same(12.0))
+                                    .inner_margin(Margin::symmetric(10.0, 8.0))
                                     .show(ui, |ui| {
                                         ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
                                             // Reserve right-side action buttons first so long descriptions never overflow
                                             let copy_btn = egui::Button::new(
                                                 RichText::new(self.lang.t("SAO CHÉP", "COPY"))
                                                     .color(COLOR_BG)
-                                                    .size(12.0)
+                                                    .size(11.5)
                                                     .strong(),
                                             )
                                             .fill(COLOR_ACCENT)
                                             .rounding(Rounding::same(3.0))
-                                            .min_size(Vec2::new(88.0, 26.0));
+                                            .min_size(Vec2::new(82.0, 24.0));
 
                                             if ui.add(copy_btn).clicked() {
                                                 build_to_copy = Some((b.weapon.clone(), b.classification.clone(), b.copy_count, b.loadout_code.clone()));
@@ -10282,6 +10314,25 @@ mod tests {
         let p2 = image_cache_path_in_dir(&cache_dir, "  https://deltaforcetools.gg/img/m4a1.webp  ");
         assert_eq!(p1, p2);
         assert!(p1.to_string_lossy().ends_with(".img"));
+
+        // 4. Reject avatar/user/profile/member/icon/logo/badge/sprite/svg URLs
+        for bad_url in [
+            "https://example.com/uploads/avatar_123.png",
+            "https://example.com/users/profile/pic.webp",
+            "https://example.com/author/thumb.jpg",
+            "https://example.com/member-badge.png",
+            "https://example.com/assets/site-logo.png",
+            "https://example.com/icons/gun.png",
+            "https://example.com/sprites/sheet.webp",
+            "https://example.com/vector/gun.svg",
+        ] {
+            let item: BuildItem = serde_json::from_str(&format!(
+                r#"{{"weapon":"M4A1","loadout_code":"M4A1-Warfare-6HABCDEF123456","image_url":"{}"}}"#,
+                bad_url
+            ))
+            .unwrap();
+            assert_eq!(item.valid_image_url(), None, "should reject {}", bad_url);
+        }
     }
 }
 

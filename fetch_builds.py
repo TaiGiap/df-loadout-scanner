@@ -47,6 +47,29 @@ def clean_text(text: str) -> str:
         return ""
     return re.sub(r"\s+", " ", text).strip()
 
+AVATAR_OR_NON_BUILD_IMAGE_TOKENS = (
+    "avatar",
+    "user",
+    "author",
+    "profile",
+    "member",
+    "icon",
+    "logo",
+    "emoji",
+    "badge",
+    "placeholder",
+    "sprite",
+    "blank",
+    "favicon",
+    ".svg",
+)
+
+
+def is_non_build_image_hint(text: str) -> bool:
+    lower = (text or "").lower()
+    return any(tok in lower for tok in AVATAR_OR_NON_BUILD_IMAGE_TOKENS)
+
+
 def normalize_preview_image_url(raw_url: str, base_url: str = "") -> str:
     if not raw_url:
         return ""
@@ -54,9 +77,8 @@ def normalize_preview_image_url(raw_url: str, base_url: str = "") -> str:
     lower = u.lower()
     if not u or lower.startswith("data:") or lower.startswith("blob:"):
         return ""
-    for bad in ("placeholder", "avatar", "favicon", "logo", "blank", ".svg"):
-        if bad in lower:
-            return ""
+    if is_non_build_image_hint(lower):
+        return ""
     if u.startswith("//"):
         u = "https:" + u
     elif u.startswith("/") and base_url:
@@ -242,13 +264,37 @@ def extract_dftools_cards_from_page(page, server_label: str, mode_label: str):
             if card_el.count() > 0:
                 card_text = card_el.inner_text()
                 copy_count = extract_copy_count(card_text)
-                img_nodes = card_el.locator("img").all()
-                for img in img_nodes:
-                    raw_src = img.get_attribute("src") or img.get_attribute("data-src") or ""
-                    norm_src = normalize_preview_image_url(raw_src, "https://deltaforcetools.gg")
-                    if norm_src:
+                img_candidates = card_el.evaluate("""(card) => {
+                    const imgs = Array.from(card.querySelectorAll('img'));
+                    return imgs.map(im => {
+                        const rect = im.getBoundingClientRect ? im.getBoundingClientRect() : { width: 0, height: 0 };
+                        return {
+                            src: im.getAttribute('src') || im.getAttribute('data-src') || '',
+                            alt: im.getAttribute('alt') || '',
+                            cls: im.getAttribute('class') || '',
+                            w: im.naturalWidth || parseInt(im.getAttribute('width') || '0', 10) || Math.round(rect.width || 0),
+                            h: im.naturalHeight || parseInt(im.getAttribute('height') || '0', 10) || Math.round(rect.height || 0),
+                        };
+                    });
+                }""")
+                best_score = -1
+                for im in img_candidates:
+                    norm_src = normalize_preview_image_url(im.get("src", ""), "https://deltaforcetools.gg")
+                    if not norm_src:
+                        continue
+                    if is_non_build_image_hint(im.get("alt", "")) or is_non_build_image_hint(im.get("cls", "")):
+                        continue
+                    w = int(im.get("w") or 0)
+                    h = int(im.get("h") or 0)
+                    if w > 0 and h > 0:
+                        if w <= 72 and h <= 72:
+                            continue
+                        if w == h and w <= 128:
+                            continue
+                    score = (w * h) + (50000 if w > h * 1.15 else 0)
+                    if score > best_score:
+                        best_score = score
                         image_url = norm_src
-                        break
                 tag_nodes = card_el.locator("span.inline-block, .font-bold").all()
                 for t in tag_nodes:
                     txt = clean_text(t.inner_text())
@@ -389,12 +435,26 @@ def scrape_dfbuilds(page, seen_codes: set) -> list:
                         const txt = t.innerText.trim();
                         if (txt) tags.push(txt);
                     }
-                    const imgs = card.querySelectorAll('img');
+                    const imgs = Array.from(card.querySelectorAll('img'));
+                    let bestScore = -1;
+                    const badHint = /avatar|user|author|profile|member|icon|logo|emoji|badge|placeholder|sprite|\\.svg/i;
                     for (const im of imgs) {
                         const src = im.getAttribute('src') || im.getAttribute('data-src') || '';
-                        if (src && !src.startsWith('data:')) {
+                        const alt = im.getAttribute('alt') || '';
+                        const cls = im.getAttribute('class') || '';
+                        if (!src || src.startsWith('data:') || src.startsWith('blob:')) continue;
+                        if (badHint.test(src) || badHint.test(alt) || badHint.test(cls)) continue;
+                        const rect = im.getBoundingClientRect ? im.getBoundingClientRect() : { width: 0, height: 0 };
+                        const w = im.naturalWidth || parseInt(im.getAttribute('width') || '0', 10) || Math.round(rect.width || 0);
+                        const h = im.naturalHeight || parseInt(im.getAttribute('height') || '0', 10) || Math.round(rect.height || 0);
+                        if (w > 0 && h > 0) {
+                            if (w <= 72 && h <= 72) continue;
+                            if (w === h && w <= 128) continue;
+                        }
+                        const score = (w * h) + (w > h * 1.15 ? 50000 : 0);
+                        if (score > bestScore) {
+                            bestScore = score;
                             imageUrl = src;
-                            break;
                         }
                     }
                 }
