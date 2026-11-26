@@ -33,7 +33,7 @@ extern "system" {
 // Application & Author identity constants
 const AUTHOR_NAME: &str = "Anh Bảy Chọ / Tài Giáp";
 const APP_NAME: &str = "DF Loadout Scanner";
-const APP_VERSION: &str = "v2.0.7-Beta";
+const APP_VERSION: &str = "v2.0.8-Beta";
 
 // VietQR donation constants
 const DONATE_BANK_ID: &str = "TCB";
@@ -332,6 +332,45 @@ struct BuildItem {
     image_url: Option<String>,
 }
 
+fn percent_decode_url_component(input: &str) -> String {
+    let bytes = input.as_bytes();
+    let mut out = Vec::with_capacity(bytes.len());
+    let mut i = 0;
+    while i < bytes.len() {
+        if bytes[i] == b'%' && i + 2 < bytes.len() {
+            if let (Some(h), Some(l)) = (
+                (bytes[i + 1] as char).to_digit(16),
+                (bytes[i + 2] as char).to_digit(16),
+            ) {
+                out.push(((h << 4) | l) as u8);
+                i += 3;
+                continue;
+            }
+        }
+        out.push(bytes[i]);
+        i += 1;
+    }
+    String::from_utf8_lossy(&out).into_owned()
+}
+
+fn unwrap_next_image_url(raw: &str) -> String {
+    let trimmed = raw.trim();
+    let Some(idx) = trimmed.find("/_next/image?") else {
+        return trimmed.to_string();
+    };
+    let query = &trimmed[idx + "/_next/image?".len()..];
+    for pair in query.split('&') {
+        if let Some(val) = pair.strip_prefix("url=") {
+            let decoded = percent_decode_url_component(val);
+            let unescaped = decoded.trim();
+            if unescaped.starts_with("https://") || unescaped.starts_with("http://") {
+                return unescaped.to_string();
+            }
+        }
+    }
+    trimmed.to_string()
+}
+
 impl BuildItem {
     fn valid_image_url(&self) -> Option<&str> {
         let raw = self.image_url.as_deref()?.trim();
@@ -339,6 +378,7 @@ impl BuildItem {
         if raw.is_empty() || (!lower.starts_with("https://") && !lower.starts_with("http://")) {
             return None;
         }
+        let resolved_lower = unwrap_next_image_url(raw).to_ascii_lowercase();
         for bad in [
             "avatar",
             "user",
@@ -354,10 +394,11 @@ impl BuildItem {
             "blank",
             "favicon",
             ".svg",
+            ".avif",
             "data:",
             "blob:",
         ] {
-            if lower.contains(bad) {
+            if lower.contains(bad) || resolved_lower.contains(bad) {
                 return None;
             }
         }
@@ -2449,7 +2490,8 @@ fn spawn_build_image_load(url: String, tx: Sender<WorkerEvent>, ctx: egui::Conte
         const MAX_PREVIEW_BYTES: usize = 8 * 1024 * 1024;
 
         let res = (|| -> Result<(Vec<u8>, [usize; 2]), String> {
-            let cache_path = image_cache_path_for_url(&url);
+            let fetch_url = unwrap_next_image_url(&url);
+            let cache_path = image_cache_path_for_url(&fetch_url);
             if let Ok(cached_bytes) = fs::read(&cache_path) {
                 if !cached_bytes.is_empty() {
                     if let Ok(decoded) = decode_preview_image_bytes(&cached_bytes) {
@@ -2459,8 +2501,9 @@ fn spawn_build_image_load(url: String, tx: Sender<WorkerEvent>, ctx: egui::Conte
                 }
             }
 
-            let resp = ureq::get(&url)
+            let resp = ureq::get(&fetch_url)
                 .set("User-Agent", "DF-Loadout-Scanner")
+                .set("Accept", "image/webp,image/png,image/jpeg,*/*;q=0.1")
                 .timeout(Duration::from_secs(10))
                 .call()
                 .map_err(|e| format!("Lỗi tải ảnh: {}", e))?;
@@ -5154,7 +5197,7 @@ impl LoadoutTerminalApp {
             .fill(Color32::from_rgb(28, 39, 52))
             .stroke(Stroke::new(1.0_f32, Color32::from_rgb(90, 114, 140)))
             .rounding(Rounding::same(3.0))
-            .min_size(Vec2::new(28.0, 26.0));
+            .min_size(Vec2::new(26.0, 24.0));
 
             let resp = ui.add(eye_btn);
             if resp.hovered() {
@@ -5173,7 +5216,7 @@ impl LoadoutTerminalApp {
             .fill(Color32::from_rgb(19, 27, 36))
             .stroke(Stroke::new(1.0_f32, Color32::from_rgb(48, 62, 78)))
             .rounding(Rounding::same(3.0))
-            .min_size(Vec2::new(28.0, 26.0));
+            .min_size(Vec2::new(26.0, 24.0));
 
             ui.add(eye_btn).on_hover_text(self.lang.t(
                 "Build này chưa có hình ảnh đính kèm",
@@ -7173,96 +7216,102 @@ impl eframe::App for LoadoutTerminalApp {
                                         .fill(COLOR_CARD)
                                         .stroke(card_border)
                                         .rounding(Rounding::same(4.0))
-                                        .inner_margin(Margin::symmetric(10.0, 8.0))
+                                        .inner_margin(Margin::symmetric(10.0, 7.0))
                                         .show(ui, |ui| {
-                                            ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
-                                                // Right-side action buttons reserved first so long descriptions never push them out
-                                                let copy_btn = egui::Button::new(
-                                                    RichText::new(self.lang.t("SAO CHÉP", "COPY"))
-                                                        .color(COLOR_BG)
-                                                        .size(11.5)
-                                                        .strong(),
-                                                )
-                                                .fill(COLOR_ACCENT)
-                                                .rounding(Rounding::same(3.0))
-                                                .min_size(Vec2::new(82.0, 24.0));
-
-                                                if ui.add(copy_btn).clicked() {
-                                                    build_to_copy = Some((b.weapon.clone(), b.classification.clone(), b.copy_count, b.loadout_code.clone()));
-                                                }
-
-                                                ui.add_space(4.0);
-
-                                                let (fav_label, fav_color, fav_fill, fav_border) = if is_fav {
-                                                    (
-                                                        self.lang.t("★ Đã ghim", "★ Pinned"),
-                                                        Color32::from_rgb(255, 215, 0),
-                                                        Color32::from_rgb(45, 40, 10),
-                                                        Color32::from_rgb(255, 215, 0),
+                                            let row_w = ui.available_width().max(120.0);
+                                            ui.allocate_ui_with_layout(
+                                                egui::vec2(row_w, 26.0),
+                                                Layout::right_to_left(Align::Center),
+                                                |ui| {
+                                                    // Right-side action buttons reserved first so long descriptions never push them out
+                                                    let copy_btn = egui::Button::new(
+                                                        RichText::new(self.lang.t("SAO CHÉP", "COPY"))
+                                                            .color(COLOR_BG)
+                                                            .size(11.5)
+                                                            .strong(),
                                                     )
-                                                } else {
-                                                    (
-                                                        self.lang.t("☆ Lưu", "☆ Pin"),
-                                                        COLOR_TEXT_MAIN,
-                                                        Color32::from_rgb(25, 35, 47),
-                                                        Color32::from_rgb(72, 92, 114),
-                                                    )
-                                                };
-
-                                                let fav_btn = egui::Button::new(
-                                                    RichText::new(fav_label)
-                                                        .color(fav_color)
-                                                        .size(11.0)
-                                                        .strong(),
-                                                )
-                                                .fill(fav_fill)
-                                                .stroke(Stroke::new(1.0_f32, fav_border))
-                                                .rounding(Rounding::same(3.0))
-                                                .min_size(Vec2::new(76.0, 26.0));
-
-                                                if ui
-                                                    .add(fav_btn)
-                                                    .on_hover_text(self.lang.t(
-                                                        "Ghim bản build này lên đầu và lưu vào favorites.json",
-                                                        "Pin this build to top and save to favorites.json"
-                                                    ))
-                                                    .clicked()
-                                                {
-                                                    build_to_toggle_fav = Some(b.clone());
-                                                }
-
-                                                self.render_eye_preview_button(ui, b, &mut hovered_preview_req);
-
-                                                if b.is_custom {
-                                                    ui.add_space(4.0);
-                                                    let del_btn = egui::Button::new(
-                                                        RichText::new(self.lang.t("🗑 Xóa", "🗑 Delete"))
-                                                            .color(Color32::from_rgb(255, 100, 100))
-                                                            .size(11.0),
-                                                    )
-                                                    .fill(Color32::from_rgb(40, 15, 15))
-                                                    .stroke(Stroke::new(1.0_f32, Color32::from_rgb(180, 50, 50)))
+                                                    .fill(COLOR_ACCENT)
                                                     .rounding(Rounding::same(3.0))
-                                                    .min_size(Vec2::new(60.0, 26.0));
+                                                    .min_size(Vec2::new(82.0, 24.0));
+
+                                                    if ui.add(copy_btn).clicked() {
+                                                        build_to_copy = Some((b.weapon.clone(), b.classification.clone(), b.copy_count, b.loadout_code.clone()));
+                                                    }
+
+                                                    ui.add_space(4.0);
+
+                                                    let (fav_label, fav_color, fav_fill, fav_border) = if is_fav {
+                                                        (
+                                                            self.lang.t("★ Đã ghim", "★ Pinned"),
+                                                            Color32::from_rgb(255, 215, 0),
+                                                            Color32::from_rgb(45, 40, 10),
+                                                            Color32::from_rgb(255, 215, 0),
+                                                        )
+                                                    } else {
+                                                        (
+                                                            self.lang.t("☆ Lưu", "☆ Pin"),
+                                                            COLOR_TEXT_MAIN,
+                                                            Color32::from_rgb(25, 35, 47),
+                                                            Color32::from_rgb(72, 92, 114),
+                                                        )
+                                                    };
+
+                                                    let fav_btn = egui::Button::new(
+                                                        RichText::new(fav_label)
+                                                            .color(fav_color)
+                                                            .size(11.0)
+                                                            .strong(),
+                                                    )
+                                                    .fill(fav_fill)
+                                                    .stroke(Stroke::new(1.0_f32, fav_border))
+                                                    .rounding(Rounding::same(3.0))
+                                                    .min_size(Vec2::new(76.0, 24.0));
 
                                                     if ui
-                                                        .add(del_btn)
+                                                        .add(fav_btn)
                                                         .on_hover_text(self.lang.t(
-                                                            "Xóa mã build cá nhân này",
-                                                            "Delete this custom loadout"
+                                                            "Ghim bản build này lên đầu và lưu vào favorites.json",
+                                                            "Pin this build to top and save to favorites.json"
                                                         ))
                                                         .clicked()
                                                     {
-                                                        code_to_delete = Some(b.loadout_code.clone());
+                                                        build_to_toggle_fav = Some(b.clone());
                                                     }
-                                                }
 
-                                                ui.add_space(6.0);
-                                                let rem_w = ui.available_width().max(60.0);
-                                                ui.allocate_ui_with_layout(
-                                                    egui::vec2(rem_w, 26.0),
-                                                    Layout::left_to_right(Align::Center),
-                                                    |ui| {
+                                                    self.render_eye_preview_button(ui, b, &mut hovered_preview_req);
+
+                                                    if b.is_custom {
+                                                        ui.add_space(4.0);
+                                                        let del_btn = egui::Button::new(
+                                                            RichText::new(self.lang.t("🗑 Xóa", "🗑 Delete"))
+                                                                .color(Color32::from_rgb(255, 100, 100))
+                                                                .size(11.0),
+                                                        )
+                                                        .fill(Color32::from_rgb(40, 15, 15))
+                                                        .stroke(Stroke::new(1.0_f32, Color32::from_rgb(180, 50, 50)))
+                                                        .rounding(Rounding::same(3.0))
+                                                        .min_size(Vec2::new(60.0, 24.0));
+
+                                                        if ui
+                                                            .add(del_btn)
+                                                            .on_hover_text(self.lang.t(
+                                                                "Xóa mã build cá nhân này",
+                                                                "Delete this custom loadout"
+                                                            ))
+                                                            .clicked()
+                                                        {
+                                                            code_to_delete = Some(b.loadout_code.clone());
+                                                        }
+                                                    }
+
+                                                    ui.add_space(6.0);
+                                                    let rem_w = ui.available_width().max(60.0);
+                                                    ui.allocate_ui_with_layout(
+                                                        egui::vec2(rem_w, 24.0),
+                                                        Layout::left_to_right(Align::Center),
+                                                        |ui| {
+                                                            ui.set_max_width(rem_w);
+                                                            ui.set_clip_rect(ui.max_rect().intersect(ui.clip_rect()));
                                                         ui.add(
                                                             egui::Label::new(
                                                                 RichText::new(format!("#{}.", idx + 1))
@@ -7545,103 +7594,109 @@ impl eframe::App for LoadoutTerminalApp {
                                     .fill(COLOR_CARD)
                                     .stroke(Stroke::new(1.0_f32, Color32::from_rgb(255, 215, 0)))
                                     .rounding(Rounding::same(4.0))
-                                    .inner_margin(Margin::symmetric(10.0, 8.0))
+                                    .inner_margin(Margin::symmetric(10.0, 7.0))
                                     .show(ui, |ui| {
-                                        ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
-                                            // Reserve right-side action buttons first so long descriptions never overflow
-                                            let copy_btn = egui::Button::new(
-                                                RichText::new(self.lang.t("SAO CHÉP", "COPY"))
-                                                    .color(COLOR_BG)
-                                                    .size(11.5)
-                                                    .strong(),
-                                            )
-                                            .fill(COLOR_ACCENT)
-                                            .rounding(Rounding::same(3.0))
-                                            .min_size(Vec2::new(82.0, 24.0));
-
-                                            if ui.add(copy_btn).clicked() {
-                                                build_to_copy = Some((b.weapon.clone(), b.classification.clone(), b.copy_count, b.loadout_code.clone()));
-                                            }
-
-                                            ui.add_space(4.0);
-
-                                            // "Xem súng" button: jumps to weapon and switches to Scanner tab
-                                            let view_btn = egui::Button::new(
-                                                RichText::new(self.lang.t("🔍 Xem súng", "🔍 View Gun"))
-                                                    .color(COLOR_TEXT_MAIN)
-                                                    .size(11.0),
-                                            )
-                                            .fill(COLOR_CARD_HOVER)
-                                            .stroke(Stroke::new(1.0_f32, COLOR_BORDER))
-                                            .rounding(Rounding::same(3.0))
-                                            .min_size(Vec2::new(82.0, 26.0));
-
-                                            if ui
-                                                .add(view_btn)
-                                                .on_hover_text(self.lang.t(
-                                                    "Chuyển sang màn hình tra cứu của khẩu súng này",
-                                                    "Jump to this weapon on the main scanner screen"
-                                                ))
-                                                .clicked()
-                                            {
-                                                jump_to_weapon = Some(b.weapon.clone());
-                                            }
-
-                                            ui.add_space(4.0);
-
-                                            if is_custom {
-                                                let del_btn = egui::Button::new(
-                                                    RichText::new(self.lang.t("🗑 Xóa", "🗑 Delete"))
-                                                        .color(Color32::from_rgb(255, 100, 100))
-                                                        .size(11.0),
-                                                )
-                                                .fill(Color32::from_rgb(40, 15, 15))
-                                                .stroke(Stroke::new(1.0_f32, Color32::from_rgb(180, 50, 50)))
-                                                .rounding(Rounding::same(3.0))
-                                                .min_size(Vec2::new(60.0, 26.0));
-
-                                                if ui
-                                                    .add(del_btn)
-                                                    .on_hover_text(self.lang.t(
-                                                        "Xóa mã build cá nhân này khỏi danh sách",
-                                                        "Delete this custom loadout"
-                                                    ))
-                                                    .clicked()
-                                                {
-                                                    code_to_delete = Some(b.loadout_code.clone());
-                                                }
-                                            } else {
-                                                let unpin_btn = egui::Button::new(
-                                                    RichText::new(self.lang.t("★ Bỏ lưu", "★ Unpin"))
-                                                        .color(Color32::from_rgb(255, 215, 0))
-                                                        .size(11.0)
+                                        let row_w = ui.available_width().max(120.0);
+                                        ui.allocate_ui_with_layout(
+                                            egui::vec2(row_w, 26.0),
+                                            Layout::right_to_left(Align::Center),
+                                            |ui| {
+                                                // Reserve right-side action buttons first so long descriptions never overflow
+                                                let copy_btn = egui::Button::new(
+                                                    RichText::new(self.lang.t("SAO CHÉP", "COPY"))
+                                                        .color(COLOR_BG)
+                                                        .size(11.5)
                                                         .strong(),
                                                 )
-                                                .fill(Color32::from_rgb(45, 40, 10))
-                                                .stroke(Stroke::new(1.0_f32, Color32::from_rgb(255, 215, 0)))
+                                                .fill(COLOR_ACCENT)
                                                 .rounding(Rounding::same(3.0))
-                                                .min_size(Vec2::new(76.0, 26.0));
+                                                .min_size(Vec2::new(82.0, 24.0));
+
+                                                if ui.add(copy_btn).clicked() {
+                                                    build_to_copy = Some((b.weapon.clone(), b.classification.clone(), b.copy_count, b.loadout_code.clone()));
+                                                }
+
+                                                ui.add_space(4.0);
+
+                                                // "Xem súng" button: jumps to weapon and switches to Scanner tab
+                                                let view_btn = egui::Button::new(
+                                                    RichText::new(self.lang.t("🔍 Xem súng", "🔍 View Gun"))
+                                                        .color(COLOR_TEXT_MAIN)
+                                                        .size(11.0),
+                                                )
+                                                .fill(COLOR_CARD_HOVER)
+                                                .stroke(Stroke::new(1.0_f32, COLOR_BORDER))
+                                                .rounding(Rounding::same(3.0))
+                                                .min_size(Vec2::new(82.0, 24.0));
 
                                                 if ui
-                                                    .add(unpin_btn)
+                                                    .add(view_btn)
                                                     .on_hover_text(self.lang.t(
-                                                        "Bỏ ghim bản build này khỏi kho Yêu thích",
-                                                        "Unpin this build from Favorites"
+                                                        "Chuyển sang màn hình tra cứu của khẩu súng này",
+                                                        "Jump to this weapon on the main scanner screen"
                                                     ))
                                                     .clicked()
                                                 {
-                                                    build_to_toggle_fav = Some(b.clone());
+                                                    jump_to_weapon = Some(b.weapon.clone());
                                                 }
-                                            }
 
-                                            self.render_eye_preview_button(ui, b, &mut hovered_preview_req);
+                                                ui.add_space(4.0);
 
-                                            ui.add_space(6.0);
-                                            let rem_w = ui.available_width().max(60.0);
-                                            ui.allocate_ui_with_layout(
-                                                egui::vec2(rem_w, 26.0),
-                                                Layout::left_to_right(Align::Center),
-                                                |ui| {
+                                                if is_custom {
+                                                    let del_btn = egui::Button::new(
+                                                        RichText::new(self.lang.t("🗑 Xóa", "🗑 Delete"))
+                                                            .color(Color32::from_rgb(255, 100, 100))
+                                                            .size(11.0),
+                                                    )
+                                                    .fill(Color32::from_rgb(40, 15, 15))
+                                                    .stroke(Stroke::new(1.0_f32, Color32::from_rgb(180, 50, 50)))
+                                                    .rounding(Rounding::same(3.0))
+                                                    .min_size(Vec2::new(60.0, 24.0));
+
+                                                    if ui
+                                                        .add(del_btn)
+                                                        .on_hover_text(self.lang.t(
+                                                            "Xóa mã build cá nhân này khỏi danh sách",
+                                                            "Delete this custom loadout"
+                                                        ))
+                                                        .clicked()
+                                                    {
+                                                        code_to_delete = Some(b.loadout_code.clone());
+                                                    }
+                                                } else {
+                                                    let unpin_btn = egui::Button::new(
+                                                        RichText::new(self.lang.t("★ Bỏ lưu", "★ Unpin"))
+                                                            .color(Color32::from_rgb(255, 215, 0))
+                                                            .size(11.0)
+                                                            .strong(),
+                                                    )
+                                                    .fill(Color32::from_rgb(45, 40, 10))
+                                                    .stroke(Stroke::new(1.0_f32, Color32::from_rgb(255, 215, 0)))
+                                                    .rounding(Rounding::same(3.0))
+                                                    .min_size(Vec2::new(76.0, 24.0));
+
+                                                    if ui
+                                                        .add(unpin_btn)
+                                                        .on_hover_text(self.lang.t(
+                                                            "Bỏ ghim bản build này khỏi kho Yêu thích",
+                                                            "Unpin this build from Favorites"
+                                                        ))
+                                                        .clicked()
+                                                    {
+                                                        build_to_toggle_fav = Some(b.clone());
+                                                    }
+                                                }
+
+                                                self.render_eye_preview_button(ui, b, &mut hovered_preview_req);
+
+                                                ui.add_space(6.0);
+                                                let rem_w = ui.available_width().max(60.0);
+                                                ui.allocate_ui_with_layout(
+                                                    egui::vec2(rem_w, 24.0),
+                                                    Layout::left_to_right(Align::Center),
+                                                    |ui| {
+                                                        ui.set_max_width(rem_w);
+                                                        ui.set_clip_rect(ui.max_rect().intersect(ui.clip_rect()));
                                                     ui.add(
                                                         egui::Label::new(
                                                             RichText::new(format!("#{}.", idx + 1))
@@ -10333,6 +10388,23 @@ mod tests {
             .unwrap();
             assert_eq!(item.valid_image_url(), None, "should reject {}", bad_url);
         }
+
+        // 5. Unwrap /_next/image?url=... to direct PNG/JPG/WebP and reject raw .avif
+        assert_eq!(
+            unwrap_next_image_url("https://deltaforcetools.gg/_next/image?url=https%3A%2F%2Fstatic.deltaforcetools.gg%2Fimages%2FF3LSF7am.PNG&w=3840&q=75"),
+            "https://static.deltaforcetools.gg/images/F3LSF7am.PNG"
+        );
+        let next_png_item: BuildItem = serde_json::from_str(
+            r#"{"weapon":"M4A1","loadout_code":"M4A1-Warfare-6HABCDEF123456","image_url":"https://deltaforcetools.gg/_next/image?url=https%3A%2F%2Fstatic.deltaforcetools.gg%2Fimages%2FF3LSF7am.PNG&w=3840&q=75"}"#,
+        )
+        .unwrap();
+        assert!(next_png_item.valid_image_url().is_some());
+
+        let next_avif_item: BuildItem = serde_json::from_str(
+            r#"{"weapon":"M4A1","loadout_code":"M4A1-Warfare-6HABCDEF123456","image_url":"https://deltaforcetools.gg/_next/image?url=https%3A%2F%2Fstatic.deltaforcetools.gg%2Fimages%2Fz7XH4prx.avif&w=3840&q=75"}"#,
+        )
+        .unwrap();
+        assert_eq!(next_avif_item.valid_image_url(), None);
     }
 }
 

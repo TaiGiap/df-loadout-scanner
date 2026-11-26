@@ -62,12 +62,30 @@ AVATAR_OR_NON_BUILD_IMAGE_TOKENS = (
     "blank",
     "favicon",
     ".svg",
+    ".avif",
 )
 
 
 def is_non_build_image_hint(text: str) -> bool:
     lower = (text or "").lower()
     return any(tok in lower for tok in AVATAR_OR_NON_BUILD_IMAGE_TOKENS)
+
+
+def unwrap_next_image_url(u: str) -> str:
+    if "/_next/image" not in u:
+        return u
+    try:
+        from urllib.parse import urlparse, parse_qs, unquote
+        parsed = urlparse(u)
+        qs = parse_qs(parsed.query)
+        inner = qs.get("url", [""])[0]
+        if inner:
+            inner = unquote(inner).strip()
+            if inner.startswith("https://") or inner.startswith("http://"):
+                return inner
+    except Exception:
+        pass
+    return u
 
 
 def normalize_preview_image_url(raw_url: str, base_url: str = "") -> str:
@@ -77,12 +95,13 @@ def normalize_preview_image_url(raw_url: str, base_url: str = "") -> str:
     lower = u.lower()
     if not u or lower.startswith("data:") or lower.startswith("blob:"):
         return ""
-    if is_non_build_image_hint(lower):
-        return ""
     if u.startswith("//"):
         u = "https:" + u
     elif u.startswith("/") and base_url:
         u = base_url.rstrip("/") + u
+    u = unwrap_next_image_url(u)
+    if is_non_build_image_hint(u.lower()):
+        return ""
     if not u.startswith("https://"):
         return ""
     return u
