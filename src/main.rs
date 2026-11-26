@@ -3831,6 +3831,7 @@ struct LoadoutTerminalApp {
     is_downloading_update: bool,
     downloaded_update_path: Option<PathBuf>,
     update_banner_dismissed: bool,
+    up_to_date_banner_until: Option<Instant>,
 
     egui_ctx: egui::Context,
     tx_events: Sender<WorkerEvent>,
@@ -4061,6 +4062,7 @@ impl LoadoutTerminalApp {
             is_downloading_update: false,
             downloaded_update_path: None,
             update_banner_dismissed: false,
+            up_to_date_banner_until: None,
             egui_ctx: cc.egui_ctx.clone(),
             tx_events: tx,
             rx,
@@ -4645,14 +4647,20 @@ impl eframe::App for LoadoutTerminalApp {
                             if changed {
                                 self.downloaded_update_path = None;
                             }
+                            self.up_to_date_banner_until = None;
                             self.update_banner_dismissed = false;
+                            if manual {
+                                unsafe {
+                                    let _ = MessageBeep(MB_OK);
+                                }
+                            }
                             let msg = match self.lang {
                                 AppLang::Vi => format!(
-                                    "Có bản cập nhật mới {} (hiện tại: {}). Xem banner phía trên để mở hoặc tải gói .zip.",
+                                    "🚀 Có bản cập nhật mới {} (hiện tại: {}). Xem banner phía trên để mở hoặc tải gói .zip.",
                                     info.tag_name, APP_VERSION
                                 ),
                                 AppLang::En => format!(
-                                    "New version {} available (current: {}). Use the top banner to open or download .zip.",
+                                    "🚀 New version {} available (current: {}). Use the top banner to open or download .zip.",
                                     info.tag_name, APP_VERSION
                                 ),
                             };
@@ -4662,14 +4670,23 @@ impl eframe::App for LoadoutTerminalApp {
                         Ok(None) => {
                             self.available_update = None;
                             if manual {
+                                unsafe {
+                                    let _ = MessageBeep(MB_OK);
+                                }
+                                self.up_to_date_banner_until = Some(Instant::now() + Duration::from_secs(8));
                                 let msg = match self.lang {
-                                    AppLang::Vi => format!("Bạn đang sử dụng phiên bản mới nhất ({}).", APP_VERSION),
-                                    AppLang::En => format!("You are already on the latest version ({}).", APP_VERSION),
+                                    AppLang::Vi => format!("✔ Bạn đang sử dụng phiên bản mới nhất ({}).", APP_VERSION),
+                                    AppLang::En => format!("✔ You are already on the latest version ({}).", APP_VERSION),
                                 };
                                 self.status_message = Some((msg, Instant::now(), false));
                             }
                         }
                         Err(err) => {
+                            if manual {
+                                unsafe {
+                                    let _ = MessageBeep(MB_ICONERROR);
+                                }
+                            }
                             let msg = match self.lang {
                                 AppLang::Vi => format!("Kiểm tra cập nhật thất bại: {}", err),
                                 AppLang::En => format!("Update check failed: {}", err),
@@ -4682,14 +4699,21 @@ impl eframe::App for LoadoutTerminalApp {
                     self.is_downloading_update = false;
                     match result {
                         Ok(path) => {
+                            unsafe {
+                                let _ = MessageBeep(MB_OK);
+                            }
+                            self.update_banner_dismissed = false;
                             let msg = match self.lang {
-                                AppLang::Vi => format!("Đã tải gói cập nhật về: {}", path.display()),
-                                AppLang::En => format!("Downloaded update package to: {}", path.display()),
+                                AppLang::Vi => format!("✔ Đã tải xong gói cập nhật về: {}", path.display()),
+                                AppLang::En => format!("✔ Downloaded update package to: {}", path.display()),
                             };
                             self.downloaded_update_path = Some(path);
                             self.status_message = Some((msg, Instant::now(), false));
                         }
                         Err(err) => {
+                            unsafe {
+                                let _ = MessageBeep(MB_ICONERROR);
+                            }
                             let msg = match self.lang {
                                 AppLang::Vi => format!("Tải gói cập nhật thất bại: {}", err),
                                 AppLang::En => format!("Failed to download update: {}", err),
@@ -4814,12 +4838,13 @@ impl eframe::App for LoadoutTerminalApp {
                     .stroke(Stroke::new(1.0_f32, COLOR_BORDER))
                     .inner_margin(Margin {
                         left: 14.0,
-                        right: 10.0,
-                        top: 8.0,
-                        bottom: 8.0,
+                        right: 12.0,
+                        top: 7.0,
+                        bottom: 7.0,
                     }),
             )
             .show(ctx, |ui| {
+                // Row 1: Logo + Primary Navigation Tabs (Left) | Utility Controls (Right)
                 ui.horizontal(|ui| {
                     ui.add(
                         egui::Label::new(
@@ -4832,9 +4857,9 @@ impl eframe::App for LoadoutTerminalApp {
                         .selectable(false),
                     );
 
-                    ui.add_space(4.0);
+                    ui.add_space(6.0);
                     ui.add(egui::Label::new(RichText::new("|").color(COLOR_BORDER).size(13.0)).selectable(false));
-                    ui.add_space(4.0);
+                    ui.add_space(6.0);
 
                     // Navigation Tabs: [🔍 QUÉT & TRA CỨU] and [★ YÊU THÍCH (N)]
                     let tab1_active = self.current_tab == AppTab::Scanner;
@@ -4875,9 +4900,111 @@ impl eframe::App for LoadoutTerminalApp {
                         self.current_tab = AppTab::Favorites;
                     }
 
-                    ui.add_space(6.0);
-                    ui.add(egui::Label::new(RichText::new("|").color(COLOR_BORDER).size(13.0)).selectable(false));
-                    ui.add_space(6.0);
+                    ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
+                        ui.spacing_mut().item_spacing.x = 5.0;
+
+                        let about_color = if self.show_about { COLOR_ACCENT } else { COLOR_TEXT_MUTED };
+                        let about_btn = egui::Button::new(
+                            RichText::new("[ABOUT]")
+                                .color(about_color)
+                                .size(11.0)
+                                .strong(),
+                        )
+                        .stroke(Stroke::new(1.0_f32, if self.show_about { COLOR_ACCENT } else { COLOR_BORDER }))
+                        .rounding(Rounding::same(3.0));
+
+                        if ui.add(about_btn).on_hover_text(self.lang.t("Thông tin tác giả", "Author information")).clicked() {
+                            self.show_about = !self.show_about;
+                        }
+
+                        let support_color = if self.show_support {
+                            Color32::from_rgb(255, 105, 180)
+                        } else {
+                            Color32::from_rgb(255, 140, 180)
+                        };
+                        let support_btn = egui::Button::new(
+                            RichText::new(self.lang.t("[❤ ỦNG HỘ]", "[❤ SUPPORT]"))
+                                .color(support_color)
+                                .size(11.0)
+                                .strong(),
+                        )
+                        .stroke(Stroke::new(1.0_f32, if self.show_support { Color32::from_rgb(255, 105, 180) } else { Color32::from_rgb(180, 60, 100) }))
+                        .rounding(Rounding::same(3.0));
+
+                        if ui.add(support_btn).on_hover_text(self.lang.t("Ủng hộ tác giả (VietQR)", "Support developer (VietQR)")).clicked() {
+                            self.show_support = !self.show_support;
+                            if self.show_support && self.support_qr_texture.is_none() {
+                                self.update_support_qr(ctx);
+                            }
+                        }
+
+                        let top_icon = if self.always_on_top {
+                            self.lang.t("[GHIM: BẬT]", "[PIN: ON]")
+                        } else {
+                            self.lang.t("[GHIM: TẮT]", "[PIN: OFF]")
+                        };
+                        let top_color = if self.always_on_top { COLOR_ACCENT } else { COLOR_TEXT_MUTED };
+                        let top_btn = egui::Button::new(
+                            RichText::new(top_icon)
+                                .color(top_color)
+                                .size(11.0)
+                                .strong(),
+                        )
+                        .stroke(Stroke::new(1.0_f32, if self.always_on_top { COLOR_ACCENT } else { COLOR_BORDER }))
+                        .rounding(Rounding::same(3.0));
+
+                        if ui.add(top_btn).on_hover_text(self.lang.t("Ghim trên cùng", "Always on Top")).clicked() {
+                            self.always_on_top = !self.always_on_top;
+                            ctx.send_viewport_cmd(egui::ViewportCommand::WindowLevel(if self.always_on_top {
+                                egui::WindowLevel::AlwaysOnTop
+                            } else {
+                                egui::WindowLevel::Normal
+                            }));
+                        }
+
+                        let lang_label = match self.lang {
+                            AppLang::Vi => "[LANG: VI]",
+                            AppLang::En => "[LANG: EN]",
+                        };
+                        let lang_btn = egui::Button::new(
+                            RichText::new(lang_label)
+                                .color(COLOR_ACCENT)
+                                .size(11.0)
+                                .strong(),
+                        )
+                        .stroke(Stroke::new(1.0_f32, COLOR_BORDER))
+                        .rounding(Rounding::same(3.0));
+
+                        if ui.add(lang_btn).on_hover_text(self.lang.t("Chuyển sang English", "Switch to Tiếng Việt")).clicked() {
+                            self.lang = match self.lang {
+                                AppLang::Vi => AppLang::En,
+                                AppLang::En => AppLang::Vi,
+                            };
+                            self.save_current_config();
+                        }
+
+                        let guide_label = self.lang.t("[HƯỚNG DẪN]", "[GUIDE]");
+                        let guide_color = if self.show_guide { COLOR_ACCENT } else { COLOR_TEXT_MUTED };
+                        let guide_btn = egui::Button::new(
+                            RichText::new(guide_label)
+                                .color(guide_color)
+                                .size(11.0)
+                                .strong(),
+                        )
+                        .stroke(Stroke::new(1.0_f32, if self.show_guide { COLOR_ACCENT } else { COLOR_BORDER }))
+                        .rounding(Rounding::same(3.0));
+
+                        if ui.add(guide_btn).on_hover_text(self.lang.t("Mở bảng hướng dẫn sử dụng", "Open User Guide")).clicked() {
+                            self.show_guide = !self.show_guide;
+                        }
+                    });
+                });
+
+                ui.add_space(5.0);
+
+                // Row 2: Scan Hotkey Cluster (Left) | DB Update & App Update Cluster (Right, generously separated)
+                ui.horizontal_wrapped(|ui| {
+                    ui.spacing_mut().item_spacing = egui::vec2(6.0, 4.0);
 
                     let (f9_bg, f9_stroke, f9_color, f9_text) = if self.ocr_available {
                         (
@@ -4905,7 +5032,7 @@ impl eframe::App for LoadoutTerminalApp {
                         .fill(f9_bg)
                         .stroke(Stroke::new(1.0_f32, f9_stroke))
                         .rounding(Rounding::same(3.0))
-                        .inner_margin(Margin::symmetric(6.0, 2.0))
+                        .inner_margin(Margin::symmetric(8.0, 3.0))
                         .show(ui, |ui| {
                             let lbl = ui.add(
                                 egui::Label::new(
@@ -4923,8 +5050,6 @@ impl eframe::App for LoadoutTerminalApp {
                                 });
                             }
                         });
-
-                    ui.add_space(4.0);
 
                     // Rebind Hotkey Button [⌨] or [NHẤN PHÍM...]
                     let (rebind_label, rebind_text_color, rebind_bg, rebind_stroke) = if self.is_rebinding_hotkey {
@@ -4974,112 +5099,7 @@ impl eframe::App for LoadoutTerminalApp {
                     }
 
                     ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
-                        ui.add_space(2.0);
-
-                        let about_color = if self.show_about { COLOR_ACCENT } else { COLOR_TEXT_MUTED };
-                        let about_btn = egui::Button::new(
-                            RichText::new("[ABOUT]")
-                                .color(about_color)
-                                .size(11.0)
-                                .strong(),
-                        )
-                        .stroke(Stroke::new(1.0_f32, if self.show_about { COLOR_ACCENT } else { COLOR_BORDER }))
-                        .rounding(Rounding::same(3.0));
-
-                        if ui.add(about_btn).on_hover_text(self.lang.t("Thông tin tác giả", "Author information")).clicked() {
-                            self.show_about = !self.show_about;
-                        }
-
-                        ui.add_space(2.0);
-
-                        let support_color = if self.show_support {
-                            Color32::from_rgb(255, 105, 180)
-                        } else {
-                            Color32::from_rgb(255, 140, 180)
-                        };
-                        let support_btn = egui::Button::new(
-                            RichText::new(self.lang.t("[❤ ỦNG HỘ]", "[❤ SUPPORT]"))
-                                .color(support_color)
-                                .size(11.0)
-                                .strong(),
-                        )
-                        .stroke(Stroke::new(1.0_f32, if self.show_support { Color32::from_rgb(255, 105, 180) } else { Color32::from_rgb(180, 60, 100) }))
-                        .rounding(Rounding::same(3.0));
-
-                        if ui.add(support_btn).on_hover_text(self.lang.t("Ủng hộ tác giả (VietQR)", "Support developer (VietQR)")).clicked() {
-                            self.show_support = !self.show_support;
-                            if self.show_support && self.support_qr_texture.is_none() {
-                                self.update_support_qr(ctx);
-                            }
-                        }
-
-                        ui.add_space(2.0);
-
-                        let top_icon = if self.always_on_top {
-                            self.lang.t("[GHIM: BẬT]", "[PIN: ON]")
-                        } else {
-                            self.lang.t("[GHIM: TẮT]", "[PIN: OFF]")
-                        };
-                        let top_color = if self.always_on_top { COLOR_ACCENT } else { COLOR_TEXT_MUTED };
-                        let top_btn = egui::Button::new(
-                            RichText::new(top_icon)
-                                .color(top_color)
-                                .size(11.0)
-                                .strong(),
-                        )
-                        .stroke(Stroke::new(1.0_f32, if self.always_on_top { COLOR_ACCENT } else { COLOR_BORDER }))
-                        .rounding(Rounding::same(3.0));
-
-                        if ui.add(top_btn).on_hover_text(self.lang.t("Ghim trên cùng", "Always on Top")).clicked() {
-                            self.always_on_top = !self.always_on_top;
-                            ctx.send_viewport_cmd(egui::ViewportCommand::WindowLevel(if self.always_on_top {
-                                egui::WindowLevel::AlwaysOnTop
-                            } else {
-                                egui::WindowLevel::Normal
-                            }));
-                        }
-
-                        ui.add_space(2.0);
-
-                        let lang_label = match self.lang {
-                            AppLang::Vi => "[LANG: VI]",
-                            AppLang::En => "[LANG: EN]",
-                        };
-                        let lang_btn = egui::Button::new(
-                            RichText::new(lang_label)
-                                .color(COLOR_ACCENT)
-                                .size(11.0)
-                                .strong(),
-                        )
-                        .stroke(Stroke::new(1.0_f32, COLOR_BORDER))
-                        .rounding(Rounding::same(3.0));
-
-                        if ui.add(lang_btn).on_hover_text(self.lang.t("Chuyển sang English", "Switch to Tiếng Việt")).clicked() {
-                            self.lang = match self.lang {
-                                AppLang::Vi => AppLang::En,
-                                AppLang::En => AppLang::Vi,
-                            };
-                            self.save_current_config();
-                        }
-
-                        ui.add_space(2.0);
-
-                        let guide_label = self.lang.t("[HƯỚNG DẪN]", "[GUIDE]");
-                        let guide_color = if self.show_guide { COLOR_ACCENT } else { COLOR_TEXT_MUTED };
-                        let guide_btn = egui::Button::new(
-                            RichText::new(guide_label)
-                                .color(guide_color)
-                                .size(11.0)
-                                .strong(),
-                        )
-                        .stroke(Stroke::new(1.0_f32, if self.show_guide { COLOR_ACCENT } else { COLOR_BORDER }))
-                        .rounding(Rounding::same(3.0));
-
-                        if ui.add(guide_btn).on_hover_text(self.lang.t("Mở bảng hướng dẫn sử dụng", "Open User Guide")).clicked() {
-                            self.show_guide = !self.show_guide;
-                        }
-
-                        ui.add_space(2.0);
+                        ui.spacing_mut().item_spacing.x = 6.0;
 
                         // [UPDATE DB] button with 30-min cooldown
                         let cooldown_secs: u64 = 1800; // 30 minutes
@@ -5099,15 +5119,15 @@ impl eframe::App for LoadoutTerminalApp {
 
                         let (db_text, can_update, db_color) = if self.is_updating {
                             (
-                                self.lang.t("[ĐANG TẢI...]", "[UPDATING...]").to_string(),
+                                self.lang.t("[ĐANG TẢI DB...]", "[UPDATING DB...]").to_string(),
                                 false,
                                 COLOR_AMBER,
                             )
                         } else if let Some(rem_secs) = remaining_cooldown_secs {
                             let rem_mins = (rem_secs + 59) / 60;
                             let label = match self.lang {
-                                AppLang::Vi => format!("[CHỜ {}M]", rem_mins),
-                                AppLang::En => format!("[WAIT {}M]", rem_mins),
+                                AppLang::Vi => format!("[CHỜ DB {}M]", rem_mins),
+                                AppLang::En => format!("[WAIT DB {}M]", rem_mins),
                             };
                             (label, false, COLOR_TEXT_MUTED)
                         } else {
@@ -5151,9 +5171,7 @@ impl eframe::App for LoadoutTerminalApp {
                             self.trigger_db_update(ctx.clone());
                         }
 
-                        ui.add_space(2.0);
-
-                        // Manual Check App Update button
+                        // Manual Check App Update button (grouped neatly with DB Update on the right)
                         let (upd_text, upd_enabled, upd_color) = if self.is_checking_update {
                             (
                                 self.lang.t("[ĐANG KIỂM TRA...]", "[CHECKING...]"),
@@ -5185,12 +5203,12 @@ impl eframe::App for LoadoutTerminalApp {
                             .clicked()
                         {
                             self.is_checking_update = true;
+                            self.up_to_date_banner_until = None;
                             spawn_update_check(self.tx_events.clone(), ctx.clone(), true);
                         }
 
                         // Prominent New Version Badge Button if an update is available on GitHub
                         if let Some(new_ver) = &self.available_update {
-                            ui.add_space(2.0);
                             let ver_label = match self.lang {
                                 AppLang::Vi => format!("[BẢN MỚI {}]", new_ver.tag_name),
                                 AppLang::En => format!("[NEW {}]", new_ver.tag_name),
@@ -5206,8 +5224,8 @@ impl eframe::App for LoadoutTerminalApp {
                             .rounding(Rounding::same(3.0));
 
                             let ver_tooltip = match self.lang {
-                                AppLang::Vi => format!("Đã có phiên bản mới {} trên GitHub! Bấm để hiện banner tải về.", new_ver.tag_name),
-                                AppLang::En => format!("New release {} is available on GitHub! Click to show update banner.", new_ver.tag_name),
+                                AppLang::Vi => format!("Đã có phiên bản mới {} (hiện tại: {})! Bấm để hiện banner tải về.", new_ver.tag_name, APP_VERSION),
+                                AppLang::En => format!("New release {} available (current: {})! Click to show update banner.", new_ver.tag_name, APP_VERSION),
                             };
 
                             if ui.add(ver_btn).on_hover_text(ver_tooltip).clicked() {
@@ -5218,17 +5236,26 @@ impl eframe::App for LoadoutTerminalApp {
                 });
             });
 
-        // Prominent Update Banner (Way A: Notify + Open Release / Safe .zip Download into DF-Loadout-Scanner-Data/downloads/)
+        // Prominent Update / Download Completion Banner
         if let Some(update_info) = self.available_update.clone().filter(|_| !self.update_banner_dismissed) {
+            let is_downloaded = self.downloaded_update_path.is_some();
+            let (banner_bg, banner_stroke, text_color) = if is_downloaded {
+                (Color32::from_rgb(16, 44, 30), COLOR_ACCENT, COLOR_ACCENT)
+            } else {
+                (Color32::from_rgb(42, 30, 12), COLOR_AMBER, COLOR_AMBER)
+            };
+
             egui::TopBottomPanel::top("update_banner")
                 .frame(
                     Frame::default()
-                        .fill(Color32::from_rgb(42, 30, 12))
-                        .stroke(Stroke::new(1.0_f32, COLOR_AMBER))
+                        .fill(banner_bg)
+                        .stroke(Stroke::new(1.0_f32, banner_stroke))
                         .inner_margin(Margin::symmetric(14.0, 6.0)),
                 )
                 .show(ctx, |ui| {
                     ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
+                        ui.spacing_mut().item_spacing.x = 6.0;
+
                         let close_btn = egui::Button::new(
                             RichText::new("✕").color(COLOR_TEXT_MUTED).size(11.0),
                         )
@@ -5288,11 +5315,11 @@ impl eframe::App for LoadoutTerminalApp {
 
                         let open_rel_btn = egui::Button::new(
                             RichText::new(self.lang.t("[🌐 MỞ RELEASE]", "[🌐 OPEN RELEASE]"))
-                                .color(COLOR_AMBER)
+                                .color(text_color)
                                 .size(11.0)
                                 .strong(),
                         )
-                        .stroke(Stroke::new(1.0_f32, COLOR_AMBER))
+                        .stroke(Stroke::new(1.0_f32, text_color))
                         .rounding(Rounding::same(2.0));
                         if ui.add(open_rel_btn).clicked() {
                             ctx.open_url(egui::OpenUrl::new_tab(&update_info.html_url));
@@ -5317,25 +5344,46 @@ impl eframe::App for LoadoutTerminalApp {
                             egui::vec2(rem_w, 20.0),
                             Layout::left_to_right(Align::Center),
                             |ui| {
-                                let banner_text = if update_info.summary.is_empty() {
-                                    format!(
-                                        "{} {} ({})",
-                                        self.lang.t("🚀 Có bản mới:", "🚀 Update available:"),
-                                        update_info.tag_name,
-                                        update_info.name
-                                    )
+                                let banner_text = if let Some(dl_path) = &self.downloaded_update_path {
+                                    match self.lang {
+                                        AppLang::Vi => format!(
+                                            "✔ Đã tải xong bản {} về: {}",
+                                            update_info.tag_name,
+                                            dl_path.display()
+                                        ),
+                                        AppLang::En => format!(
+                                            "✔ Downloaded {} to: {}",
+                                            update_info.tag_name,
+                                            dl_path.display()
+                                        ),
+                                    }
+                                } else if update_info.summary.is_empty() {
+                                    match self.lang {
+                                        AppLang::Vi => format!(
+                                            "🚀 Có bản mới {} (hiện tại: {}) — {}",
+                                            update_info.tag_name, APP_VERSION, update_info.name
+                                        ),
+                                        AppLang::En => format!(
+                                            "🚀 Update available {} (current: {}) — {}",
+                                            update_info.tag_name, APP_VERSION, update_info.name
+                                        ),
+                                    }
                                 } else {
-                                    format!(
-                                        "{} {} — {}",
-                                        self.lang.t("🚀 Có bản mới:", "🚀 Update available:"),
-                                        update_info.tag_name,
-                                        update_info.summary
-                                    )
+                                    match self.lang {
+                                        AppLang::Vi => format!(
+                                            "🚀 Có bản mới {} (hiện tại: {}) — {}",
+                                            update_info.tag_name, APP_VERSION, update_info.summary
+                                        ),
+                                        AppLang::En => format!(
+                                            "🚀 Update available {} (current: {}) — {}",
+                                            update_info.tag_name, APP_VERSION, update_info.summary
+                                        ),
+                                    }
                                 };
                                 ui.add(
                                     egui::Label::new(
                                         RichText::new(banner_text)
-                                            .color(COLOR_AMBER)
+                                            .color(text_color)
                                             .size(12.0)
                                             .strong(),
                                     )
@@ -5346,6 +5394,50 @@ impl eframe::App for LoadoutTerminalApp {
                         );
                     });
                 });
+        } else if let Some(until) = self.up_to_date_banner_until {
+            if Instant::now() < until {
+                if is_window_active {
+                    ctx.request_repaint_after(Duration::from_secs(1));
+                }
+                egui::TopBottomPanel::top("up_to_date_banner")
+                    .frame(
+                        Frame::default()
+                            .fill(Color32::from_rgb(16, 44, 30))
+                            .stroke(Stroke::new(1.0_f32, COLOR_ACCENT))
+                            .inner_margin(Margin::symmetric(14.0, 5.0)),
+                    )
+                    .show(ctx, |ui| {
+                        ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
+                            let close_btn = egui::Button::new(
+                                RichText::new("✕").color(COLOR_TEXT_MUTED).size(11.0),
+                            )
+                            .fill(Color32::TRANSPARENT);
+                            if ui.add(close_btn).clicked() {
+                                self.up_to_date_banner_until = None;
+                            }
+                            let rem_w = ui.available_width().max(60.0);
+                            ui.allocate_ui_with_layout(
+                                egui::vec2(rem_w, 18.0),
+                                Layout::left_to_right(Align::Center),
+                                |ui| {
+                                    let msg = match self.lang {
+                                        AppLang::Vi => format!("✔ Bạn đang sử dụng phiên bản mới nhất ({}).", APP_VERSION),
+                                        AppLang::En => format!("✔ You are already on the latest version ({}).", APP_VERSION),
+                                    };
+                                    ui.add(
+                                        egui::Label::new(
+                                            RichText::new(msg).color(COLOR_ACCENT).size(12.0).strong(),
+                                        )
+                                        .truncate()
+                                        .selectable(false),
+                                    );
+                                },
+                            );
+                        });
+                    });
+            } else {
+                self.up_to_date_banner_until = None;
+            }
         }
 
         // 5-Level Filter Bar (Directly below Header) or Favorites Banner
