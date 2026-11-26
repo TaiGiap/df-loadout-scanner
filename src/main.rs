@@ -33,7 +33,7 @@ extern "system" {
 // Application & Author identity constants
 const AUTHOR_NAME: &str = "Anh Bảy Chọ / Tài Giáp";
 const APP_NAME: &str = "DF Loadout Scanner";
-const APP_VERSION: &str = "v2.0.10-Beta";
+const APP_VERSION: &str = "v2.0.11-Beta";
 
 // VietQR donation constants
 const DONATE_BANK_ID: &str = "TCB";
@@ -2472,8 +2472,8 @@ fn decode_preview_image_bytes(bytes: &[u8]) -> Result<(Vec<u8>, [usize; 2]), Str
             format!("Không giải mã được ảnh xem trước: {}", e)
         }
     })?;
-    if dyn_img.width() > 1280 || dyn_img.height() > 800 {
-        dyn_img = dyn_img.resize(1280, 800, image::imageops::FilterType::Triangle);
+    if dyn_img.width() > 1600 || dyn_img.height() > 1000 {
+        dyn_img = dyn_img.resize(1600, 1000, image::imageops::FilterType::Triangle);
     }
     let rgba = dyn_img.to_rgba8();
     let w = rgba.width() as usize;
@@ -4509,7 +4509,7 @@ fn calculate_preview_popup_placement(
     img_size: Option<(f32, f32)>,
     fallback_size: (f32, f32),
 ) -> (f32, f32, f32, f32, Option<(f32, f32)>) {
-    let safe_margin = 24.0_f32;
+    let safe_margin = 20.0_f32;
     let gap = 14.0_f32;
     let frame_pad_w = 16.0_f32;
     let frame_pad_h = 38.0_f32;
@@ -4518,7 +4518,7 @@ fn calculate_preview_popup_placement(
     let right_space = ((screen.right() - safe_margin) - (anchor_rect.right() + gap)).max(0.0);
 
     let desired_popup_w = if img_size.is_some() {
-        (screen.width() * 0.72).clamp(640.0, 780.0) + frame_pad_w
+        (screen.width() * 0.82).clamp(820.0, 980.0) + frame_pad_w
     } else {
         fallback_size.0
     };
@@ -4539,8 +4539,8 @@ fn calculate_preview_popup_placement(
     let (popup_w, popup_h, disp_size_opt) = if let Some((img_w, img_h)) = img_size {
         let max_img_w = (avail_side_w - frame_pad_w).max(80.0);
         let max_img_h = (max_avail_h - frame_pad_h).max(60.0);
-        let target_w = (screen.width() * 0.72).clamp(640.0, 780.0).min(max_img_w);
-        let target_h = (screen.height() * 0.75).clamp(380.0, 500.0).min(max_img_h);
+        let target_w = (screen.width() * 0.82).clamp(820.0, 980.0).min(max_img_w);
+        let target_h = (screen.height() * 0.85).clamp(460.0, 680.0).min(max_img_h);
 
         let w = img_w.max(1.0);
         let h = img_h.max(1.0);
@@ -10464,17 +10464,27 @@ mod tests {
         .unwrap();
         assert_eq!(next_avif_item.valid_image_url(), None);
 
-        // 6. Preview popup placement: strictly left or right of eye button, zero overlap, aspect ratio preserved
+        // 6. Preview popup placement: larger target (820px-980px on wide windows), strictly left or right of eye button, zero overlap
+        let screen_wide = egui::Rect::from_min_size(egui::pos2(0.0, 0.0), egui::vec2(1440.0, 860.0));
+        let eye_wide_right = egui::Rect::from_min_size(egui::pos2(1220.0, 260.0), egui::vec2(26.0, 24.0));
+        let (px_w, py_w, pw_w, ph_w, disp_w) =
+            calculate_preview_popup_placement(screen_wide, eye_wide_right, Some((1640.0, 720.0)), (240.0, 68.0));
+        let (dw_w, dh_w) = disp_w.unwrap();
+        assert!(dw_w >= 820.0 && dw_w <= 980.1, "dw_w should be in 820..980 range: {}", dw_w);
+        assert!(((1640.0 / 720.0) - (dw_w / dh_w)).abs() < 0.01, "Aspect ratio must be preserved");
+        assert!(px_w + pw_w <= eye_wide_right.left() - 12.0, "Popup must stay strictly left of eye button");
+        assert!(px_w >= 20.0 && py_w >= 20.0 && py_w + ph_w <= 860.0 - 20.0);
+
         let screen_std = egui::Rect::from_min_size(egui::pos2(0.0, 0.0), egui::vec2(1140.0, 680.0));
-        // Case A: Eye button near right edge -> popup placed cleanly to the left
+        // Case A: Eye button near right edge -> popup placed cleanly to the left (expanded width)
         let eye_right = egui::Rect::from_min_size(egui::pos2(940.0, 240.0), egui::vec2(26.0, 24.0));
         let (px1, py1, pw1, ph1, disp1) =
             calculate_preview_popup_placement(screen_std, eye_right, Some((1640.0, 720.0)), (240.0, 68.0));
         let (dw1, dh1) = disp1.unwrap();
-        assert!(dw1 >= 640.0 && dw1 <= 780.0, "dw1 should be in target range: {}", dw1);
+        assert!(dw1 >= 820.0 && dw1 <= 980.1, "dw1 should be in 820..980 range: {}", dw1);
         assert!(((1640.0 / 720.0) - (dw1 / dh1)).abs() < 0.01, "Aspect ratio must be preserved");
         assert!(px1 + pw1 <= eye_right.left() - 12.0, "Popup must stay strictly left of eye button");
-        assert!(px1 >= 24.0 && py1 >= 24.0 && py1 + ph1 <= 680.0 - 24.0);
+        assert!(px1 >= 20.0 && py1 >= 20.0 && py1 + ph1 <= 680.0 - 20.0);
 
         // Case B: Eye button near left/middle -> popup placed cleanly to the right
         let eye_left = egui::Rect::from_min_size(egui::pos2(160.0, 240.0), egui::vec2(26.0, 24.0));
@@ -10482,7 +10492,7 @@ mod tests {
             calculate_preview_popup_placement(screen_std, eye_left, Some((1920.0, 1080.0)), (240.0, 68.0));
         let (dw2, dh2) = disp2.unwrap();
         assert!(px2 >= eye_left.right() + 12.0, "Popup must stay strictly right of eye button");
-        assert!(px2 + pw2 <= 1140.0 - 24.0);
+        assert!(px2 + pw2 <= 1140.0 - 20.0);
         assert!(((1920.0 / 1080.0) - (dw2 / dh2)).abs() < 0.01);
 
         // Case C: Narrow window (800x600) with eye button in middle -> picks wider side and shrinks without overlap
@@ -10492,7 +10502,7 @@ mod tests {
             calculate_preview_popup_placement(screen_small, eye_mid, Some((1920.0, 1080.0)), (240.0, 68.0));
         let (dw3, dh3) = disp3.unwrap();
         assert!(px3 + pw3 <= eye_mid.left() - 12.0, "Must not overlap eye button on narrow window");
-        assert!(px3 >= 24.0 && py3 >= 24.0 && py3 + ph3 <= 600.0 - 24.0);
+        assert!(px3 >= 20.0 && py3 >= 20.0 && py3 + ph3 <= 600.0 - 20.0);
         assert!(((1920.0 / 1080.0) - (dw3 / dh3)).abs() < 0.01);
     }
 }
