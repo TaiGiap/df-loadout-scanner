@@ -1,6 +1,6 @@
 #![windows_subsystem = "windows"]
 
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 use std::fs;
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicBool, AtomicI32, Ordering};
@@ -33,7 +33,7 @@ extern "system" {
 // Application & Author identity constants
 const AUTHOR_NAME: &str = "Anh Bảy Chọ / Tài Giáp";
 const APP_NAME: &str = "DF Loadout Scanner";
-const APP_VERSION: &str = "v2.0.4-Beta";
+const APP_VERSION: &str = "v2.0.5-Beta";
 
 // VietQR donation constants
 const DONATE_BANK_ID: &str = "TCB";
@@ -328,9 +328,25 @@ struct BuildItem {
     is_custom: bool,
     #[serde(default)]
     is_favorite: bool,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    image_url: Option<String>,
 }
 
 impl BuildItem {
+    fn valid_image_url(&self) -> Option<&str> {
+        let raw = self.image_url.as_deref()?.trim();
+        let lower = raw.to_ascii_lowercase();
+        if raw.is_empty() || (!lower.starts_with("https://") && !lower.starts_with("http://")) {
+            return None;
+        }
+        for bad in ["placeholder", "blank", "avatar", "favicon", ".svg", "data:"] {
+            if lower.contains(bad) {
+                return None;
+            }
+        }
+        Some(raw)
+    }
+
     fn source_name(&self) -> &'static str {
         if self.tags.iter().any(|t| t.eq_ignore_ascii_case("DFTools")) || self.classification.contains("DFTools") {
             "DFTools"
@@ -677,6 +693,10 @@ enum WorkerEvent {
     UpdateDownloadFinished {
         target_tag: String,
         result: Result<PathBuf, String>,
+    },
+    BuildImageLoaded {
+        url: String,
+        result: Result<(Vec<u8>, [usize; 2]), String>,
     },
 }
 
@@ -2366,6 +2386,88 @@ fn validate_update_zip_archive(zip_path: &Path) -> Result<Vec<String>, String> {
         return Err("Gói .zip không chứa tệp thực thi .exe hợp lệ".to_string());
     }
     Ok(entries)
+}
+
+fn image_cache_dir() -> PathBuf {
+    app_data_dir().join("image_cache")
+}
+
+fn image_cache_path_in_dir(dir: &Path, url: &str) -> PathBuf {
+    dir.join(format!("{}.img", sha256_hex(url.trim().as_bytes())))
+}
+
+fn image_cache_path_for_url(url: &str) -> PathBuf {
+    image_cache_path_in_dir(&image_cache_dir(), url)
+}
+
+fn decode_preview_image_bytes(bytes: &[u8]) -> Result<(Vec<u8>, [usize; 2]), String> {
+    let mut dyn_img = image::load_from_memory(bytes)
+        .map_err(|e| format!("Không giải mã được ảnh xem trước: {}", e))?;
+    if dyn_img.width() > 960 || dyn_img.height() > 640 {
+        dyn_img = dyn_img.resize(960, 640, image::imageops::FilterType::Triangle);
+    }
+    let rgba = dyn_img.to_rgba8();
+    let w = rgba.width() as usize;
+    let h = rgba.height() as usize;
+    if w == 0 || h == 0 {
+        return Err("Ảnh xem trước có kích thước 0x0".to_string());
+    }
+    Ok((rgba.into_raw(), [w, h]))
+}
+
+fn spawn_build_image_load(url: String, tx: Sender<WorkerEvent>, ctx: egui::Context) {
+    thread::spawn(move || {
+        use std::io::Read;
+        const MAX_PREVIEW_BYTES: usize = 8 * 1024 * 1024;
+
+        let res = (|| -> Result<(Vec<u8>, [usize; 2]), String> {
+            let cache_path = image_cache_path_for_url(&url);
+            if let Ok(cached_bytes) = fs::read(&cache_path) {
+                if !cached_bytes.is_empty() {
+                    if let Ok(decoded) = decode_preview_image_bytes(&cached_bytes) {
+                        return Ok(decoded);
+                    }
+                    let _ = fs::remove_file(&cache_path);
+                }
+            }
+
+            let resp = ureq::get(&url)
+                .set("User-Agent", "DF-Loadout-Scanner")
+                .timeout(Duration::from_secs(10))
+                .call()
+                .map_err(|e| format!("Lỗi tải ảnh: {}", e))?;
+
+            let mut bytes = Vec::new();
+            resp.into_reader()
+                .take((MAX_PREVIEW_BYTES + 1) as u64)
+                .read_to_end(&mut bytes)
+                .map_err(|e| format!("Lỗi đọc dữ liệu ảnh: {}", e))?;
+            if bytes.is_empty() {
+                return Err("Ảnh tải về rỗng (0 bytes)".to_string());
+            }
+            if bytes.len() > MAX_PREVIEW_BYTES {
+                return Err("Ảnh vượt quá giới hạn dung lượng 8MB".to_string());
+            }
+
+            let decoded = decode_preview_image_bytes(&bytes)?;
+
+            if let Some(parent) = cache_path.parent() {
+                let _ = fs::create_dir_all(parent);
+                let tmp_path = cache_path.with_extension("img.tmp");
+                if fs::write(&tmp_path, &bytes).is_ok() {
+                    if fs::rename(&tmp_path, &cache_path).is_err() {
+                        let _ = fs::copy(&tmp_path, &cache_path);
+                        let _ = fs::remove_file(&tmp_path);
+                    }
+                }
+            }
+
+            Ok(decoded)
+        })();
+
+        let _ = tx.send(WorkerEvent::BuildImageLoaded { url, result: res });
+        ctx.request_repaint();
+    });
 }
 
 fn updates_dir_path() -> PathBuf {
@@ -4241,6 +4343,15 @@ fn start_hotkey_worker(
     });
 }
 
+enum PreviewImageState {
+    Loading,
+    Ready {
+        texture: egui::TextureHandle,
+        size: [usize; 2],
+    },
+    Error(String),
+}
+
 struct LoadoutTerminalApp {
     builds: Vec<BuildItem>,
     unique_weapons: Vec<String>,
@@ -4313,6 +4424,7 @@ struct LoadoutTerminalApp {
     update_banner_dismissed: bool,
     up_to_date_banner_until: Option<Instant>,
     just_updated_version: Option<String>,
+    image_preview_cache: HashMap<String, PreviewImageState>,
 
     egui_ctx: egui::Context,
     tx_events: Sender<WorkerEvent>,
@@ -4559,6 +4671,7 @@ impl LoadoutTerminalApp {
             update_banner_dismissed: false,
             up_to_date_banner_until: None,
             just_updated_version,
+            image_preview_cache: HashMap::new(),
             egui_ctx: cc.egui_ctx.clone(),
             tx_events: tx,
             rx,
@@ -4989,6 +5102,124 @@ impl LoadoutTerminalApp {
         });
     }
 
+    fn request_or_get_preview_image(&mut self, url: &str, ctx: &egui::Context) {
+        if !self.image_preview_cache.contains_key(url) {
+            self.image_preview_cache
+                .insert(url.to_string(), PreviewImageState::Loading);
+            spawn_build_image_load(url.to_string(), self.tx_events.clone(), ctx.clone());
+        }
+    }
+
+    fn render_eye_preview_button(
+        &self,
+        ui: &mut egui::Ui,
+        build: &BuildItem,
+        hovered_preview_req: &mut Option<(String, egui::Rect, String)>,
+    ) {
+        if let Some(img_url) = build.valid_image_url() {
+            ui.add_space(4.0);
+            let eye_btn = egui::Button::new(
+                RichText::new("👁")
+                    .color(Color32::from_rgb(228, 236, 244))
+                    .size(13.0),
+            )
+            .fill(Color32::from_rgb(25, 35, 47))
+            .stroke(Stroke::new(1.0_f32, Color32::from_rgb(72, 92, 114)))
+            .rounding(Rounding::same(3.0))
+            .min_size(Vec2::new(28.0, 26.0));
+
+            let resp = ui.add(eye_btn);
+            if resp.hovered() {
+                *hovered_preview_req = Some((
+                    img_url.to_string(),
+                    resp.rect,
+                    build.classification.clone(),
+                ));
+            }
+        }
+    }
+
+    fn render_build_image_preview_popup(
+        &mut self,
+        ctx: &egui::Context,
+        req: Option<(String, egui::Rect, String)>,
+    ) {
+        let Some((url, anchor_rect, title)) = req else {
+            return;
+        };
+        self.request_or_get_preview_image(&url, ctx);
+
+        let screen = ctx.screen_rect();
+        let (popup_w, popup_h, disp_size_opt) = match self.image_preview_cache.get(&url) {
+            Some(PreviewImageState::Ready { size, .. }) => {
+                let w = size[0].max(1) as f32;
+                let h = size[1].max(1) as f32;
+                let scale = (360.0 / w).min(210.0 / h).min(1.0);
+                let dw = (w * scale).max(120.0);
+                let dh = (h * scale).max(70.0);
+                (dw + 16.0, dh + 36.0, Some((dw, dh)))
+            }
+            _ => (240.0, 72.0, None),
+        };
+
+        let mut pos_x = anchor_rect.left() - popup_w - 8.0;
+        if pos_x < screen.left() + 8.0 {
+            pos_x = (anchor_rect.right() + 8.0).min(screen.right() - popup_w - 8.0);
+        }
+        let pos_x = pos_x.clamp(screen.left() + 8.0, (screen.right() - popup_w - 8.0).max(screen.left() + 8.0));
+        let pos_y = (anchor_rect.top() - popup_h * 0.35)
+            .clamp(screen.top() + 8.0, (screen.bottom() - popup_h - 8.0).max(screen.top() + 8.0));
+
+        egui::Area::new(egui::Id::new("build_image_preview_popup"))
+            .order(egui::Order::Tooltip)
+            .interactable(false)
+            .fixed_pos(egui::pos2(pos_x, pos_y))
+            .show(ctx, |ui| {
+                Frame::default()
+                    .fill(COLOR_CARD)
+                    .stroke(Stroke::new(1.5_f32, COLOR_ACCENT))
+                    .rounding(Rounding::same(5.0))
+                    .inner_margin(Margin::same(8.0))
+                    .show(ui, |ui| {
+                        ui.set_max_width(popup_w - 16.0);
+                        match self.image_preview_cache.get(&url) {
+                            Some(PreviewImageState::Ready { texture, .. }) => {
+                                if let Some((dw, dh)) = disp_size_opt {
+                                    ui.image((texture.id(), egui::vec2(dw, dh)));
+                                    ui.add_space(4.0);
+                                }
+                                ui.add(
+                                    egui::Label::new(
+                                        RichText::new(truncate_ocr_preview(&title, 48))
+                                            .color(COLOR_TEXT_MAIN)
+                                            .size(11.0),
+                                    )
+                                    .truncate()
+                                    .selectable(false),
+                                );
+                            }
+                            Some(PreviewImageState::Error(err)) => {
+                                ui.label(
+                                    RichText::new(truncate_ocr_preview(err, 64))
+                                        .color(COLOR_AMBER)
+                                        .size(11.0),
+                                );
+                            }
+                            _ => {
+                                ui.horizontal(|ui| {
+                                    ui.spinner();
+                                    ui.label(
+                                        RichText::new(self.lang.t("Đang tải ảnh...", "Loading preview..."))
+                                            .color(COLOR_TEXT_MAIN)
+                                            .size(11.0),
+                                    );
+                                });
+                            }
+                        }
+                    });
+            });
+    }
+
     fn update_support_qr(&mut self, ctx: &egui::Context) {
         if let Some(color_img) = generate_vietqr_image(self.support_amount, "Ung ho DF Loadout Scanner") {
             self.support_qr_texture = Some(ctx.load_texture(
@@ -5238,8 +5469,30 @@ impl eframe::App for LoadoutTerminalApp {
                         }
                     }
                 }
+                WorkerEvent::BuildImageLoaded { url, result } => {
+                    match result {
+                        Ok((rgba, size)) => {
+                            let color_img = egui::ColorImage::from_rgba_unmultiplied(size, &rgba);
+                            let tex = ctx.load_texture(
+                                format!("preview_{}", sha256_hex(url.as_bytes())),
+                                color_img,
+                                egui::TextureOptions::LINEAR,
+                            );
+                            self.image_preview_cache.insert(
+                                url,
+                                PreviewImageState::Ready { texture: tex, size },
+                            );
+                        }
+                        Err(err) => {
+                            self.image_preview_cache
+                                .insert(url, PreviewImageState::Error(err));
+                        }
+                    }
+                }
             }
         }
+
+        let mut hovered_preview_req: Option<(String, egui::Rect, String)> = None;
 
         // If window is minimized to taskbar, skip UI rendering entirely to save CPU/GPU
         if is_minimized {
@@ -7027,6 +7280,8 @@ impl eframe::App for LoadoutTerminalApp {
                                                         build_to_toggle_fav = Some(b.clone());
                                                     }
 
+                                                    self.render_eye_preview_button(ui, b, &mut hovered_preview_req);
+
                                                     if b.is_custom {
                                                         ui.add_space(4.0);
                                                         let del_btn = egui::Button::new(
@@ -7419,6 +7674,8 @@ impl eframe::App for LoadoutTerminalApp {
                                                         build_to_toggle_fav = Some(b.clone());
                                                     }
                                                 }
+
+                                                self.render_eye_preview_button(ui, b, &mut hovered_preview_req);
                                             });
                                         });
 
@@ -8236,6 +8493,7 @@ impl eframe::App for LoadoutTerminalApp {
                         loadout_code: code_trimmed,
                         is_custom: true,
                         is_favorite: true,
+                        image_url: None,
                     };
 
                     self.favorites.retain(|f| f.loadout_code != item.loadout_code);
@@ -8269,6 +8527,8 @@ impl eframe::App for LoadoutTerminalApp {
                 }
             }
         }
+
+        self.render_build_image_preview_popup(ctx, hovered_preview_req);
     }
 }
 
@@ -8648,6 +8908,7 @@ mod tests {
             loadout_code: "code-dftools-high".into(),
             is_custom: false,
             is_favorite: false,
+            image_url: None,
         };
         let b_dftools_mid = BuildItem {
             server: "Garena".into(),
@@ -8660,6 +8921,7 @@ mod tests {
             loadout_code: "code-dftools-mid".into(),
             is_custom: false,
             is_favorite: false,
+            image_url: None,
         };
         let b_dftools_low = BuildItem {
             server: "Garena".into(),
@@ -8672,6 +8934,7 @@ mod tests {
             loadout_code: "code-dftools-low".into(),
             is_custom: false,
             is_favorite: false,
+            image_url: None,
         };
         let b_dfbuilds_meta = BuildItem {
             server: "Garena".into(),
@@ -8684,6 +8947,7 @@ mod tests {
             loadout_code: "code-dfbuilds-meta".into(),
             is_custom: false,
             is_favorite: false,
+            image_url: None,
         };
         let b_dfbuilds_normal = BuildItem {
             server: "Garena".into(),
@@ -8696,6 +8960,7 @@ mod tests {
             loadout_code: "code-dfbuilds-normal".into(),
             is_custom: false,
             is_favorite: false,
+            image_url: None,
         };
         let b_fpsmeta_rec = BuildItem {
             server: "Garena".into(),
@@ -8708,6 +8973,7 @@ mod tests {
             loadout_code: "code-fpsmeta-rec".into(),
             is_custom: false,
             is_favorite: false,
+            image_url: None,
         };
 
         let slice = vec![
@@ -8751,6 +9017,7 @@ mod tests {
             loadout_code: "code-m4a1-meta".into(),
             is_custom: false,
             is_favorite: false,
+            image_url: None,
         };
         let b_normal_pinned = BuildItem {
             server: "Garena".into(),
@@ -8763,6 +9030,7 @@ mod tests {
             loadout_code: "code-m4a1-pinned".into(),
             is_custom: false,
             is_favorite: true,
+            image_url: None,
         };
         let b_custom = BuildItem {
             server: "Garena".into(),
@@ -8775,6 +9043,7 @@ mod tests {
             loadout_code: "code-m4a1-custom".into(),
             is_custom: true,
             is_favorite: true,
+            image_url: None,
         };
 
         let mut fav_set = HashSet::new();
@@ -9518,6 +9787,7 @@ mod tests {
             loadout_code: code.to_string(),
             is_custom: false,
             is_favorite: false,
+            image_url: None,
         };
 
         // 2. All invalid entries rejected
@@ -9573,6 +9843,7 @@ mod tests {
             loadout_code: code.to_string(),
             is_custom: false,
             is_favorite: false,
+            image_url: None,
         };
 
         let items = vec![
@@ -9936,6 +10207,38 @@ mod tests {
         .is_err());
 
         let _ = fs::remove_dir_all(&test_dir);
+    }
+
+    #[test]
+    fn test_build_item_image_url_compat_and_cache_path() {
+        // 1. Backward compatibility: legacy JSON without `image_url` deserializes cleanly
+        let legacy_json = r#"{"weapon":"M4A1","loadout_code":"M4A1-Warfare-6HABCDEF123456"}"#;
+        let legacy_item: BuildItem = serde_json::from_str(legacy_json).expect("legacy json should parse");
+        assert_eq!(legacy_item.image_url, None);
+        assert_eq!(legacy_item.valid_image_url(), None);
+
+        // 2. Round-trip with valid `image_url` and placeholder filtering
+        let with_img_json = r#"{"weapon":"M4A1","loadout_code":"M4A1-Warfare-6HABCDEF123456","image_url":"https://deltaforcetools.gg/img/m4a1.webp"}"#;
+        let img_item: BuildItem = serde_json::from_str(with_img_json).expect("json with image_url should parse");
+        assert_eq!(
+            img_item.valid_image_url(),
+            Some("https://deltaforcetools.gg/img/m4a1.webp")
+        );
+        let serialized = serde_json::to_string(&img_item).expect("serialize");
+        assert!(serialized.contains("image_url"));
+
+        let placeholder_item: BuildItem = serde_json::from_str(
+            r#"{"weapon":"M4A1","loadout_code":"M4A1-Warfare-6HABCDEF123456","image_url":"https://example.com/placeholder.png"}"#,
+        )
+        .unwrap();
+        assert_eq!(placeholder_item.valid_image_url(), None);
+
+        // 3. Deterministic SHA-256 cache path
+        let cache_dir = Path::new("DF-Loadout-Scanner-Data").join("image_cache");
+        let p1 = image_cache_path_in_dir(&cache_dir, "https://deltaforcetools.gg/img/m4a1.webp");
+        let p2 = image_cache_path_in_dir(&cache_dir, "  https://deltaforcetools.gg/img/m4a1.webp  ");
+        assert_eq!(p1, p2);
+        assert!(p1.to_string_lossy().ends_with(".img"));
     }
 }
 

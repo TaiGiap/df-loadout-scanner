@@ -47,6 +47,24 @@ def clean_text(text: str) -> str:
         return ""
     return re.sub(r"\s+", " ", text).strip()
 
+def normalize_preview_image_url(raw_url: str, base_url: str = "") -> str:
+    if not raw_url:
+        return ""
+    u = raw_url.strip()
+    lower = u.lower()
+    if not u or lower.startswith("data:") or lower.startswith("blob:"):
+        return ""
+    for bad in ("placeholder", "avatar", "favicon", "logo", "blank", ".svg"):
+        if bad in lower:
+            return ""
+    if u.startswith("//"):
+        u = "https:" + u
+    elif u.startswith("/") and base_url:
+        u = base_url.rstrip("/") + u
+    if not u.startswith("https://"):
+        return ""
+    return u
+
 def parse_shorthand_number(text: str) -> int:
     if not text:
         return 0
@@ -220,9 +238,17 @@ def extract_dftools_cards_from_page(page, server_label: str, mode_label: str):
 
             tags = ["DFTools"]
             copy_count = 0
+            image_url = ""
             if card_el.count() > 0:
                 card_text = card_el.inner_text()
                 copy_count = extract_copy_count(card_text)
+                img_nodes = card_el.locator("img").all()
+                for img in img_nodes:
+                    raw_src = img.get_attribute("src") or img.get_attribute("data-src") or ""
+                    norm_src = normalize_preview_image_url(raw_src, "https://deltaforcetools.gg")
+                    if norm_src:
+                        image_url = norm_src
+                        break
                 tag_nodes = card_el.locator("span.inline-block, .font-bold").all()
                 for t in tag_nodes:
                     txt = clean_text(t.inner_text())
@@ -243,7 +269,7 @@ def extract_dftools_cards_from_page(page, server_label: str, mode_label: str):
             classification = ", ".join(tags) if tags else "Tiêu chuẩn"
             weapon_type = get_weapon_type(weapon_name_clean, loadout_code)
 
-            results.append({
+            item = {
                 "server": server_label,
                 "mode": mode_label,
                 "weapon_type": weapon_type,
@@ -252,7 +278,10 @@ def extract_dftools_cards_from_page(page, server_label: str, mode_label: str):
                 "tags": tags,
                 "copy_count": copy_count,
                 "loadout_code": loadout_code
-            })
+            }
+            if image_url:
+                item["image_url"] = image_url
+            results.append(item)
         except Exception:
             pass
 
@@ -348,6 +377,7 @@ def scrape_dfbuilds(page, seen_codes: set) -> list:
                 let gunName = '';
                 let desc = '';
                 let tags = [];
+                let imageUrl = '';
 
                 if (card) {
                     const gunBadge = card.querySelector('.feed-gun-badge');
@@ -359,8 +389,16 @@ def scrape_dfbuilds(page, seen_codes: set) -> list:
                         const txt = t.innerText.trim();
                         if (txt) tags.push(txt);
                     }
+                    const imgs = card.querySelectorAll('img');
+                    for (const im of imgs) {
+                        const src = im.getAttribute('src') || im.getAttribute('data-src') || '';
+                        if (src && !src.startsWith('data:')) {
+                            imageUrl = src;
+                            break;
+                        }
+                    }
                 }
-                results.push({ code, gun: gunName, desc, tags });
+                results.push({ code, gun: gunName, desc, tags, imageUrl });
             }
             return results;
         }""")
@@ -377,8 +415,9 @@ def scrape_dfbuilds(page, seen_codes: set) -> list:
             server = parse_server_from_text(" ".join(c["tags"]), c["tags"], default="Infinity")
             tags = ["DFBuilds"] + [t for t in c["tags"] if t not in ["DFBuilds"]]
             desc = c["desc"] if c["desc"] else f"Cộng đồng {weapon}"
+            image_url = normalize_preview_image_url(c.get("imageUrl", ""), BASE_DFBUILDS_URL)
 
-            builds.append({
+            item = {
                 "server": server,
                 "mode": mode,
                 "weapon_type": w_type,
@@ -387,7 +426,10 @@ def scrape_dfbuilds(page, seen_codes: set) -> list:
                 "tags": tags,
                 "copy_count": 0,
                 "loadout_code": code
-            })
+            }
+            if image_url:
+                item["image_url"] = image_url
+            builds.append(item)
         print(f"       -> Đã lấy {len(builds)} cấu hình từ /latest")
     except Exception as e:
         print(f"       [!] Lỗi khi lấy /latest: {e}")
@@ -422,6 +464,7 @@ def scrape_dfbuilds(page, seen_codes: set) -> list:
                         const card = block.closest('.feed-card') || block.parentElement;
                         let desc = '';
                         let tags = [];
+                        let imageUrl = '';
 
                         if (card) {
                             const descEl = card.querySelector('.feed-desc');
@@ -431,8 +474,16 @@ def scrape_dfbuilds(page, seen_codes: set) -> list:
                                 const txt = t.innerText.trim();
                                 if (txt) tags.push(txt);
                             }
+                            const imgs = card.querySelectorAll('img');
+                            for (const im of imgs) {
+                                const src = im.getAttribute('src') || im.getAttribute('data-src') || '';
+                                if (src && !src.startsWith('data:')) {
+                                    imageUrl = src;
+                                    break;
+                                }
+                            }
                         }
-                        results.push({ code, desc, tags });
+                        results.push({ code, desc, tags, imageUrl });
                     }
                     return results;
                 }""")
@@ -450,8 +501,9 @@ def scrape_dfbuilds(page, seen_codes: set) -> list:
                     server = parse_server_from_text(" ".join(c["tags"]), c["tags"], default="Infinity")
                     tags = ["DFBuilds"] + [t for t in c["tags"] if t not in ["DFBuilds"]]
                     desc = c["desc"] if c["desc"] else f"Cộng đồng {weapon}"
+                    image_url = normalize_preview_image_url(c.get("imageUrl", ""), BASE_DFBUILDS_URL)
 
-                    builds.append({
+                    item = {
                         "server": server,
                         "mode": mode,
                         "weapon_type": w_type,
@@ -460,7 +512,10 @@ def scrape_dfbuilds(page, seen_codes: set) -> list:
                         "tags": tags,
                         "copy_count": 0,
                         "loadout_code": code
-                    })
+                    }
+                    if image_url:
+                        item["image_url"] = image_url
+                    builds.append(item)
                     new_count += 1
 
                 if idx % 10 == 0 or idx == len(gun_links):
