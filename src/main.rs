@@ -33,7 +33,7 @@ extern "system" {
 // Application & Author identity constants
 const AUTHOR_NAME: &str = "Anh Bảy Chọ / Tài Giáp";
 const APP_NAME: &str = "DF Loadout Scanner";
-const APP_VERSION: &str = "v2.0.5-Beta";
+const APP_VERSION: &str = "v2.0.6-Beta";
 
 // VietQR donation constants
 const DONATE_BANK_ID: &str = "TCB";
@@ -5116,15 +5116,15 @@ impl LoadoutTerminalApp {
         build: &BuildItem,
         hovered_preview_req: &mut Option<(String, egui::Rect, String)>,
     ) {
+        ui.add_space(4.0);
         if let Some(img_url) = build.valid_image_url() {
-            ui.add_space(4.0);
             let eye_btn = egui::Button::new(
                 RichText::new("👁")
-                    .color(Color32::from_rgb(228, 236, 244))
+                    .color(COLOR_TEXT_MAIN)
                     .size(13.0),
             )
-            .fill(Color32::from_rgb(25, 35, 47))
-            .stroke(Stroke::new(1.0_f32, Color32::from_rgb(72, 92, 114)))
+            .fill(Color32::from_rgb(28, 39, 52))
+            .stroke(Stroke::new(1.0_f32, Color32::from_rgb(90, 114, 140)))
             .rounding(Rounding::same(3.0))
             .min_size(Vec2::new(28.0, 26.0));
 
@@ -5136,6 +5136,21 @@ impl LoadoutTerminalApp {
                     build.classification.clone(),
                 ));
             }
+        } else {
+            let eye_btn = egui::Button::new(
+                RichText::new("👁")
+                    .color(Color32::from_rgb(130, 142, 156))
+                    .size(13.0),
+            )
+            .fill(Color32::from_rgb(19, 27, 36))
+            .stroke(Stroke::new(1.0_f32, Color32::from_rgb(48, 62, 78)))
+            .rounding(Rounding::same(3.0))
+            .min_size(Vec2::new(28.0, 26.0));
+
+            ui.add(eye_btn).on_hover_text(self.lang.t(
+                "Build này chưa có hình ảnh đính kèm",
+                "This build has no attached preview image",
+            ));
         }
     }
 
@@ -7128,184 +7143,203 @@ impl eframe::App for LoadoutTerminalApp {
                                         .rounding(Rounding::same(4.0))
                                         .inner_margin(Margin::same(12.0))
                                         .show(ui, |ui| {
-                                            ui.horizontal(|ui| {
-                                                ui.add(
-                                                    egui::Label::new(
-                                                        RichText::new(format!("#{}.", idx + 1))
-                                                            .color(COLOR_TEXT_MUTED)
-                                                            .size(13.0)
-                                                            .monospace(),
+                                            ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
+                                                // Right-side action buttons reserved first so long descriptions never push them out
+                                                let copy_btn = egui::Button::new(
+                                                    RichText::new(self.lang.t("SAO CHÉP", "COPY"))
+                                                        .color(COLOR_BG)
+                                                        .size(12.0)
+                                                        .strong(),
+                                                )
+                                                .fill(COLOR_ACCENT)
+                                                .rounding(Rounding::same(3.0))
+                                                .min_size(Vec2::new(88.0, 26.0));
+
+                                                if ui.add(copy_btn).clicked() {
+                                                    build_to_copy = Some((b.weapon.clone(), b.classification.clone(), b.copy_count, b.loadout_code.clone()));
+                                                }
+
+                                                ui.add_space(4.0);
+
+                                                let (fav_label, fav_color, fav_fill, fav_border) = if is_fav {
+                                                    (
+                                                        self.lang.t("★ Đã ghim", "★ Pinned"),
+                                                        Color32::from_rgb(255, 215, 0),
+                                                        Color32::from_rgb(45, 40, 10),
+                                                        Color32::from_rgb(255, 215, 0),
                                                     )
-                                                    .selectable(false),
-                                                );
-
-                                                if is_fav {
-                                                    Frame::default()
-                                                        .fill(Color32::from_rgb(50, 45, 10))
-                                                        .stroke(Stroke::new(1.0_f32, Color32::from_rgb(255, 215, 0)))
-                                                        .rounding(Rounding::same(2.0))
-                                                        .inner_margin(Margin::symmetric(6.0, 2.0))
-                                                        .show(ui, |ui| {
-                                                            ui.add(
-                                                                egui::Label::new(
-                                                                    RichText::new(if b.is_custom {
-                                                                        self.lang.t("★ MÃ RIÊNG", "★ CUSTOM")
-                                                                    } else {
-                                                                        self.lang.t("★ YÊU THÍCH", "★ FAVORITE")
-                                                                    })
-                                                                    .color(Color32::from_rgb(255, 215, 0))
-                                                                    .size(11.0)
-                                                                    .strong(),
-                                                                )
-                                                                .selectable(false),
-                                                            );
-                                                        });
-                                                }
-
-                                                if is_meta {
-                                                    Frame::default()
-                                                        .fill(COLOR_ACCENT_DIM)
-                                                        .stroke(Stroke::new(1.0_f32, COLOR_ACCENT))
-                                                        .rounding(Rounding::same(2.0))
-                                                        .inner_margin(Margin::symmetric(6.0, 2.0))
-                                                        .show(ui, |ui| {
-                                                            ui.add(
-                                                                egui::Label::new(
-                                                                    RichText::new(self.lang.t("CẤU HÌNH META", "META BUILD"))
-                                                                        .color(COLOR_ACCENT)
-                                                                        .size(11.0)
-                                                                        .strong(),
-                                                                )
-                                                                .selectable(false),
-                                                            );
-                                                        });
-                                                }
-
-                                                if is_recommended {
-                                                    Frame::default()
-                                                        .fill(Color32::from_rgb(60, 45, 0))
-                                                        .stroke(Stroke::new(1.0_f32, COLOR_AMBER))
-                                                        .rounding(Rounding::same(2.0))
-                                                        .inner_margin(Margin::symmetric(6.0, 2.0))
-                                                        .show(ui, |ui| {
-                                                            ui.add(
-                                                                egui::Label::new(
-                                                                    RichText::new(self.lang.t("ĐỀ XUẤT", "RECOMMENDED"))
-                                                                        .color(COLOR_AMBER)
-                                                                        .size(11.0)
-                                                                        .strong(),
-                                                                )
-                                                                .selectable(false),
-                                                            );
-                                                        });
-                                                }
-
-                                                let display_class = format_display_classification(&b.classification, self.lang);
-                                                ui.add(
-                                                    egui::Label::new(
-                                                        RichText::new(display_class)
-                                                            .color(COLOR_TEXT_MAIN)
-                                                            .size(13.0)
-                                                            .strong(),
+                                                } else {
+                                                    (
+                                                        self.lang.t("☆ Lưu", "☆ Pin"),
+                                                        COLOR_TEXT_MAIN,
+                                                        Color32::from_rgb(25, 35, 47),
+                                                        Color32::from_rgb(72, 92, 114),
                                                     )
-                                                    .selectable(false),
-                                                );
+                                                };
 
-                                                if b.copy_count > 0 {
-                                                    let count_formatted = format_number_with_commas(b.copy_count);
-                                                    let copy_text = match self.lang {
-                                                        AppLang::Vi => format!("📋 {} lượt copy", count_formatted),
-                                                        AppLang::En => format!("📋 {} copies", count_formatted),
-                                                    };
-                                                    Frame::default()
-                                                        .fill(Color32::from_rgb(18, 30, 42))
-                                                        .stroke(Stroke::new(1.0_f32, Color32::from_rgb(35, 75, 110)))
-                                                        .rounding(Rounding::same(2.0))
-                                                        .inner_margin(Margin::symmetric(6.0, 2.0))
-                                                        .show(ui, |ui| {
-                                                            ui.add(
-                                                                egui::Label::new(
-                                                                    RichText::new(copy_text)
-                                                                        .color(Color32::from_rgb(100, 200, 255))
-                                                                        .size(11.0)
-                                                                        .strong(),
-                                                                )
-                                                                .selectable(false),
-                                                            );
-                                                        });
+                                                let fav_btn = egui::Button::new(
+                                                    RichText::new(fav_label)
+                                                        .color(fav_color)
+                                                        .size(11.0)
+                                                        .strong(),
+                                                )
+                                                .fill(fav_fill)
+                                                .stroke(Stroke::new(1.0_f32, fav_border))
+                                                .rounding(Rounding::same(3.0))
+                                                .min_size(Vec2::new(76.0, 26.0));
+
+                                                if ui
+                                                    .add(fav_btn)
+                                                    .on_hover_text(self.lang.t(
+                                                        "Ghim bản build này lên đầu và lưu vào favorites.json",
+                                                        "Pin this build to top and save to favorites.json"
+                                                    ))
+                                                    .clicked()
+                                                {
+                                                    build_to_toggle_fav = Some(b.clone());
                                                 }
 
-                                                ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
-                                                    let copy_btn = egui::Button::new(
-                                                        RichText::new(self.lang.t("SAO CHÉP", "COPY"))
-                                                            .color(COLOR_BG)
-                                                            .size(12.0)
-                                                            .strong(),
-                                                    )
-                                                    .fill(COLOR_ACCENT)
-                                                    .rounding(Rounding::same(3.0))
-                                                    .min_size(Vec2::new(88.0, 26.0));
+                                                self.render_eye_preview_button(ui, b, &mut hovered_preview_req);
 
-                                                    if ui.add(copy_btn).clicked() {
-                                                        build_to_copy = Some((b.weapon.clone(), b.classification.clone(), b.copy_count, b.loadout_code.clone()));
-                                                    }
-
+                                                if b.is_custom {
                                                     ui.add_space(4.0);
-
-                                                    let (fav_label, fav_color, fav_fill) = if is_fav {
-                                                        (self.lang.t("★ Đã ghim", "★ Pinned"), Color32::from_rgb(255, 215, 0), Color32::from_rgb(45, 40, 10))
-                                                    } else {
-                                                        (self.lang.t("☆ Lưu", "☆ Pin"), COLOR_TEXT_MUTED, COLOR_CARD)
-                                                    };
-
-                                                    let fav_btn = egui::Button::new(
-                                                        RichText::new(fav_label)
-                                                            .color(fav_color)
-                                                            .size(11.0)
-                                                            .strong(),
+                                                    let del_btn = egui::Button::new(
+                                                        RichText::new(self.lang.t("🗑 Xóa", "🗑 Delete"))
+                                                            .color(Color32::from_rgb(255, 100, 100))
+                                                            .size(11.0),
                                                     )
-                                                    .fill(fav_fill)
-                                                    .stroke(Stroke::new(1.0_f32, if is_fav { Color32::from_rgb(255, 215, 0) } else { COLOR_BORDER }))
+                                                    .fill(Color32::from_rgb(40, 15, 15))
+                                                    .stroke(Stroke::new(1.0_f32, Color32::from_rgb(180, 50, 50)))
                                                     .rounding(Rounding::same(3.0))
-                                                    .min_size(Vec2::new(76.0, 26.0));
+                                                    .min_size(Vec2::new(60.0, 26.0));
 
                                                     if ui
-                                                        .add(fav_btn)
+                                                        .add(del_btn)
                                                         .on_hover_text(self.lang.t(
-                                                            "Ghim bản build này lên đầu và lưu vào favorites.json",
-                                                            "Pin this build to top and save to favorites.json"
+                                                            "Xóa mã build cá nhân này",
+                                                            "Delete this custom loadout"
                                                         ))
                                                         .clicked()
                                                     {
-                                                        build_to_toggle_fav = Some(b.clone());
+                                                        code_to_delete = Some(b.loadout_code.clone());
                                                     }
+                                                }
 
-                                                    self.render_eye_preview_button(ui, b, &mut hovered_preview_req);
+                                                ui.add_space(6.0);
+                                                let rem_w = ui.available_width().max(60.0);
+                                                ui.allocate_ui_with_layout(
+                                                    egui::vec2(rem_w, 26.0),
+                                                    Layout::left_to_right(Align::Center),
+                                                    |ui| {
+                                                        ui.add(
+                                                            egui::Label::new(
+                                                                RichText::new(format!("#{}.", idx + 1))
+                                                                    .color(COLOR_TEXT_MUTED)
+                                                                    .size(13.0)
+                                                                    .monospace(),
+                                                            )
+                                                            .selectable(false),
+                                                        );
 
-                                                    if b.is_custom {
-                                                        ui.add_space(4.0);
-                                                        let del_btn = egui::Button::new(
-                                                            RichText::new(self.lang.t("🗑 Xóa", "🗑 Delete"))
-                                                                .color(Color32::from_rgb(255, 100, 100))
-                                                                .size(11.0),
-                                                        )
-                                                        .fill(Color32::from_rgb(40, 15, 15))
-                                                        .stroke(Stroke::new(1.0_f32, Color32::from_rgb(180, 50, 50)))
-                                                        .rounding(Rounding::same(3.0))
-                                                        .min_size(Vec2::new(60.0, 26.0));
-
-                                                        if ui
-                                                            .add(del_btn)
-                                                            .on_hover_text(self.lang.t(
-                                                                "Xóa mã build cá nhân này",
-                                                                "Delete this custom loadout"
-                                                            ))
-                                                            .clicked()
-                                                        {
-                                                            code_to_delete = Some(b.loadout_code.clone());
+                                                        if is_fav {
+                                                            Frame::default()
+                                                                .fill(Color32::from_rgb(50, 45, 10))
+                                                                .stroke(Stroke::new(1.0_f32, Color32::from_rgb(255, 215, 0)))
+                                                                .rounding(Rounding::same(2.0))
+                                                                .inner_margin(Margin::symmetric(6.0, 2.0))
+                                                                .show(ui, |ui| {
+                                                                    ui.add(
+                                                                        egui::Label::new(
+                                                                            RichText::new(if b.is_custom {
+                                                                                self.lang.t("★ MÃ RIÊNG", "★ CUSTOM")
+                                                                            } else {
+                                                                                self.lang.t("★ YÊU THÍCH", "★ FAVORITE")
+                                                                            })
+                                                                            .color(Color32::from_rgb(255, 215, 0))
+                                                                            .size(11.0)
+                                                                            .strong(),
+                                                                        )
+                                                                        .selectable(false),
+                                                                    );
+                                                                });
                                                         }
-                                                    }
-                                                });
+
+                                                        if is_meta {
+                                                            Frame::default()
+                                                                .fill(COLOR_ACCENT_DIM)
+                                                                .stroke(Stroke::new(1.0_f32, COLOR_ACCENT))
+                                                                .rounding(Rounding::same(2.0))
+                                                                .inner_margin(Margin::symmetric(6.0, 2.0))
+                                                                .show(ui, |ui| {
+                                                                    ui.add(
+                                                                        egui::Label::new(
+                                                                            RichText::new(self.lang.t("CẤU HÌNH META", "META BUILD"))
+                                                                                .color(COLOR_ACCENT)
+                                                                                .size(11.0)
+                                                                                .strong(),
+                                                                        )
+                                                                        .selectable(false),
+                                                                    );
+                                                                });
+                                                        }
+
+                                                        if is_recommended {
+                                                            Frame::default()
+                                                                .fill(Color32::from_rgb(60, 45, 0))
+                                                                .stroke(Stroke::new(1.0_f32, COLOR_AMBER))
+                                                                .rounding(Rounding::same(2.0))
+                                                                .inner_margin(Margin::symmetric(6.0, 2.0))
+                                                                .show(ui, |ui| {
+                                                                    ui.add(
+                                                                        egui::Label::new(
+                                                                            RichText::new(self.lang.t("ĐỀ XUẤT", "RECOMMENDED"))
+                                                                                .color(COLOR_AMBER)
+                                                                                .size(11.0)
+                                                                                .strong(),
+                                                                        )
+                                                                        .selectable(false),
+                                                                    );
+                                                                });
+                                                        }
+
+                                                        if b.copy_count > 0 {
+                                                            let count_formatted = format_number_with_commas(b.copy_count);
+                                                            let copy_text = match self.lang {
+                                                                AppLang::Vi => format!("📋 {} lượt copy", count_formatted),
+                                                                AppLang::En => format!("📋 {} copies", count_formatted),
+                                                            };
+                                                            Frame::default()
+                                                                .fill(Color32::from_rgb(18, 30, 42))
+                                                                .stroke(Stroke::new(1.0_f32, Color32::from_rgb(35, 75, 110)))
+                                                                .rounding(Rounding::same(2.0))
+                                                                .inner_margin(Margin::symmetric(6.0, 2.0))
+                                                                .show(ui, |ui| {
+                                                                    ui.add(
+                                                                        egui::Label::new(
+                                                                            RichText::new(copy_text)
+                                                                                .color(Color32::from_rgb(100, 200, 255))
+                                                                                .size(11.0)
+                                                                                .strong(),
+                                                                        )
+                                                                        .selectable(false),
+                                                                    );
+                                                                });
+                                                        }
+
+                                                        let display_class = format_display_classification(&b.classification, self.lang);
+                                                        ui.add(
+                                                            egui::Label::new(
+                                                                RichText::new(&display_class)
+                                                                    .color(COLOR_TEXT_MAIN)
+                                                                    .size(13.0)
+                                                                    .strong(),
+                                                            )
+                                                            .truncate()
+                                                            .selectable(false),
+                                                        )
+                                                        .on_hover_text(&display_class);
+                                                    },
+                                                );
                                             });
 
                                             ui.add_space(8.0);
@@ -7481,202 +7515,211 @@ impl eframe::App for LoadoutTerminalApp {
                                     .rounding(Rounding::same(4.0))
                                     .inner_margin(Margin::same(12.0))
                                     .show(ui, |ui| {
-                                        ui.horizontal(|ui| {
-                                            ui.add(
-                                                egui::Label::new(
-                                                    RichText::new(format!("#{}.", idx + 1))
-                                                        .color(COLOR_TEXT_MUTED)
-                                                        .size(13.0)
-                                                        .monospace(),
-                                                )
-                                                .selectable(false),
-                                            );
+                                        ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
+                                            // Reserve right-side action buttons first so long descriptions never overflow
+                                            let copy_btn = egui::Button::new(
+                                                RichText::new(self.lang.t("SAO CHÉP", "COPY"))
+                                                    .color(COLOR_BG)
+                                                    .size(12.0)
+                                                    .strong(),
+                                            )
+                                            .fill(COLOR_ACCENT)
+                                            .rounding(Rounding::same(3.0))
+                                            .min_size(Vec2::new(88.0, 26.0));
 
-                                            // Weapon Badge: [M4A1]
-                                            Frame::default()
-                                                .fill(COLOR_ACCENT_DIM)
-                                                .stroke(Stroke::new(1.0_f32, COLOR_ACCENT))
-                                                .rounding(Rounding::same(2.0))
-                                                .inner_margin(Margin::symmetric(6.0, 2.0))
-                                                .show(ui, |ui| {
+                                            if ui.add(copy_btn).clicked() {
+                                                build_to_copy = Some((b.weapon.clone(), b.classification.clone(), b.copy_count, b.loadout_code.clone()));
+                                            }
+
+                                            ui.add_space(4.0);
+
+                                            // "Xem súng" button: jumps to weapon and switches to Scanner tab
+                                            let view_btn = egui::Button::new(
+                                                RichText::new(self.lang.t("🔍 Xem súng", "🔍 View Gun"))
+                                                    .color(COLOR_TEXT_MAIN)
+                                                    .size(11.0),
+                                            )
+                                            .fill(COLOR_CARD_HOVER)
+                                            .stroke(Stroke::new(1.0_f32, COLOR_BORDER))
+                                            .rounding(Rounding::same(3.0))
+                                            .min_size(Vec2::new(82.0, 26.0));
+
+                                            if ui
+                                                .add(view_btn)
+                                                .on_hover_text(self.lang.t(
+                                                    "Chuyển sang màn hình tra cứu của khẩu súng này",
+                                                    "Jump to this weapon on the main scanner screen"
+                                                ))
+                                                .clicked()
+                                            {
+                                                jump_to_weapon = Some(b.weapon.clone());
+                                            }
+
+                                            ui.add_space(4.0);
+
+                                            if is_custom {
+                                                let del_btn = egui::Button::new(
+                                                    RichText::new(self.lang.t("🗑 Xóa", "🗑 Delete"))
+                                                        .color(Color32::from_rgb(255, 100, 100))
+                                                        .size(11.0),
+                                                )
+                                                .fill(Color32::from_rgb(40, 15, 15))
+                                                .stroke(Stroke::new(1.0_f32, Color32::from_rgb(180, 50, 50)))
+                                                .rounding(Rounding::same(3.0))
+                                                .min_size(Vec2::new(60.0, 26.0));
+
+                                                if ui
+                                                    .add(del_btn)
+                                                    .on_hover_text(self.lang.t(
+                                                        "Xóa mã build cá nhân này khỏi danh sách",
+                                                        "Delete this custom loadout"
+                                                    ))
+                                                    .clicked()
+                                                {
+                                                    code_to_delete = Some(b.loadout_code.clone());
+                                                }
+                                            } else {
+                                                let unpin_btn = egui::Button::new(
+                                                    RichText::new(self.lang.t("★ Bỏ lưu", "★ Unpin"))
+                                                        .color(Color32::from_rgb(255, 215, 0))
+                                                        .size(11.0)
+                                                        .strong(),
+                                                )
+                                                .fill(Color32::from_rgb(45, 40, 10))
+                                                .stroke(Stroke::new(1.0_f32, Color32::from_rgb(255, 215, 0)))
+                                                .rounding(Rounding::same(3.0))
+                                                .min_size(Vec2::new(76.0, 26.0));
+
+                                                if ui
+                                                    .add(unpin_btn)
+                                                    .on_hover_text(self.lang.t(
+                                                        "Bỏ ghim bản build này khỏi kho Yêu thích",
+                                                        "Unpin this build from Favorites"
+                                                    ))
+                                                    .clicked()
+                                                {
+                                                    build_to_toggle_fav = Some(b.clone());
+                                                }
+                                            }
+
+                                            self.render_eye_preview_button(ui, b, &mut hovered_preview_req);
+
+                                            ui.add_space(6.0);
+                                            let rem_w = ui.available_width().max(60.0);
+                                            ui.allocate_ui_with_layout(
+                                                egui::vec2(rem_w, 26.0),
+                                                Layout::left_to_right(Align::Center),
+                                                |ui| {
                                                     ui.add(
                                                         egui::Label::new(
-                                                            RichText::new(format!("[{}]", b.weapon))
-                                                                .color(COLOR_ACCENT)
-                                                                .size(12.0)
-                                                                .strong()
+                                                            RichText::new(format!("#{}.", idx + 1))
+                                                                .color(COLOR_TEXT_MUTED)
+                                                                .size(13.0)
                                                                 .monospace(),
                                                         )
                                                         .selectable(false),
                                                     );
-                                                });
 
-                                            // Type badge: [★ MÃ RIÊNG] or [★ YÊU THÍCH]
-                                            Frame::default()
-                                                .fill(Color32::from_rgb(50, 45, 10))
-                                                .stroke(Stroke::new(1.0_f32, Color32::from_rgb(255, 215, 0)))
-                                                .rounding(Rounding::same(2.0))
-                                                .inner_margin(Margin::symmetric(6.0, 2.0))
-                                                .show(ui, |ui| {
+                                                    // Weapon Badge: [M4A1]
+                                                    Frame::default()
+                                                        .fill(COLOR_ACCENT_DIM)
+                                                        .stroke(Stroke::new(1.0_f32, COLOR_ACCENT))
+                                                        .rounding(Rounding::same(2.0))
+                                                        .inner_margin(Margin::symmetric(6.0, 2.0))
+                                                        .show(ui, |ui| {
+                                                            ui.add(
+                                                                egui::Label::new(
+                                                                    RichText::new(format!("[{}]", b.weapon))
+                                                                        .color(COLOR_ACCENT)
+                                                                        .size(12.0)
+                                                                        .strong()
+                                                                        .monospace(),
+                                                                )
+                                                                .selectable(false),
+                                                            );
+                                                        });
+
+                                                    // Type badge: [★ MÃ RIÊNG] or [★ YÊU THÍCH]
+                                                    Frame::default()
+                                                        .fill(Color32::from_rgb(50, 45, 10))
+                                                        .stroke(Stroke::new(1.0_f32, Color32::from_rgb(255, 215, 0)))
+                                                        .rounding(Rounding::same(2.0))
+                                                        .inner_margin(Margin::symmetric(6.0, 2.0))
+                                                        .show(ui, |ui| {
+                                                            ui.add(
+                                                                egui::Label::new(
+                                                                    RichText::new(if is_custom {
+                                                                        self.lang.t("★ MÃ RIÊNG", "★ CUSTOM")
+                                                                    } else {
+                                                                        self.lang.t("★ YÊU THÍCH", "★ FAVORITE")
+                                                                    })
+                                                                    .color(Color32::from_rgb(255, 215, 0))
+                                                                    .size(11.0)
+                                                                    .strong(),
+                                                                )
+                                                                .selectable(false),
+                                                            );
+                                                        });
+
+                                                    // Mode badge if present
+                                                    if !b.mode.is_empty() {
+                                                        Frame::default()
+                                                            .fill(Color32::from_rgb(20, 30, 40))
+                                                            .stroke(Stroke::new(1.0_f32, Color32::from_rgb(40, 70, 100)))
+                                                            .rounding(Rounding::same(2.0))
+                                                            .inner_margin(Margin::symmetric(6.0, 2.0))
+                                                            .show(ui, |ui| {
+                                                                ui.add(
+                                                                    egui::Label::new(
+                                                                        RichText::new(&b.mode)
+                                                                            .color(Color32::from_rgb(120, 190, 255))
+                                                                            .size(11.0)
+                                                                            .strong(),
+                                                                    )
+                                                                    .selectable(false),
+                                                                );
+                                                            });
+                                                    }
+
+                                                    if b.copy_count > 0 && !is_custom {
+                                                        let count_formatted = format_number_with_commas(b.copy_count);
+                                                        let copy_text = match self.lang {
+                                                            AppLang::Vi => format!("📋 {} lượt copy", count_formatted),
+                                                            AppLang::En => format!("📋 {} copies", count_formatted),
+                                                        };
+                                                        Frame::default()
+                                                            .fill(Color32::from_rgb(18, 30, 42))
+                                                            .stroke(Stroke::new(1.0_f32, Color32::from_rgb(35, 75, 110)))
+                                                            .rounding(Rounding::same(2.0))
+                                                            .inner_margin(Margin::symmetric(6.0, 2.0))
+                                                            .show(ui, |ui| {
+                                                                ui.add(
+                                                                    egui::Label::new(
+                                                                        RichText::new(copy_text)
+                                                                            .color(Color32::from_rgb(100, 200, 255))
+                                                                            .size(11.0)
+                                                                            .strong(),
+                                                                    )
+                                                                    .selectable(false),
+                                                                );
+                                                            });
+                                                    }
+
+                                                    // Classification / Description truncated cleanly
+                                                    let display_class = format_display_classification(&b.classification, self.lang);
                                                     ui.add(
                                                         egui::Label::new(
-                                                            RichText::new(if is_custom {
-                                                                self.lang.t("★ MÃ RIÊNG", "★ CUSTOM")
-                                                            } else {
-                                                                self.lang.t("★ YÊU THÍCH", "★ FAVORITE")
-                                                            })
-                                                            .color(Color32::from_rgb(255, 215, 0))
-                                                            .size(11.0)
-                                                            .strong(),
+                                                            RichText::new(&display_class)
+                                                                .color(COLOR_TEXT_MAIN)
+                                                                .size(13.0)
+                                                                .strong(),
                                                         )
+                                                        .truncate()
                                                         .selectable(false),
-                                                    );
-                                                });
-
-                                            // Mode badge if present
-                                            if !b.mode.is_empty() {
-                                                Frame::default()
-                                                    .fill(Color32::from_rgb(20, 30, 40))
-                                                    .stroke(Stroke::new(1.0_f32, Color32::from_rgb(40, 70, 100)))
-                                                    .rounding(Rounding::same(2.0))
-                                                    .inner_margin(Margin::symmetric(6.0, 2.0))
-                                                    .show(ui, |ui| {
-                                                        ui.add(
-                                                            egui::Label::new(
-                                                                RichText::new(&b.mode)
-                                                                    .color(Color32::from_rgb(120, 190, 255))
-                                                                    .size(11.0)
-                                                                    .strong(),
-                                                            )
-                                                            .selectable(false),
-                                                        );
-                                                    });
-                                            }
-
-                                            // Classification / Description
-                                            let display_class = format_display_classification(&b.classification, self.lang);
-                                            ui.add(
-                                                egui::Label::new(
-                                                    RichText::new(display_class)
-                                                        .color(COLOR_TEXT_MAIN)
-                                                        .size(13.0)
-                                                        .strong(),
-                                                )
-                                                .selectable(false),
+                                                    )
+                                                    .on_hover_text(&display_class);
+                                                },
                                             );
-
-                                            if b.copy_count > 0 && !is_custom {
-                                                let count_formatted = format_number_with_commas(b.copy_count);
-                                                let copy_text = match self.lang {
-                                                    AppLang::Vi => format!("📋 {} lượt copy", count_formatted),
-                                                    AppLang::En => format!("📋 {} copies", count_formatted),
-                                                };
-                                                Frame::default()
-                                                    .fill(Color32::from_rgb(18, 30, 42))
-                                                    .stroke(Stroke::new(1.0_f32, Color32::from_rgb(35, 75, 110)))
-                                                    .rounding(Rounding::same(2.0))
-                                                    .inner_margin(Margin::symmetric(6.0, 2.0))
-                                                    .show(ui, |ui| {
-                                                        ui.add(
-                                                            egui::Label::new(
-                                                                RichText::new(copy_text)
-                                                                    .color(Color32::from_rgb(100, 200, 255))
-                                                                    .size(11.0)
-                                                                    .strong(),
-                                                            )
-                                                            .selectable(false),
-                                                        );
-                                                    });
-                                            }
-
-                                            ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
-                                                let copy_btn = egui::Button::new(
-                                                    RichText::new(self.lang.t("SAO CHÉP", "COPY"))
-                                                        .color(COLOR_BG)
-                                                        .size(12.0)
-                                                        .strong(),
-                                                )
-                                                .fill(COLOR_ACCENT)
-                                                .rounding(Rounding::same(3.0))
-                                                .min_size(Vec2::new(88.0, 26.0));
-
-                                                if ui.add(copy_btn).clicked() {
-                                                    build_to_copy = Some((b.weapon.clone(), b.classification.clone(), b.copy_count, b.loadout_code.clone()));
-                                                }
-
-                                                ui.add_space(4.0);
-
-                                                // "Xem súng" button: jumps to weapon and switches to Scanner tab
-                                                let view_btn = egui::Button::new(
-                                                    RichText::new(self.lang.t("🔍 Xem súng", "🔍 View Gun"))
-                                                        .color(COLOR_TEXT_MAIN)
-                                                        .size(11.0),
-                                                )
-                                                .fill(COLOR_CARD_HOVER)
-                                                .stroke(Stroke::new(1.0_f32, COLOR_BORDER))
-                                                .rounding(Rounding::same(3.0))
-                                                .min_size(Vec2::new(82.0, 26.0));
-
-                                                if ui
-                                                    .add(view_btn)
-                                                    .on_hover_text(self.lang.t(
-                                                        "Chuyển sang màn hình tra cứu của khẩu súng này",
-                                                        "Jump to this weapon on the main scanner screen"
-                                                    ))
-                                                    .clicked()
-                                                {
-                                                    jump_to_weapon = Some(b.weapon.clone());
-                                                }
-
-                                                ui.add_space(4.0);
-
-                                                if is_custom {
-                                                    let del_btn = egui::Button::new(
-                                                        RichText::new(self.lang.t("🗑 Xóa", "🗑 Delete"))
-                                                            .color(Color32::from_rgb(255, 100, 100))
-                                                            .size(11.0),
-                                                    )
-                                                    .fill(Color32::from_rgb(40, 15, 15))
-                                                    .stroke(Stroke::new(1.0_f32, Color32::from_rgb(180, 50, 50)))
-                                                    .rounding(Rounding::same(3.0))
-                                                    .min_size(Vec2::new(60.0, 26.0));
-
-                                                    if ui
-                                                        .add(del_btn)
-                                                        .on_hover_text(self.lang.t(
-                                                            "Xóa mã build cá nhân này khỏi danh sách",
-                                                            "Delete this custom loadout"
-                                                        ))
-                                                        .clicked()
-                                                    {
-                                                        code_to_delete = Some(b.loadout_code.clone());
-                                                    }
-                                                } else {
-                                                    let unpin_btn = egui::Button::new(
-                                                        RichText::new(self.lang.t("★ Bỏ lưu", "★ Unpin"))
-                                                            .color(Color32::from_rgb(255, 215, 0))
-                                                            .size(11.0)
-                                                            .strong(),
-                                                    )
-                                                    .fill(Color32::from_rgb(45, 40, 10))
-                                                    .stroke(Stroke::new(1.0_f32, Color32::from_rgb(255, 215, 0)))
-                                                    .rounding(Rounding::same(3.0))
-                                                    .min_size(Vec2::new(76.0, 26.0));
-
-                                                    if ui
-                                                        .add(unpin_btn)
-                                                        .on_hover_text(self.lang.t(
-                                                            "Bỏ ghim bản build này khỏi kho Yêu thích",
-                                                            "Unpin this build from Favorites"
-                                                        ))
-                                                        .clicked()
-                                                    {
-                                                        build_to_toggle_fav = Some(b.clone());
-                                                    }
-                                                }
-
-                                                self.render_eye_preview_button(ui, b, &mut hovered_preview_req);
-                                            });
                                         });
 
                                         ui.add_space(8.0);

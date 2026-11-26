@@ -535,7 +535,7 @@ dependencies = [
 
 [[package]]
 name = "df_clipboard_helper"
-version = "2.0.5-Beta"
+version = "2.0.6-Beta"
 dependencies = [
  "arboard",
  "eframe",
